@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StructureVault – Nostr × Minecraft</title>
+<link rel="icon" type="image/png" href="https://freepngimg.com/download/minecraft/24498-6-creeper-transparent.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
 
@@ -45,23 +46,11 @@
     z-index: -2;
   }
 
-  /* Clouds (pixel style) */
-  body::after {
-    content: '';
-    position: fixed; top: 60px; left: 0; right: 0; height: 60px;
-    background-image:
-      radial-gradient(ellipse 60px 24px at 100px 20px, #fff 100%, transparent 100%),
-      radial-gradient(ellipse 40px 20px at 130px 16px, #fff 100%, transparent 100%),
-      radial-gradient(ellipse 50px 22px at 320px 24px, #fff 100%, transparent 100%),
-      radial-gradient(ellipse 35px 18px at 300px 20px, #fff 100%, transparent 100%),
-      radial-gradient(ellipse 70px 26px at 560px 18px, #fff 100%, transparent 100%),
-      radial-gradient(ellipse 45px 22px at 590px 14px, #fff 100%, transparent 100%),
-      radial-gradient(ellipse 55px 24px at 800px 22px, #fff 100%, transparent 100%);
-    z-index: -1;
-    animation: cloudDrift 40s linear infinite;
+  /* Clouds rendered on canvas via JS */
+  #cloud-canvas {
+    position: fixed; top: 0; left: 0; width: 100%; height: 180px;
+    z-index: -1; pointer-events: none; image-rendering: pixelated;
   }
-
-  @keyframes cloudDrift { from { transform: translateX(0); } to { transform: translateX(-200px); } }
 
   /* ═══ STARS (night sky pixels) ═══ */
   .stars {
@@ -554,22 +543,16 @@
 </style>
 </head>
 <body>
+<canvas id="cloud-canvas"></canvas>
 
 <!-- HEADER -->
 <header>
   <div class="logo-block">
     <div class="logo-title">
-      <svg class="creeper-svg" style="width:40px;height:40px;vertical-align:middle;margin-right:8px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-        <rect width="16" height="16" fill="#3a7d44"/>
-        <rect x="4" y="3" width="2" height="2" fill="#000"/>
-        <rect x="10" y="3" width="2" height="2" fill="#000"/>
-        <rect x="5" y="6" width="6" height="1" fill="#000"/>
-        <rect x="5" y="7" width="2" height="2" fill="#000"/>
-        <rect x="9" y="7" width="2" height="2" fill="#000"/>
-        <rect x="6" y="8" width="4" height="1" fill="#000"/>
-        <rect x="6" y="9" width="1" height="2" fill="#000"/>
-        <rect x="9" y="9" width="1" height="2" fill="#000"/>
-      </svg>
+      <img src="https://freepngimg.com/download/minecraft/24498-6-creeper-transparent.png"
+           class="creeper-svg"
+           style="width:80px;height:56px;vertical-align:middle;margin-right:12px;image-rendering:pixelated;"
+           alt="Creeper">
       StructureVault
     </div>
     <div class="logo-sub">[ Nostr × Minecraft Structure Storage ]</div>
@@ -587,16 +570,95 @@
   <div id="login-screen">
     <div class="card">
       <div class="card-header">
-        <span>🔑</span>
+        <!-- pixel key icon -->
+        <svg width="16" height="16" viewBox="0 0 16 16" style="image-rendering:pixelated;vertical-align:middle" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="5" width="2" height="2" fill="#f9c733"/>
+          <rect x="2" y="3" width="2" height="2" fill="#f9c733"/>
+          <rect x="4" y="1" width="4" height="2" fill="#f9c733"/>
+          <rect x="8" y="3" width="2" height="2" fill="#f9c733"/>
+          <rect x="10" y="5" width="2" height="2" fill="#f9c733"/>
+          <rect x="8" y="7" width="2" height="2" fill="#f9c733"/>
+          <rect x="6" y="9" width="2" height="2" fill="#f9c733"/>
+          <rect x="4" y="9" width="2" height="4" fill="#f9c733"/>
+          <rect x="2" y="5" width="2" height="2" fill="#c49a00"/>
+          <rect x="4" y="3" width="4" height="2" fill="#c49a00"/>
+          <rect x="8" y="5" width="2" height="2" fill="#c49a00"/>
+          <rect x="6" y="7" width="2" height="2" fill="#c49a00"/>
+          <rect x="6" y="3" width="2" height="2" fill="#fff" opacity="0.4"/>
+        </svg>
         <span class="card-header-title">Connect Your Identity</span>
       </div>
       <div class="card-body login-box">
         <div class="inventory">
-          <div class="inv-slot" title="Grass Block">🟩</div>
-          <div class="inv-slot" title="Diamond">💎</div>
-          <div class="inv-slot" title="Structure Block">🧱</div>
-          <div class="inv-slot" title="Nostr Key">🔑</div>
-          <div class="inv-slot" title="Chest">📦</div>
+          <!-- Grass block -->
+          <div class="inv-slot" title="Grass Block">
+            <svg width="28" height="28" viewBox="0 0 16 16" style="image-rendering:pixelated" xmlns="http://www.w3.org/2000/svg">
+              <rect width="16" height="16" fill="#866043"/>
+              <rect width="16" height="5" fill="#5d9e29"/>
+              <rect x="0" y="0" width="2" height="2" fill="#7acc3a"/>
+              <rect x="4" y="1" width="3" height="1" fill="#7acc3a"/>
+              <rect x="10" y="0" width="2" height="3" fill="#7acc3a"/>
+              <rect x="3" y="6" width="2" height="2" fill="#6b4a2a"/>
+              <rect x="9" y="8" width="3" height="2" fill="#6b4a2a"/>
+              <rect x="1" y="10" width="2" height="3" fill="#6b4a2a"/>
+            </svg>
+          </div>
+          <!-- Diamond -->
+          <div class="inv-slot" title="Diamond">
+            <svg width="28" height="28" viewBox="0 0 16 16" style="image-rendering:pixelated" xmlns="http://www.w3.org/2000/svg">
+              <rect x="5" y="1" width="6" height="2" fill="#5ce4e4"/>
+              <rect x="3" y="3" width="10" height="4" fill="#5ce4e4"/>
+              <rect x="3" y="3" width="4" height="4" fill="#9cf0f0"/>
+              <rect x="1" y="5" width="2" height="2" fill="#5ce4e4"/>
+              <rect x="13" y="5" width="2" height="2" fill="#3ab0b0"/>
+              <rect x="3" y="7" width="10" height="4" fill="#3ab0b0"/>
+              <rect x="5" y="11" width="6" height="2" fill="#3ab0b0"/>
+              <rect x="7" y="13" width="2" height="2" fill="#3ab0b0"/>
+              <rect x="5" y="1" width="2" height="2" fill="#aff4f4"/>
+            </svg>
+          </div>
+          <!-- Structure block -->
+          <div class="inv-slot" title="Structure Block">
+            <svg width="28" height="28" viewBox="0 0 16 16" style="image-rendering:pixelated" xmlns="http://www.w3.org/2000/svg">
+              <rect width="16" height="16" fill="#5ce4e4"/>
+              <rect width="16" height="1" fill="#aff4f4"/>
+              <rect width="1" height="16" fill="#aff4f4"/>
+              <rect x="15" width="1" height="16" fill="#2a7a7a"/>
+              <rect y="15" width="16" height="1" fill="#2a7a7a"/>
+              <rect x="3" y="3" width="10" height="10" fill="#2a7a7a"/>
+              <rect x="3" y="3" width="10" height="1" fill="#5ce4e4"/>
+              <rect x="3" y="3" width="1" height="10" fill="#5ce4e4"/>
+              <rect x="5" y="5" width="6" height="6" fill="#5ce4e4"/>
+            </svg>
+          </div>
+          <!-- Lightning bolt / Nostr -->
+          <div class="inv-slot" title="Nostr Key">
+            <svg width="28" height="28" viewBox="0 0 16 16" style="image-rendering:pixelated" xmlns="http://www.w3.org/2000/svg">
+              <rect x="8" y="1" width="4" height="2" fill="#f9c733"/>
+              <rect x="6" y="3" width="2" height="2" fill="#f9c733"/>
+              <rect x="5" y="5" width="5" height="2" fill="#f9c733"/>
+              <rect x="4" y="7" width="4" height="2" fill="#f9c733"/>
+              <rect x="3" y="9" width="2" height="2" fill="#f9c733"/>
+              <rect x="5" y="11" width="2" height="2" fill="#f9c733"/>
+              <rect x="4" y="13" width="4" height="2" fill="#f9c733"/>
+              <rect x="8" y="1" width="2" height="2" fill="#ffe066"/>
+              <rect x="5" y="5" width="2" height="2" fill="#ffe066"/>
+            </svg>
+          </div>
+          <!-- Chest -->
+          <div class="inv-slot" title="Chest">
+            <svg width="28" height="28" viewBox="0 0 16 16" style="image-rendering:pixelated" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="14" height="6" fill="#b08850"/>
+              <rect x="1" y="7" width="14" height="8" fill="#866043"/>
+              <rect x="1" y="1" width="14" height="1" fill="#d4a96a"/>
+              <rect x="1" y="1" width="1" height="6" fill="#d4a96a"/>
+              <rect x="6" y="5" width="4" height="4" fill="#5c3d1e"/>
+              <rect x="7" y="6" width="2" height="2" fill="#866043"/>
+              <rect x="14" y="1" width="1" height="6" fill="#5c3d1e"/>
+              <rect x="1" y="14" width="14" height="1" fill="#5c3d1e"/>
+              <rect x="14" y="7" width="1" height="8" fill="#5c3d1e"/>
+            </svg>
+          </div>
         </div>
         <div class="login-desc">
           Sign in with your Nostr identity to upload<br>
@@ -632,13 +694,36 @@
     <!-- UPLOAD CARD -->
     <div class="card">
       <div class="card-header">
-        <span>📦</span>
+        <!-- pixel chest icon -->
+        <svg width="16" height="16" viewBox="0 0 16 16" style="image-rendering:pixelated;vertical-align:middle" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="14" height="6" fill="#b08850"/>
+          <rect x="1" y="7" width="14" height="8" fill="#866043"/>
+          <rect x="1" y="1" width="14" height="1" fill="#d4a96a"/>
+          <rect x="1" y="1" width="1" height="6" fill="#d4a96a"/>
+          <rect x="6" y="5" width="4" height="4" fill="#5c3d1e"/>
+          <rect x="7" y="6" width="2" height="2" fill="#866043"/>
+          <rect x="14" y="1" width="1" height="6" fill="#5c3d1e"/>
+          <rect x="1" y="14" width="14" height="1" fill="#5c3d1e"/>
+          <rect x="14" y="7" width="1" height="8" fill="#5c3d1e"/>
+        </svg>
         <span class="card-header-title">Upload Structure Files</span>
       </div>
       <div class="card-body">
         <div class="drop-zone" id="drop-zone">
           <input type="file" id="file-input" multiple accept=".mcstructure">
-          <div class="drop-zone-icon">🧱</div>
+          <!-- pixel structure block large -->
+          <svg width="48" height="48" viewBox="0 0 16 16" style="image-rendering:pixelated" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="16" height="16" fill="#5ce4e4"/>
+            <rect x="0" y="0" width="16" height="1" fill="#aff4f4"/>
+            <rect x="0" y="0" width="1" height="16" fill="#aff4f4"/>
+            <rect x="15" y="0" width="1" height="16" fill="#2a7a7a"/>
+            <rect x="0" y="15" width="16" height="1" fill="#2a7a7a"/>
+            <rect x="3" y="3" width="10" height="10" fill="#2a7a7a"/>
+            <rect x="3" y="3" width="10" height="1" fill="#5ce4e4"/>
+            <rect x="3" y="3" width="1" height="10" fill="#5ce4e4"/>
+            <rect x="5" y="5" width="6" height="6" fill="#5ce4e4"/>
+            <rect x="2" y="7" width="2" height="2" fill="#fff" opacity="0.5"/>
+          </svg>
           <div class="drop-zone-text">Drop .mcstructure files here</div>
           <div class="drop-zone-sub">or click to browse your chest</div>
         </div>
@@ -667,7 +752,19 @@
     <!-- MY STRUCTURES -->
     <div class="card">
       <div class="card-header">
-        <span>📚</span>
+        <!-- pixel structure block icon -->
+        <svg width="16" height="16" viewBox="0 0 16 16" style="image-rendering:pixelated;vertical-align:middle" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="14" height="14" fill="#5ce4e4"/>
+          <rect x="1" y="1" width="14" height="1" fill="#9cf0f0"/>
+          <rect x="1" y="1" width="1" height="14" fill="#9cf0f0"/>
+          <rect x="14" y="1" width="1" height="14" fill="#3a9a9a"/>
+          <rect x="1" y="14" width="14" height="1" fill="#3a9a9a"/>
+          <rect x="4" y="4" width="8" height="8" fill="#3a9a9a"/>
+          <rect x="4" y="4" width="8" height="1" fill="#5ce4e4"/>
+          <rect x="4" y="4" width="1" height="8" fill="#5ce4e4"/>
+          <rect x="6" y="6" width="4" height="4" fill="#5ce4e4"/>
+          <rect x="3" y="7" width="2" height="2" fill="#fff" opacity="0.5"/>
+        </svg>
         <span class="card-header-title">My Structures</span>
       </div>
       <div class="card-body">
@@ -948,7 +1045,7 @@ function renderFileList() {
   list.innerHTML = pendingFiles.map((f, i) => `
     <div class="file-item" id="fi-${i}">
       <div class="file-item-progress" id="fp-${i}" style="width:0%"></div>
-      <span class="file-item-icon">🧱</span>
+      <span class="file-item-icon"><svg width="20" height="20" viewBox="0 0 16 16" style="image-rendering:pixelated" xmlns="http://www.w3.org/2000/svg"><rect width="16" height="16" fill="#5ce4e4"/><rect width="16" height="1" fill="#aff4f4"/><rect width="1" height="16" fill="#aff4f4"/><rect x="15" width="1" height="16" fill="#2a7a7a"/><rect y="15" width="16" height="1" fill="#2a7a7a"/><rect x="3" y="3" width="10" height="10" fill="#2a7a7a"/><rect x="3" y="3" width="10" height="1" fill="#5ce4e4"/><rect x="3" y="3" width="1" height="10" fill="#5ce4e4"/><rect x="5" y="5" width="6" height="6" fill="#5ce4e4"/></svg></span>
       <span class="file-item-name">${escHtml(f.name)}</span>
       <span class="file-item-size">${formatBytes(f.size)}</span>
       <span class="file-item-status" id="fs-${i}">⏳</span>
@@ -1083,7 +1180,7 @@ async function fetchMyStructures() {
     const safeId = ev.id.slice(0,8);
 
     return `<div class="uploaded-item" data-id="${ev.id}">
-      <span style="font-size:20px">🧱</span>
+      <span style="font-size:20px"><svg width="20" height="20" viewBox="0 0 16 16" style="image-rendering:pixelated" xmlns="http://www.w3.org/2000/svg"><rect width="16" height="16" fill="#5ce4e4"/><rect width="16" height="1" fill="#aff4f4"/><rect width="1" height="16" fill="#aff4f4"/><rect x="15" width="1" height="16" fill="#2a7a7a"/><rect y="15" width="16" height="1" fill="#2a7a7a"/><rect x="3" y="3" width="10" height="10" fill="#2a7a7a"/><rect x="3" y="3" width="10" height="1" fill="#5ce4e4"/><rect x="3" y="3" width="1" height="10" fill="#5ce4e4"/><rect x="5" y="5" width="6" height="6" fill="#5ce4e4"/></svg></span>
       <div style="flex:1;min-width:0">
         <div>${escHtml(name)}</div>
         <div class="uploaded-item-meta">${date} • ${formatBytes(parseInt(size)||0)} • sha: ${hashShort}</div>
@@ -1155,6 +1252,117 @@ function toast(msg, type = 'info') {
     setTimeout(() => el.remove(), 400);
   }, 4000);
 }
+
+// ═══════════════════════════════════════
+//  PIXEL CLOUD CANVAS
+// ═══════════════════════════════════════
+(function() {
+  const canvas = document.getElementById('cloud-canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Each cloud is defined as a grid of 1/0 pixels at low res, scaled up
+  const CLOUD_SHAPES = [
+    // Big fluffy cloud (12x5 grid)
+    [
+      [0,0,1,1,1,1,1,1,0,0,0,0],
+      [0,1,1,1,1,1,1,1,1,1,0,0],
+      [1,1,1,1,1,1,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [0,1,1,1,1,1,1,1,1,1,1,0],
+    ],
+    // Medium cloud (9x4)
+    [
+      [0,0,1,1,1,1,0,0,0],
+      [0,1,1,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1,1,1],
+      [0,1,1,1,1,1,1,1,0],
+    ],
+    // Small cloud (7x3)
+    [
+      [0,1,1,1,1,0,0],
+      [1,1,1,1,1,1,1],
+      [0,1,1,1,1,1,0],
+    ],
+  ];
+
+  const PIXEL = 12; // each "block" = 12×12 real pixels
+
+  // Cloud instances: { shapeIdx, x, y, speed }
+  let clouds = [];
+  let W = 0, H = 0;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = 180;
+  }
+
+  function initClouds() {
+    clouds = [];
+    const count = Math.ceil(W / 200) + 3;
+    for (let i = 0; i < count; i++) {
+      clouds.push({
+        shapeIdx: Math.floor(Math.random() * CLOUD_SHAPES.length),
+        x: Math.random() * W * 1.5,
+        y: 60 + Math.random() * 60,
+        speed: 0.3 + Math.random() * 0.4,
+      });
+    }
+  }
+
+  function drawCloud(cloud) {
+    const shape = CLOUD_SHAPES[cloud.shapeIdx];
+    const rows = shape.length;
+    const cols = shape[0].length;
+    const x0 = Math.round(cloud.x);
+    const y0 = Math.round(cloud.y);
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (!shape[r][c]) continue;
+        const px = x0 + c * PIXEL;
+        const py = y0 + r * PIXEL;
+
+        // Main white block
+        ctx.fillStyle = '#f0f4ff';
+        ctx.fillRect(px, py, PIXEL, PIXEL);
+
+        // Top-left highlight
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(px, py, PIXEL, 2);
+        ctx.fillRect(px, py, 2, PIXEL);
+
+        // Bottom-right shadow
+        ctx.fillStyle = '#c8d4e8';
+        ctx.fillRect(px, py + PIXEL - 2, PIXEL, 2);
+        ctx.fillRect(px + PIXEL - 2, py, 2, PIXEL);
+      }
+    }
+  }
+
+  let last = 0;
+  function animate(ts) {
+    const dt = ts - last; last = ts;
+    ctx.clearRect(0, 0, W, H);
+
+    for (const cloud of clouds) {
+      cloud.x -= cloud.speed * (dt / 16);
+      const shapeWidth = CLOUD_SHAPES[cloud.shapeIdx][0].length * PIXEL;
+      if (cloud.x + shapeWidth < 0) {
+        cloud.x = W + Math.random() * 200;
+        cloud.y = 60 + Math.random() * 60;
+        cloud.shapeIdx = Math.floor(Math.random() * CLOUD_SHAPES.length);
+      }
+      drawCloud(cloud);
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  window.addEventListener('resize', () => { resize(); initClouds(); });
+  resize();
+  initClouds();
+  requestAnimationFrame(animate);
+})();
 
 // ═══════════════════════════════════════
 //  INIT
