@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StructureVault – Nostr × Minecraft</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+  :root {
+    --grass:    #5d9e29;
+    --grass-dk: #3d6e1a;
+    --dirt:     #866043;
+    --dirt-dk:  #5c3d1e;
+    --stone:    #8c8c8c;
+    --stone-dk: #5a5a5a;
+    --wood:     #b08850;
+    --sky:      #6ab0f5;
+    --sky-dk:   #3b7eca;
+    --coal:     #1a1a1a;
+    --gold:     #f9c733;
+    --diamond:  #5ce4e4;
+    --emerald:  #17dd62;
+    --red:      #e03232;
+    --cream:    #f5e8c8;
+    --shadow:   4px 4px 0 #000;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+
+  body {
+    font-family: 'Press Start 2P', monospace;
+    background: var(--sky);
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='16' height='16' fill='%23fff' stroke='%23000' stroke-width='2'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%23000'/%3E%3C/svg%3E") 8 8, crosshair;
+  }
+
+  /* ═══ PIXEL SKY BACKGROUND ═══ */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      linear-gradient(180deg, #a8d4f8 0%, #6ab0f5 40%, #5d9e29 40%, #5d9e29 44%, #866043 44%, #866043 100%);
+    z-index: -2;
+  }
+
+  /* Clouds (pixel style) */
+  body::after {
+    content: '';
+    position: fixed; top: 60px; left: 0; right: 0; height: 60px;
+    background-image:
+      radial-gradient(ellipse 60px 24px at 100px 20px, #fff 100%, transparent 100%),
+      radial-gradient(ellipse 40px 20px at 130px 16px, #fff 100%, transparent 100%),
+      radial-gradient(ellipse 50px 22px at 320px 24px, #fff 100%, transparent 100%),
+      radial-gradient(ellipse 35px 18px at 300px 20px, #fff 100%, transparent 100%),
+      radial-gradient(ellipse 70px 26px at 560px 18px, #fff 100%, transparent 100%),
+      radial-gradient(ellipse 45px 22px at 590px 14px, #fff 100%, transparent 100%),
+      radial-gradient(ellipse 55px 24px at 800px 22px, #fff 100%, transparent 100%);
+    z-index: -1;
+    animation: cloudDrift 40s linear infinite;
+  }
+
+  @keyframes cloudDrift { from { transform: translateX(0); } to { transform: translateX(-200px); } }
+
+  /* ═══ STARS (night sky pixels) ═══ */
+  .stars {
+    position: fixed; top: 0; left: 0; right: 0; height: 40%;
+    pointer-events: none; z-index: -1; opacity: 0;
+  }
+
+  /* ═══ PIXEL BORDER MIXIN ═══ */
+  .mc-panel {
+    background: var(--stone);
+    border: 3px solid #000;
+    box-shadow: inset -3px -3px 0 var(--stone-dk), inset 3px 3px 0 #b0b0b0, 6px 6px 0 #000;
+    padding: 20px;
+  }
+
+  .mc-panel--dirt {
+    background: var(--dirt);
+    box-shadow: inset -3px -3px 0 var(--dirt-dk), inset 3px 3px 0 #b08850, 6px 6px 0 #000;
+  }
+
+  .mc-panel--wood {
+    background: var(--wood);
+    box-shadow: inset -3px -3px 0 #7a5c30, inset 3px 3px 0 #d4a96a, 6px 6px 0 #000;
+  }
+
+  /* ═══ HEADER ═══ */
+  header {
+    text-align: center;
+    padding: 40px 20px 20px;
+    position: relative;
+  }
+
+  .logo-block {
+    display: inline-block;
+    position: relative;
+  }
+
+  .logo-title {
+    font-size: clamp(14px, 3vw, 28px);
+    color: var(--gold);
+    text-shadow: 3px 3px 0 #7a5200, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+    letter-spacing: 2px;
+    line-height: 1.4;
+    animation: titlePulse 3s ease-in-out infinite;
+  }
+
+  @keyframes titlePulse {
+    0%, 100% { text-shadow: 3px 3px 0 #7a5200, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; }
+    50% { text-shadow: 3px 3px 0 #7a5200, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 0 20px var(--gold); }
+  }
+
+  .logo-sub {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--cream);
+    text-shadow: 2px 2px 0 #000;
+    margin-top: 8px;
+    letter-spacing: 3px;
+  }
+
+  /* Animated creeper icon */
+  .creeper-icon {
+    width: 48px; height: 48px;
+    display: inline-block;
+    margin: 0 12px;
+    vertical-align: middle;
+    position: relative;
+  }
+
+  .creeper-svg { animation: creeperBob 2s ease-in-out infinite; }
+  @keyframes creeperBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  /* ═══ MAIN CONTAINER ═══ */
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 16px 60px;
+  }
+
+  /* ═══ RELAY STATUS BAR ═══ */
+  .relay-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: rgba(0,0,0,0.4);
+    border: 2px solid #000;
+  }
+
+  .relay-chip {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    padding: 3px 8px;
+    border: 2px solid #000;
+    display: flex; align-items: center; gap: 5px;
+    background: var(--stone-dk);
+    color: var(--cream);
+    transition: background 0.3s;
+  }
+
+  .relay-chip.connected { background: var(--grass-dk); }
+  .relay-chip.error     { background: var(--red); }
+
+  .relay-dot {
+    width: 8px; height: 8px;
+    background: var(--stone);
+    border: 1px solid #000;
+    display: inline-block;
+    animation: dotBlink 1.5s step-end infinite;
+  }
+
+  .relay-chip.connected .relay-dot { background: var(--emerald); animation: none; }
+  .relay-chip.error .relay-dot     { background: var(--red); animation: none; }
+
+  @keyframes dotBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+  /* ═══ CARD ═══ */
+  .card {
+    margin-bottom: 20px;
+  }
+
+  .card-header {
+    background: var(--grass);
+    border: 3px solid #000;
+    border-bottom: none;
+    padding: 8px 16px;
+    box-shadow: inset 0 3px 0 var(--grass-dk);
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .card-header-title {
+    font-size: 10px;
+    color: #fff;
+    text-shadow: 2px 2px 0 var(--grass-dk);
+  }
+
+  .card-body {
+    background: #c6c6c6;
+    border: 3px solid #000;
+    border-top: none;
+    padding: 24px;
+    box-shadow: inset -2px -2px 0 var(--stone-dk), inset 2px 0 0 #e8e8e8;
+  }
+
+  /* ═══ BUTTON ═══ */
+  .mc-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    padding: 12px 20px;
+    border: 3px solid #000;
+    cursor: pointer;
+    transition: transform 0.05s, box-shadow 0.05s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: inline-flex; align-items: center; gap: 8px;
+    position: relative;
+    outline: none;
+  }
+
+  .mc-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000 !important; }
+
+  .mc-btn--green {
+    background: var(--grass);
+    color: #fff;
+    box-shadow: inset -3px -3px 0 var(--grass-dk), inset 2px 2px 0 #7acc3a, 4px 4px 0 #000;
+    text-shadow: 2px 2px 0 var(--grass-dk);
+  }
+
+  .mc-btn--blue {
+    background: var(--sky-dk);
+    color: #fff;
+    box-shadow: inset -3px -3px 0 #1a5ca0, inset 2px 2px 0 #6ab0f5, 4px 4px 0 #000;
+    text-shadow: 2px 2px 0 #1a5ca0;
+  }
+
+  .mc-btn--gold {
+    background: var(--gold);
+    color: var(--coal);
+    box-shadow: inset -3px -3px 0 #c49a00, inset 2px 2px 0 #ffe066, 4px 4px 0 #000;
+    text-shadow: 1px 1px 0 #c49a00;
+  }
+
+  .mc-btn--red {
+    background: var(--red);
+    color: #fff;
+    box-shadow: inset -3px -3px 0 #8a0000, inset 2px 2px 0 #ff6666, 4px 4px 0 #000;
+    text-shadow: 2px 2px 0 #8a0000;
+  }
+
+  .mc-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  .mc-btn--full { width: 100%; justify-content: center; }
+
+  /* ═══ DROP ZONE ═══ */
+  .drop-zone {
+    border: 4px dashed var(--stone-dk);
+    background: #9a9a9a;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    position: relative;
+    min-height: 180px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    background: #b8b8b8;
+    border-color: var(--gold);
+    border-style: solid;
+  }
+
+  .drop-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .drop-zone-icon { font-size: 40px; }
+
+  .drop-zone-text {
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    color: var(--coal);
+    text-shadow: 1px 1px 0 #fff;
+  }
+
+  .drop-zone-sub {
+    font-family: 'VT323', monospace;
+    font-size: 15px;
+    color: var(--stone-dk);
+  }
+
+  /* ═══ FILE LIST ═══ */
+  .file-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+
+  .file-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--stone-dk);
+    border: 2px solid #000;
+    padding: 8px 12px;
+    color: var(--cream);
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .file-item-icon { font-size: 20px; flex-shrink: 0; }
+  .file-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-item-size { color: #aaa; font-size: 13px; flex-shrink: 0; }
+
+  .file-item-progress {
+    position: absolute; left: 0; top: 0; height: 100%;
+    background: rgba(93, 158, 41, 0.3);
+    transition: width 0.4s ease;
+    pointer-events: none;
+  }
+
+  .file-item-status { flex-shrink: 0; font-size: 14px; }
+
+  /* ═══ PROFILE BAR ═══ */
+  .profile-bar {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--dirt-dk);
+    border: 3px solid #000;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    box-shadow: 4px 4px 0 #000;
+  }
+
+  .profile-avatar {
+    width: 40px; height: 40px;
+    border: 2px solid #000;
+    background: var(--stone);
+    image-rendering: pixelated;
+    flex-shrink: 0;
+  }
+
+  .profile-info { flex: 1; }
+
+  .profile-name {
+    font-size: 8px;
+    color: var(--gold);
+    text-shadow: 1px 1px 0 #000;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .profile-npub {
+    font-family: 'VT323', monospace;
+    font-size: 13px;
+    color: #aaa;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* ═══ FEED / UPLOADED ═══ */
+  .uploaded-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--stone-dk);
+    border: 2px solid #000;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    color: var(--cream);
+    font-family: 'VT323', monospace;
+    font-size: 15px;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+
+  .uploaded-item-meta { color: #aaa; font-size: 12px; }
+
+  .download-btn {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    padding: 4px 10px;
+    border: 2px solid #000;
+    background: var(--sky-dk);
+    color: #fff;
+    cursor: pointer;
+    margin-left: auto;
+    flex-shrink: 0;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s;
+  }
+
+  .download-btn:hover { background: var(--grass-dk); }
+
+  /* ═══ TOAST ═══ */
+  #toast-container {
+    position: fixed; bottom: 24px; right: 24px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 1000;
+  }
+
+  .toast {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    padding: 10px 16px;
+    border: 3px solid #000;
+    box-shadow: 4px 4px 0 #000;
+    max-width: 320px;
+    animation: toastIn 0.3s ease-out;
+    color: #fff;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .toast--success { background: var(--grass-dk); }
+  .toast--error   { background: var(--red); }
+  .toast--info    { background: var(--sky-dk); }
+
+  @keyframes toastIn {
+    from { transform: translateX(80px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+
+  /* ═══ PROGRESS BAR ═══ */
+  .upload-progress {
+    margin-top: 12px;
+    display: none;
+  }
+
+  .upload-progress.show { display: block; }
+
+  .progress-label {
+    font-size: 8px;
+    color: var(--coal);
+    margin-bottom: 6px;
+    text-shadow: 1px 1px 0 #fff;
+  }
+
+  .progress-track {
+    height: 20px;
+    background: var(--stone-dk);
+    border: 3px solid #000;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--emerald) 0px, var(--emerald) 10px,
+      var(--grass)   10px, var(--grass)   20px
+    );
+    transition: width 0.4s ease;
+    width: 0%;
+    box-shadow: inset 0 4px 0 rgba(255,255,255,0.2);
+  }
+
+  .progress-text {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: #fff;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  /* ═══ SECTION TITLES ═══ */
+  .section-title {
+    font-size: 9px;
+    color: var(--coal);
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1; height: 3px;
+    background: repeating-linear-gradient(90deg, #000 0, #000 4px, transparent 4px, transparent 8px);
+  }
+
+  /* ═══ LOGIN SCREEN ═══ */
+  #login-screen { padding-top: 20px; }
+
+  .login-box {
+    text-align: center;
+    padding: 32px;
+  }
+
+  .login-desc {
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    color: var(--coal);
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .ext-note {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: var(--stone-dk);
+    margin-top: 16px;
+    padding: 10px;
+    background: rgba(0,0,0,0.1);
+    border: 2px solid var(--stone-dk);
+  }
+
+  /* ═══ INVENTORY GRID (decorative) ═══ */
+  .inventory {
+    display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;
+    margin: 20px 0;
+  }
+
+  .inv-slot {
+    width: 44px; height: 44px;
+    background: #8b8b8b;
+    border: 3px solid #000;
+    box-shadow: inset -2px -2px 0 #373737, inset 2px 2px 0 #c8c8c8;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: box-shadow 0.1s;
+  }
+
+  .inv-slot:hover {
+    box-shadow: inset -2px -2px 0 #373737, inset 2px 2px 0 #c8c8c8, 0 0 0 2px var(--gold);
+  }
+
+  /* ═══ HIDDEN ═══ */
+  .hidden { display: none !important; }
+
+  /* ═══ FOOTER ═══ */
+  footer {
+    text-align: center;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: rgba(0,0,0,0.5);
+    padding: 20px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 12px; }
+  ::-webkit-scrollbar-track { background: var(--stone-dk); }
+  ::-webkit-scrollbar-thumb { background: var(--stone); border: 2px solid #000; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-block">
+    <div class="logo-title">
+      <svg class="creeper-svg" style="width:40px;height:40px;vertical-align:middle;margin-right:8px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+        <rect width="16" height="16" fill="#3a7d44"/>
+        <rect x="4" y="3" width="2" height="2" fill="#000"/>
+        <rect x="10" y="3" width="2" height="2" fill="#000"/>
+        <rect x="5" y="6" width="6" height="1" fill="#000"/>
+        <rect x="5" y="7" width="2" height="2" fill="#000"/>
+        <rect x="9" y="7" width="2" height="2" fill="#000"/>
+        <rect x="6" y="8" width="4" height="1" fill="#000"/>
+        <rect x="6" y="9" width="1" height="2" fill="#000"/>
+        <rect x="9" y="9" width="1" height="2" fill="#000"/>
+      </svg>
+      StructureVault
+    </div>
+    <div class="logo-sub">[ Nostr × Minecraft Structure Storage ]</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- RELAY STATUS -->
+  <div class="relay-bar" id="relay-bar">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen">
+    <div class="card">
+      <div class="card-header">
+        <span>🔑</span>
+        <span class="card-header-title">Connect Your Identity</span>
+      </div>
+      <div class="card-body login-box">
+        <div class="inventory">
+          <div class="inv-slot" title="Grass Block">🟩</div>
+          <div class="inv-slot" title="Diamond">💎</div>
+          <div class="inv-slot" title="Structure Block">🧱</div>
+          <div class="inv-slot" title="Nostr Key">🔑</div>
+          <div class="inv-slot" title="Chest">📦</div>
+        </div>
+        <div class="login-desc">
+          Sign in with your Nostr identity to upload<br>
+          .mcstructure files across decentralised relays.<br>
+          Your builds, your keys, your world.
+        </div>
+        <button class="mc-btn mc-btn--gold mc-btn--full" onclick="loginWithNostr()" id="login-btn">
+          ⚡ Connect with Nostr
+        </button>
+        <div class="ext-note" id="ext-note">
+          Requires a NIP-07 browser extension<br>
+          (Alby, nos2x, Flamingo, etc.)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP (hidden until login) -->
+  <div id="app-screen" class="hidden">
+
+    <!-- PROFILE -->
+    <div class="profile-bar" id="profile-bar">
+      <img class="profile-avatar" id="profile-avatar" src="" alt="avatar">
+      <div class="profile-info">
+        <div class="profile-name" id="profile-name">Loading...</div>
+        <div class="profile-npub" id="profile-npub"></div>
+      </div>
+      <button class="mc-btn mc-btn--red" onclick="logout()" style="font-size:7px;padding:8px 12px;">
+        ✕ Logout
+      </button>
+    </div>
+
+    <!-- UPLOAD CARD -->
+    <div class="card">
+      <div class="card-header">
+        <span>📦</span>
+        <span class="card-header-title">Upload Structure Files</span>
+      </div>
+      <div class="card-body">
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" multiple accept=".mcstructure">
+          <div class="drop-zone-icon">🧱</div>
+          <div class="drop-zone-text">Drop .mcstructure files here</div>
+          <div class="drop-zone-sub">or click to browse your chest</div>
+        </div>
+
+        <div class="file-list" id="file-list"></div>
+
+        <div class="upload-progress" id="upload-progress">
+          <div class="progress-label">Publishing to relays...</div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+            <div class="progress-text" id="progress-text">0%</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="mc-btn mc-btn--green" onclick="uploadFiles()" id="upload-btn" disabled>
+            ⚡ Publish to Relays
+          </button>
+          <button class="mc-btn mc-btn--blue" onclick="clearFiles()" id="clear-btn" disabled>
+            🗑 Clear
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY STRUCTURES -->
+    <div class="card">
+      <div class="card-header">
+        <span>📚</span>
+        <span class="card-header-title">My Structures</span>
+      </div>
+      <div class="card-body">
+        <div class="section-title">Fetching from relays</div>
+        <div id="uploaded-list">
+          <div style="font-family:'VT323',monospace;font-size:18px;color:#555;text-align:center;padding:20px;">
+            No structures found yet. Start uploading!
+          </div>
+        </div>
+        <button class="mc-btn mc-btn--blue" onclick="fetchMyStructures()" style="margin-top:12px;">
+          🔄 Refresh
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  StructureVault v1.0 • Built on Nostr • Your keys, your builds ⚡
+</footer>
+
+<div id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════
+const RELAYS = [
+  'wss://relay.damus.io',
+  'wss://relay.nostr.band',
+  'wss://nos.lol',
+  'wss://relay.primal.net',
+  'wss://nostr.mom',
+  'wss://relay.snort.social',
+];
+
+const STRUCTURE_KIND = 30078; // NIP-78 app data (replaceable, with 'd' tag)
+// We'll use kind 1063 (file metadata) conceptually but store as kind 30078 for app-specific data
+
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let pubkey = null;
+let profile = {};
+let pendingFiles = [];
+let relayConnections = {};
+
+// ═══════════════════════════════════════
+//  RELAY UI
+// ═══════════════════════════════════════
+function renderRelayBar() {
+  const bar = document.getElementById('relay-bar');
+  bar.innerHTML = RELAYS.map(r => {
+    const host = r.replace('wss://', '').replace('ws://', '');
+    const state = relayConnections[r] || 'connecting';
+    return `<div class="relay-chip ${state === 'connected' ? 'connected' : state === 'error' ? 'error' : ''}" id="rc-${btoa(r).replace(/=/g,'')}">
+      <span class="relay-dot"></span>
+      <span>${host}</span>
+    </div>`;
+  }).join('');
+}
+
+function setRelayState(url, state) {
+  relayConnections[url] = state;
+  renderRelayBar();
+}
+
+// ═══════════════════════════════════════
+//  WEBSOCKET POOL
+// ═══════════════════════════════════════
+const sockets = {};
+
+function connectRelay(url) {
+  if (sockets[url] && sockets[url].readyState <= 1) return;
+  try {
+    const ws = new WebSocket(url);
+    sockets[url] = ws;
+    setRelayState(url, 'connecting');
+    ws.onopen = () => setRelayState(url, 'connected');
+    ws.onerror = () => setRelayState(url, 'error');
+    ws.onclose = () => {
+      setRelayState(url, 'error');
+      setTimeout(() => connectRelay(url), 5000);
+    };
+  } catch(e) {
+    setRelayState(url, 'error');
+  }
+}
+
+function connectAllRelays() {
+  RELAYS.forEach(connectRelay);
+}
+
+function publishToRelay(url, event) {
+  return new Promise((resolve, reject) => {
+    let ws = sockets[url];
+    const send = () => {
+      const msg = JSON.stringify(['EVENT', event]);
+      try { ws.send(msg); } catch(e) { return reject(e); }
+      const timeout = setTimeout(() => reject(new Error('timeout')), 8000);
+      const handler = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data[0] === 'OK' && data[1] === event.id) {
+            clearTimeout(timeout);
+            ws.removeEventListener('message', handler);
+            resolve(data[2]);
+          }
+        } catch {}
+      };
+      ws.addEventListener('message', handler);
+    };
+    if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+      const newWs = new WebSocket(url);
+      sockets[url] = newWs;
+      newWs.onopen = () => { setRelayState(url, 'connected'); ws = newWs; send(); };
+      newWs.onerror = () => { setRelayState(url, 'error'); reject(new Error('connection failed')); };
+    } else if (ws.readyState === WebSocket.CONNECTING) {
+      ws.addEventListener('open', () => { setRelayState(url, 'connected'); send(); }, { once: true });
+      ws.addEventListener('error', () => reject(new Error('connection failed')), { once: true });
+    } else {
+      send();
+    }
+  });
+}
+
+function fetchFromRelay(url, filter) {
+  return new Promise((resolve) => {
+    const results = [];
+    let ws;
+    const subId = 'sub_' + Math.random().toString(36).slice(2);
+    const cleanup = () => { try { ws?.close(); } catch {} };
+
+    try {
+      ws = new WebSocket(url);
+    } catch(e) { resolve([]); return; }
+
+    const timeout = setTimeout(() => { cleanup(); resolve(results); }, 6000);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify(['REQ', subId, filter]));
+    };
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data[0] === 'EVENT' && data[1] === subId) results.push(data[2]);
+        if (data[0] === 'EOSE') { clearTimeout(timeout); cleanup(); resolve(results); }
+      } catch {}
+    };
+    ws.onerror = () => { clearTimeout(timeout); resolve(results); };
+    ws.onclose = () => { clearTimeout(timeout); resolve(results); };
+  });
+}
+
+// ═══════════════════════════════════════
+//  NOSTR CRYPTO
+// ═══════════════════════════════════════
+async function signEvent(event) {
+  if (!window.nostr) throw new Error('No NIP-07 extension found');
+  return await window.nostr.signEvent(event);
+}
+
+function getEventHash(event) {
+  const str = JSON.stringify([0, event.pubkey, event.created_at, event.kind, event.tags, event.content]);
+  return bytesToHex(sha256(new TextEncoder().encode(str)));
+}
+
+// Minimal SHA-256 implementation
+async function sha256Async(data) {
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return new Uint8Array(hash);
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ═══════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════
+async function loginWithNostr() {
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Connecting...';
+
+  if (!window.nostr) {
+    toast('No NIP-07 extension found! Install Alby or nos2x.', 'error');
+    document.getElementById('ext-note').style.borderColor = 'var(--red)';
+    btn.disabled = false;
+    btn.textContent = '⚡ Connect with Nostr';
+    return;
+  }
+
+  try {
+    pubkey = await window.nostr.getPublicKey();
+    toast('Connected! Loading your profile...', 'success');
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-screen').classList.remove('hidden');
+
+    // Set placeholder avatar (minecraft-style using robohash)
+    const avatarEl = document.getElementById('profile-avatar');
+    avatarEl.src = `https://robohash.org/${pubkey}?set=set1&size=40x40`;
+
+    const npubShort = pubkey.slice(0, 8) + '...' + pubkey.slice(-8);
+    document.getElementById('profile-npub').textContent = 'npub: ' + npubShort;
+
+    await loadProfile();
+    connectAllRelays();
+    fetchMyStructures();
+  } catch(e) {
+    toast('Login failed: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '⚡ Connect with Nostr';
+  }
+}
+
+async function loadProfile() {
+  try {
+    const events = await fetchFromRelay('wss://relay.damus.io', { kinds: [0], authors: [pubkey], limit: 1 });
+    if (events.length > 0) {
+      profile = JSON.parse(events[0].content);
+      document.getElementById('profile-name').textContent = profile.name || profile.display_name || 'Anonymous Miner';
+      if (profile.picture) document.getElementById('profile-avatar').src = profile.picture;
+    } else {
+      document.getElementById('profile-name').textContent = 'Anonymous Miner';
+    }
+  } catch(e) {
+    document.getElementById('profile-name').textContent = 'Anonymous Miner';
+  }
+}
+
+function logout() {
+  pubkey = null;
+  profile = {};
+  pendingFiles = [];
+  document.getElementById('app-screen').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('file-list').innerHTML = '';
+  document.getElementById('uploaded-list').innerHTML = '<div style="font-family:\'VT323\',monospace;font-size:18px;color:#555;text-align:center;padding:20px;">No structures found yet.</div>';
+  const loginBtn = document.getElementById('login-btn');
+  loginBtn.disabled = false;
+  loginBtn.textContent = '⚡ Connect with Nostr';
+}
+
+// ═══════════════════════════════════════
+//  FILE HANDLING
+// ═══════════════════════════════════════
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  handleFiles(Array.from(e.dataTransfer.files));
+});
+fileInput.addEventListener('change', () => handleFiles(Array.from(fileInput.files)));
+
+function handleFiles(files) {
+  const valid = files.filter(f => f.name.endsWith('.mcstructure') || f.name.endsWith('.nbt'));
+  if (valid.length === 0) { toast('Only .mcstructure files accepted!', 'error'); return; }
+
+  valid.forEach(f => {
+    if (!pendingFiles.find(p => p.name === f.name && p.size === f.size)) {
+      pendingFiles.push(f);
+    }
+  });
+
+  renderFileList();
+  document.getElementById('upload-btn').disabled = false;
+  document.getElementById('clear-btn').disabled = false;
+}
+
+function renderFileList() {
+  const list = document.getElementById('file-list');
+  list.innerHTML = pendingFiles.map((f, i) => `
+    <div class="file-item" id="fi-${i}">
+      <div class="file-item-progress" id="fp-${i}" style="width:0%"></div>
+      <span class="file-item-icon">🧱</span>
+      <span class="file-item-name">${escHtml(f.name)}</span>
+      <span class="file-item-size">${formatBytes(f.size)}</span>
+      <span class="file-item-status" id="fs-${i}">⏳</span>
+    </div>
+  `).join('');
+}
+
+function clearFiles() {
+  pendingFiles = [];
+  fileInput.value = '';
+  document.getElementById('file-list').innerHTML = '';
+  document.getElementById('upload-btn').disabled = true;
+  document.getElementById('clear-btn').disabled = true;
+}
+
+// ═══════════════════════════════════════
+//  UPLOAD (publish to Nostr)
+// ═══════════════════════════════════════
+async function uploadFiles() {
+  if (!pubkey || pendingFiles.length === 0) return;
+
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Publishing...';
+
+  const progressEl = document.getElementById('upload-progress');
+  progressEl.classList.add('show');
+
+  let done = 0;
+  const total = pendingFiles.length;
+
+  for (let i = 0; i < pendingFiles.length; i++) {
+    const file = pendingFiles[i];
+    const statusEl = document.getElementById(`fs-${i}`);
+    const progressBar = document.getElementById(`fp-${i}`);
+
+    statusEl.textContent = '📡';
+    progressBar.style.width = '30%';
+
+    try {
+      // Read file as base64
+      const base64 = await fileToBase64(file);
+      const hash = bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer())));
+
+      // Create Nostr event (kind 1063 - file metadata, with base64 content)
+      const event = {
+        pubkey,
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 1063,
+        tags: [
+          ['name', file.name],
+          ['size', String(file.size)],
+          ['m', 'application/octet-stream'],
+          ['x', hash],
+          ['app', 'structurevault'],
+          ['type', 'mcstructure'],
+        ],
+        content: base64,
+      };
+
+      // Sign the event
+      const signed = await window.nostr.signEvent(event);
+
+      progressBar.style.width = '60%';
+
+      // Publish to all relays
+      const connected = RELAYS.filter(r => relayConnections[r] === 'connected');
+      const targets = connected.length > 0 ? connected : RELAYS.slice(0, 3);
+
+      const results = await Promise.allSettled(targets.map(r => publishToRelay(r, signed)));
+      const successes = results.filter(r => r.status === 'fulfilled').length;
+
+      progressBar.style.width = '100%';
+      statusEl.textContent = successes > 0 ? '✅' : '❌';
+
+      if (successes > 0) {
+        toast(`✅ ${file.name} published to ${successes}/${targets.length} relays`, 'success');
+      } else {
+        toast(`❌ Failed to publish ${file.name}`, 'error');
+      }
+
+    } catch(e) {
+      statusEl.textContent = '❌';
+      toast(`Error: ${e.message}`, 'error');
+    }
+
+    done++;
+    const pct = Math.round((done / total) * 100);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = pct + '%';
+  }
+
+  btn.textContent = '⚡ Publish to Relays';
+  btn.disabled = false;
+  toast('All done! Fetching your structures...', 'info');
+  setTimeout(() => fetchMyStructures(), 1500);
+}
+
+// ═══════════════════════════════════════
+//  FETCH MY STRUCTURES
+// ═══════════════════════════════════════
+async function fetchMyStructures() {
+  if (!pubkey) return;
+  const listEl = document.getElementById('uploaded-list');
+  listEl.innerHTML = '<div style="font-family:\'VT323\',monospace;font-size:18px;color:#555;text-align:center;padding:20px;">⏳ Scanning relays...</div>';
+
+  const filter = { kinds: [1063], authors: [pubkey], '#app': ['structurevault'], limit: 50 };
+
+  // Fetch from multiple relays and deduplicate
+  const allPromises = RELAYS.map(r => fetchFromRelay(r, filter));
+  const allResults = (await Promise.allSettled(allPromises)).flatMap(r => r.status === 'fulfilled' ? r.value : []);
+
+  // Deduplicate by event ID
+  const seen = new Set();
+  const unique = allResults.filter(e => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
+
+  unique.sort((a, b) => b.created_at - a.created_at);
+
+  if (unique.length === 0) {
+    listEl.innerHTML = '<div style="font-family:\'VT323\',monospace;font-size:18px;color:#555;text-align:center;padding:20px;">No structures found yet. Start uploading!</div>';
+    return;
+  }
+
+  listEl.innerHTML = unique.map(ev => {
+    const name = ev.tags.find(t => t[0] === 'name')?.[1] || 'unknown.mcstructure';
+    const size = ev.tags.find(t => t[0] === 'size')?.[1] || '?';
+    const hash = ev.tags.find(t => t[0] === 'x')?.[1] || '';
+    const date = new Date(ev.created_at * 1000).toLocaleDateString();
+    const hashShort = hash ? hash.slice(0,8) + '…' : '';
+
+    // Create download from base64 content
+    const safeId = ev.id.slice(0,8);
+
+    return `<div class="uploaded-item" data-id="${ev.id}">
+      <span style="font-size:20px">🧱</span>
+      <div style="flex:1;min-width:0">
+        <div>${escHtml(name)}</div>
+        <div class="uploaded-item-meta">${date} • ${formatBytes(parseInt(size)||0)} • sha: ${hashShort}</div>
+      </div>
+      <a class="download-btn" onclick="downloadStructure('${ev.id}')" href="#" title="Download">⬇ DL</a>
+    </div>`;
+  }).join('');
+
+  // Store events for download
+  window._structureEvents = {};
+  unique.forEach(ev => { window._structureEvents[ev.id] = ev; });
+}
+
+function downloadStructure(eventId) {
+  const ev = window._structureEvents?.[eventId];
+  if (!ev) { toast('Event not cached', 'error'); return; }
+
+  const name = ev.tags.find(t => t[0] === 'name')?.[1] || 'structure.mcstructure';
+  try {
+    const binary = atob(ev.content);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+    toast(`Downloaded ${name}`, 'success');
+  } catch(e) {
+    toast('Download failed: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B','KB','MB','GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast toast--${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  el.textContent = (icons[type] || '') + ' ' + msg;
+  c.appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'none';
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.4s';
+    setTimeout(() => el.remove(), 400);
+  }, 4000);
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+renderRelayBar();
+connectAllRelays();
+</script>
+</body>
+</html>
