@@ -243,7 +243,14 @@ function parseMCStructure(buf){
   const str=root['structure'];
   if(!str) throw new Error('No "structure" tag.');
   let palette=[];
-  const pt=str['block_palette']??str['palette'];
+  let pt=str['block_palette'];
+  if(!pt && str['palette']) {
+    if(str['palette']['default'] && str['palette']['default']['block_palette']) {
+      pt = str['palette']['default']['block_palette'];
+    } else {
+      pt = str['palette'];
+    }
+  }
   if(pt){
     const pa=pt._list?pt.value:(Array.isArray(pt)?pt:[]);
     palette=pa.map(e=>{const n=e['name']??e['Name']??'minecraft:stone';return typeof n==='string'?n:'minecraft:stone';});
