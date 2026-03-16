@@ -9,8 +9,8 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap');
     :root {
-      --soil:#3d2b1f; --bark:#5c3d2e; --moss:#4a6741; --leaf:#6b9e5e;
-      --stone:#8a8070; --sand:#c8a96e; --cream:#f0e6c8; --ember:#c8652a; --gold:#d4a843;
+      --soil:#1a2b25; --bark:#243b35; --moss:#3d6b55; --leaf:#4a8a65;
+      --stone:#6b7c75; --sand:#8ba398; --cream:#e0ede5; --ember:#357a8a; --gold:#5cb0a2;
     }
     * { box-sizing:border-box; margin:0; padding:0; }
 
@@ -78,8 +78,8 @@
     .nav-hint { font-size:0.75rem; color:var(--stone); letter-spacing:1px; text-transform:uppercase; }
 
     .hero {
-      background: radial-gradient(ellipse at 20% 80%,rgba(74,103,65,.3),transparent 60%),
-                  radial-gradient(ellipse at 80% 20%,rgba(100,60,30,.3),transparent 60%),
+      background: radial-gradient(ellipse at 20% 80%,rgba(61,107,85,.3),transparent 60%),
+                  radial-gradient(ellipse at 80% 20%,rgba(53,122,138,.2),transparent 60%),
                   var(--soil);
       padding:56px 40px 40px; text-align:center;
     }
@@ -136,22 +136,24 @@
   vr-mode-ui="enabled:false"
   loading-screen="enabled:false"
   renderer="antialias:true"
-  fog="type:exponential; color:#7ab3c8; density:0.013">
+  fog="type:exponential; color:#82b3a8; density:0.013">
 
-  <a-sky color="#7ab3c8"></a-sky>
-  <a-light type="ambient"     color="#d8c8a0" intensity="0.7"></a-light>
-  <a-light type="directional" color="#fff8e8" intensity="1.1" position="3 8 3"></a-light>
+  <a-sky color="#82b3a8"></a-sky>
+  <a-light type="ambient"     color="#b8cfc8" intensity="0.7"></a-light>
+  <a-light type="directional" color="#d3e8e2" intensity="1.1" position="3 8 3"></a-light>
   <a-plane id="ground" rotation="-90 0 0" width="500" height="500"
-    color="#3a2210" material="roughness:1;metalness:0" position="0 -0.05 0"></a-plane>
+    color="#1a2b25" material="roughness:1;metalness:0" position="0 -0.05 0"></a-plane>
 
   <a-entity id="structure-root"></a-entity>
 
-  <a-entity id="rig" position="0 5 20" wasd-controls="acceleration:18;fly:false">
-    <a-camera look-controls="pointerLockEnabled:true" wasd-controls="enabled:false" fov="75"
-      rotation="-10 0 0">
-      <a-ring color="#fff" radius-inner="0.007" radius-outer="0.013"
-        position="0 0 -0.6" material="shader:flat;opacity:0.5"></a-ring>
-    </a-camera>
+  <a-entity id="orbit-pivot">
+    <a-entity id="rig" position="0 5 20" wasd-controls="acceleration:18;fly:false">
+      <a-camera look-controls="pointerLockEnabled:true" wasd-controls="enabled:false" fov="75"
+        rotation="-10 0 0">
+        <a-ring color="#fff" radius-inner="0.007" radius-outer="0.013"
+          position="0 0 -0.6" material="shader:flat;opacity:0.5"></a-ring>
+      </a-camera>
+    </a-entity>
   </a-entity>
 
 </a-scene>
@@ -347,9 +349,9 @@ function populateScene(sd,name){
     if(pidx<0||pidx>=palette.length)continue;
     const color=blockColor(palette[pidx]);
     if(!color)continue;
-    const bx=i%sX;
-    const by=Math.floor(i/(sX*sZ));
-    const bz=Math.floor((i%(sX*sZ))/sX);
+    const bx=Math.floor(i/(sY*sZ));
+    const by=Math.floor((i%(sY*sZ))/sZ);
+    const bz=i%sZ;
     blocks.push({bx,by,bz,color});
   }
   const step=Math.max(1,Math.ceil(blocks.length/MAX_BLOCKS));
@@ -372,8 +374,24 @@ function populateScene(sd,name){
   document.getElementById('viewer-title').textContent=`${name}  ·  ${sX}×${sY}×${sZ}  ·  ${rendered.toLocaleString()} blocks`;
 }
 
-/* ══════════════ OPEN / CLOSE ══════════════ */
+/* ══════════════ OPEN / CLOSE & ORBIT ══════════════ */
 let flyMode=false, hintTimer=null;
+let orbitActive=false, orbitAngle=0, orbitRaf=null;
+
+function startOrbit(){
+  orbitActive=true; orbitAngle=0; cancelAnimationFrame(orbitRaf);
+  function loop(){
+    if(!orbitActive)return;
+    orbitAngle-=0.15;
+    document.getElementById('orbit-pivot').setAttribute('rotation', `0 ${orbitAngle} 0`);
+    orbitRaf=requestAnimationFrame(loop);
+  }
+  loop();
+}
+function stopOrbit(){ orbitActive=false; cancelAnimationFrame(orbitRaf); }
+
+document.addEventListener('mousedown', ()=>{ if(document.getElementById('viewer-ui').classList.contains('active')) stopOrbit(); });
+document.addEventListener('keydown', (e)=>{ if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) stopOrbit(); });
 
 function openViewer(sd,name){
   document.getElementById('landing').classList.add('hidden');
@@ -383,8 +401,11 @@ function openViewer(sd,name){
   hint.classList.remove('fade');
   clearTimeout(hintTimer);
   hintTimer=setTimeout(()=>hint.classList.add('fade'),6000);
+  startOrbit();
 }
 function closeViewer(){
+  stopOrbit();
+  document.getElementById('orbit-pivot').setAttribute('rotation','0 0 0');
   document.getElementById('landing').classList.remove('hidden');
   document.getElementById('viewer-ui').classList.remove('active');
   const root=document.getElementById('structure-root');
@@ -396,7 +417,11 @@ function closeViewer(){
   if(document.pointerLockElement) document.exitPointerLock();
 }
 function resetCam(){
+  document.getElementById('orbit-pivot').setAttribute('rotation','0 0 0');
   document.getElementById('rig').setAttribute('position','0 5 20');
+  const cam = document.querySelector('a-camera').components['look-controls'];
+  if(cam){ cam.pitchObject.rotation.x = -10*Math.PI/180; cam.yawObject.rotation.y = 0; }
+  startOrbit();
 }
 function toggleFly(){
   flyMode=!flyMode;
@@ -442,7 +467,7 @@ function makeStruct(sX,sY,sZ,fn){
   const indices=new Array(sX*sY*sZ).fill(0);
   const palette=['minecraft:air'];
   function id(n){let i=palette.indexOf(n);if(i<0){i=palette.length;palette.push(n);}return i;}
-  function set(x,y,z,b){if(x<0||y<0||z<0||x>=sX||y>=sY||z>=sZ)return;indices[y*(sX*sZ)+z*sX+x]=id(b);}
+  function set(x,y,z,b){if(x<0||y<0||z<0||x>=sX||y>=sY||z>=sZ)return;indices[x*(sY*sZ)+y*sZ+z]=id(b);}
   fn(set,sX,sY,sZ);
   return{sX,sY,sZ,palette,indices};
 }
@@ -498,7 +523,7 @@ function drawMini(canvas,{sX,sY,sZ,palette,indices}){
   for(let x=0;x<sX;x++)for(let z=0;z<sZ;z++){
     let col=null;
     for(let y=sY-1;y>=0;y--){
-      const i=y*(sX*sZ)+z*sX+x;
+      const i=x*(sY*sZ)+y*sZ+z;
       if(i<indices.length){col=blockColor(palette[Number(indices[i])]);if(col)break;}
     }
     if(!col)continue;
