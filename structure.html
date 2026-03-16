@@ -1,1349 +1,515 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Structure Forge — Minecraft .mcstructure Viewer</title>
-
-  <!-- A-Frame -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
-
-  <!-- pako for zlib (NBT uses it) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Structure Forge — Minecraft Viewer</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap');
-
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap');
     :root {
-      --soil:    #3d2b1f;
-      --bark:    #5c3d2e;
-      --moss:    #4a6741;
-      --leaf:    #6b9e5e;
-      --stone:   #8a8070;
-      --sand:    #c8a96e;
-      --cream:   #f0e6c8;
-      --sky:     #7ab3c8;
-      --ember:   #c8652a;
-      --gold:    #d4a843;
+      --soil:#3d2b1f; --bark:#5c3d2e; --moss:#4a6741; --leaf:#6b9e5e;
+      --stone:#8a8070; --sand:#c8a96e; --cream:#f0e6c8; --ember:#c8652a; --gold:#d4a843;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+
+    /* A-Frame renders full page by default — we overlay everything on top */
+
+    /* ── LANDING: full-screen overlay on top of A-Frame ── */
+    #landing {
+      position:fixed; inset:0; z-index:100;
+      background:var(--soil);
+      overflow-y:auto;
+      transition:opacity 0.3s;
+    }
+    #landing.hidden {
+      opacity:0;
+      pointer-events:none;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--soil);
-      font-family: 'Lato', sans-serif;
-      color: var(--cream);
-      min-height: 100vh;
-      overflow-x: hidden;
+    /* ── VIEWER UI: shown when viewer is active ── */
+    #viewer-ui {
+      display:none;
+      position:fixed; inset:0; z-index:50;
+      pointer-events:none; /* let clicks pass through to A-Frame canvas */
     }
-
-    /* ─── LANDING / SHELL ─── */
-    #shell {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* ─── HEADER ─── */
-    header {
-      background: linear-gradient(180deg, #1a0f08 0%, var(--bark) 100%);
-      border-bottom: 3px solid var(--moss);
-      padding: 18px 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: relative;
-      z-index: 100;
-    }
-
-    .logo {
-      font-family: 'Cinzel', serif;
-      font-size: 1.6rem;
-      font-weight: 700;
-      letter-spacing: 2px;
-      color: var(--gold);
-      text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
-    }
-
-    .logo span {
-      color: var(--leaf);
-      font-weight: 400;
-    }
-
-    .nav-hint {
-      font-size: 0.75rem;
-      color: var(--stone);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    /* ─── HERO ─── */
-    .hero {
-      background:
-        radial-gradient(ellipse at 20% 80%, rgba(74,103,65,0.3) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 20%, rgba(100,60,30,0.3) 0%, transparent 60%),
-        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%235c3d2e' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
-        var(--soil);
-      padding: 60px 40px 40px;
-      text-align: center;
-    }
-
-    .hero h1 {
-      font-family: 'Cinzel', serif;
-      font-size: clamp(2rem, 5vw, 3.5rem);
-      color: var(--gold);
-      text-shadow: 3px 3px 12px rgba(0,0,0,0.7);
-      margin-bottom: 12px;
-      line-height: 1.2;
-    }
-
-    .hero p {
-      color: var(--sand);
-      font-size: 1.05rem;
-      max-width: 520px;
-      margin: 0 auto 40px;
-      line-height: 1.7;
-      font-weight: 300;
-    }
-
-    /* ─── UPLOAD ZONE ─── */
-    .upload-zone {
-      max-width: 520px;
-      margin: 0 auto;
-      border: 2px dashed var(--moss);
-      border-radius: 8px;
-      padding: 40px 30px;
-      background: rgba(255,255,255,0.04);
-      cursor: pointer;
-      transition: all 0.25s;
-      position: relative;
-    }
-
-    .upload-zone:hover,
-    .upload-zone.drag-over {
-      border-color: var(--gold);
-      background: rgba(212,168,67,0.08);
-      transform: translateY(-2px);
-    }
-
-    .upload-zone input[type=file] {
-      position: absolute; inset: 0;
-      opacity: 0; cursor: pointer; width: 100%; height: 100%;
-    }
-
-    .upload-icon {
-      font-size: 3rem;
-      margin-bottom: 14px;
-    }
-
-    .upload-zone h3 {
-      font-family: 'Cinzel', serif;
-      color: var(--cream);
-      margin-bottom: 8px;
-    }
-
-    .upload-zone p {
-      color: var(--stone);
-      font-size: 0.85rem;
-      margin: 0;
-    }
-
-    /* ─── GALLERY ─── */
-    .gallery-section {
-      padding: 50px 40px;
-      max-width: 1100px;
-      margin: 0 auto;
-      width: 100%;
-    }
-
-    .section-title {
-      font-family: 'Cinzel', serif;
-      color: var(--gold);
-      font-size: 1.3rem;
-      letter-spacing: 2px;
-      margin-bottom: 28px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(90deg, var(--moss), transparent);
-    }
-
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 20px;
-    }
-
-    .gallery-card {
-      background: linear-gradient(145deg, var(--bark), #3a2518);
-      border: 1px solid var(--moss);
-      border-radius: 6px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: all 0.25s;
-      position: relative;
-    }
-
-    .gallery-card:hover {
-      border-color: var(--gold);
-      transform: translateY(-4px);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
-    }
-
-    .card-preview {
-      width: 100%;
-      height: 150px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 4rem;
-      background: linear-gradient(135deg, #1a0f08 0%, #2d1f12 100%);
-      position: relative;
-      overflow: hidden;
-    }
-
-    /* mini voxel art preview per card */
-    .card-preview canvas {
-      image-rendering: pixelated;
-    }
-
-    .card-info {
-      padding: 14px 16px;
-    }
-
-    .card-info h4 {
-      font-family: 'Cinzel', serif;
-      color: var(--cream);
-      font-size: 0.95rem;
-      margin-bottom: 4px;
-    }
-
-    .card-info p {
-      color: var(--stone);
-      font-size: 0.78rem;
-    }
-
-    .card-badge {
-      position: absolute;
-      top: 10px; right: 10px;
-      background: var(--moss);
-      color: var(--cream);
-      font-size: 0.65rem;
-      padding: 3px 8px;
-      border-radius: 20px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    /* ─── VIEWER OVERLAY ─── */
-    #viewer-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 1000;
-      flex-direction: column;
-    }
-
-    #viewer-overlay.active { display: flex; }
+    #viewer-ui.active { display:block; }
 
     #viewer-bar {
-      background: linear-gradient(180deg, rgba(15,8,3,0.95) 0%, rgba(40,25,15,0.9) 100%);
-      border-bottom: 2px solid var(--moss);
-      padding: 12px 24px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      z-index: 1001;
-      flex-shrink: 0;
+      pointer-events:all;
+      position:absolute; top:0; left:0; right:0; height:52px;
+      background:rgba(15,8,3,0.92);
+      border-bottom:2px solid var(--moss);
+      display:flex; align-items:center; gap:12px; padding:0 20px;
     }
-
     #viewer-title {
-      font-family: 'Cinzel', serif;
-      color: var(--gold);
-      font-size: 1.1rem;
-      flex: 1;
+      font-family:'Cinzel',serif; color:var(--gold); font-size:0.95rem;
+      flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     }
-
-    .viewer-btn {
-      background: var(--moss);
-      color: var(--cream);
-      border: none;
-      padding: 8px 18px;
-      border-radius: 4px;
-      font-family: 'Lato', sans-serif;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: background 0.2s;
+    .vbtn {
+      background:var(--moss); color:var(--cream); border:none;
+      padding:6px 14px; border-radius:4px; font-size:0.8rem;
+      font-family:'Lato',sans-serif; cursor:pointer; white-space:nowrap;
+      transition:background 0.15s;
     }
-    .viewer-btn:hover { background: var(--leaf); }
-    .viewer-btn.danger { background: var(--bark); }
-    .viewer-btn.danger:hover { background: var(--ember); }
+    .vbtn:hover { background:var(--leaf); }
+    .vbtn.red { background:#6a2010; }
+    .vbtn.red:hover { background:var(--ember); }
 
-    #aframe-container {
-      flex: 1;
-      position: relative;
-    }
-
-    #aframe-container a-scene {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* ─── CONTROLS HINT ─── */
     #controls-hint {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(15,8,3,0.8);
-      border: 1px solid var(--moss);
-      border-radius: 6px;
-      padding: 10px 20px;
-      font-size: 0.78rem;
-      color: var(--sand);
-      letter-spacing: 0.5px;
-      white-space: nowrap;
-      z-index: 10;
-      pointer-events: none;
-      animation: fadeHint 5s forwards;
-      animation-delay: 2s;
+      pointer-events:none;
+      position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+      background:rgba(15,8,3,0.85); border:1px solid var(--moss);
+      border-radius:6px; padding:9px 18px; font-size:0.75rem; color:var(--sand);
+      white-space:nowrap; font-family:'Lato',sans-serif;
+      opacity:1; transition:opacity 1.5s;
     }
+    #controls-hint.fade { opacity:0; }
 
-    @keyframes fadeHint {
-      0% { opacity: 1; }
-      80% { opacity: 1; }
-      100% { opacity: 0; }
+    /* ── LANDING STYLES ── */
+    header {
+      background:linear-gradient(180deg,#1a0f08,var(--bark));
+      border-bottom:3px solid var(--moss);
+      padding:16px 40px; display:flex; align-items:center; justify-content:space-between;
     }
+    .logo { font-family:'Cinzel',serif; font-size:1.5rem; font-weight:700; letter-spacing:2px; color:var(--gold); }
+    .logo span { color:var(--leaf); font-weight:400; }
+    .nav-hint { font-size:0.75rem; color:var(--stone); letter-spacing:1px; text-transform:uppercase; }
 
-    /* ─── LOADING ─── */
-    #loading-screen {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(26, 15, 8, 0.95);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 20px;
+    .hero {
+      background: radial-gradient(ellipse at 20% 80%,rgba(74,103,65,.3),transparent 60%),
+                  radial-gradient(ellipse at 80% 20%,rgba(100,60,30,.3),transparent 60%),
+                  var(--soil);
+      padding:56px 40px 40px; text-align:center;
     }
-
-    #loading-screen.active { display: flex; }
-
-    .loading-bar-wrap {
-      width: 260px;
-      height: 6px;
-      background: var(--bark);
-      border-radius: 3px;
-      overflow: hidden;
+    .hero h1 {
+      font-family:'Cinzel',serif; font-size:clamp(1.8rem,4vw,3rem); color:var(--gold);
+      text-shadow:2px 2px 10px rgba(0,0,0,.7); margin-bottom:12px;
     }
+    .hero p { color:var(--sand); font-size:1rem; max-width:480px; margin:0 auto 36px; line-height:1.7; font-weight:300; }
 
-    .loading-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--moss), var(--gold));
-      width: 0%;
-      transition: width 0.3s;
+    .upload-zone {
+      max-width:480px; margin:0 auto; border:2px dashed var(--moss); border-radius:8px;
+      padding:36px 28px; background:rgba(255,255,255,.04); cursor:pointer;
+      transition:all .2s; position:relative;
     }
+    .upload-zone:hover, .upload-zone.drag-over { border-color:var(--gold); background:rgba(212,168,67,.08); transform:translateY(-2px); }
+    .upload-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+    .upload-icon { font-size:2.8rem; margin-bottom:12px; }
+    .upload-zone h3 { font-family:'Cinzel',serif; color:var(--cream); margin-bottom:6px; }
+    .upload-zone p { color:var(--stone); font-size:0.83rem; margin:0; }
 
-    #loading-text {
-      font-family: 'Cinzel', serif;
-      color: var(--sand);
-      font-size: 0.9rem;
-      letter-spacing: 2px;
+    .gallery-section { padding:46px 40px; max-width:1080px; margin:0 auto; }
+    .section-title {
+      font-family:'Cinzel',serif; color:var(--gold); font-size:1.2rem; letter-spacing:2px;
+      margin-bottom:24px; display:flex; align-items:center; gap:16px;
     }
+    .section-title::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--moss),transparent); }
+    .gallery-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:18px; }
+    .gallery-card {
+      background:linear-gradient(145deg,var(--bark),#3a2518); border:1px solid var(--moss);
+      border-radius:6px; overflow:hidden; cursor:pointer; transition:all .22s;
+    }
+    .gallery-card:hover { border-color:var(--gold); transform:translateY(-4px); box-shadow:0 12px 28px rgba(0,0,0,.5); }
+    .card-preview { width:100%; height:140px; display:flex; align-items:center; justify-content:center; background:#1a0f08; position:relative; }
+    .card-preview canvas { image-rendering:pixelated; }
+    .card-badge { position:absolute; top:8px; right:8px; background:var(--moss); color:var(--cream); font-size:0.62rem; padding:2px 7px; border-radius:20px; letter-spacing:1px; text-transform:uppercase; }
+    .card-info { padding:12px 14px; }
+    .card-info h4 { font-family:'Cinzel',serif; color:var(--cream); font-size:0.9rem; margin-bottom:3px; }
+    .card-info p { color:var(--stone); font-size:0.76rem; }
+    footer { text-align:center; padding:22px; color:var(--stone); font-size:0.76rem; border-top:1px solid var(--bark); }
 
-    /* ─── ERROR TOAST ─── */
-    #toast {
-      display: none;
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #4a1a0a;
-      border: 1px solid var(--ember);
-      color: var(--cream);
-      padding: 14px 28px;
-      border-radius: 6px;
-      font-size: 0.88rem;
-      z-index: 3000;
-      max-width: 400px;
-      text-align: center;
-    }
-
-    /* ─── FOOTER ─── */
-    footer {
-      text-align: center;
-      padding: 24px;
-      color: var(--stone);
-      font-size: 0.78rem;
-      border-top: 1px solid var(--bark);
-      margin-top: auto;
-    }
-
-    /* ─── DEMO VOXEL PREVIEW ─── */
-    .pixel-preview {
-      image-rendering: pixelated;
-      width: 80px;
-      height: 80px;
-    }
+    /* ── LOADING + TOAST ── */
+    #loading { display:none; position:fixed; inset:0; background:rgba(20,10,5,.95); z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:18px; }
+    #loading.on { display:flex; }
+    .lbar-wrap { width:240px; height:5px; background:var(--bark); border-radius:3px; overflow:hidden; }
+    .lbar { height:100%; background:linear-gradient(90deg,var(--moss),var(--gold)); width:0%; transition:width .25s; }
+    #ltext { font-family:'Cinzel',serif; color:var(--sand); font-size:0.88rem; letter-spacing:2px; }
+    #toast { display:none; position:fixed; bottom:28px; left:50%; transform:translateX(-50%); background:#4a1a0a; border:1px solid var(--ember); color:var(--cream); padding:12px 26px; border-radius:6px; font-size:0.86rem; z-index:9999; max-width:400px; text-align:center; }
   </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════ LOADING ═══════════════════════════ -->
-<div id="loading-screen">
-  <div id="loading-text">EXCAVATING STRUCTURE…</div>
-  <div class="loading-bar-wrap">
-    <div class="loading-bar" id="loading-bar"></div>
-  </div>
-</div>
+<!-- A-FRAME: full page, no embedded — this is the ONLY reliable way -->
+<a-scene
+  vr-mode-ui="enabled:false"
+  loading-screen="enabled:false"
+  renderer="antialias:true"
+  fog="type:exponential; color:#7ab3c8; density:0.013">
 
-<!-- ═══════════════════════════ TOAST ═══════════════════════════ -->
-<div id="toast"></div>
+  <a-sky color="#7ab3c8"></a-sky>
+  <a-light type="ambient"     color="#d8c8a0" intensity="0.7"></a-light>
+  <a-light type="directional" color="#fff8e8" intensity="1.1" position="3 8 3"></a-light>
+  <a-plane id="ground" rotation="-90 0 0" width="500" height="500"
+    color="#3a2210" material="roughness:1;metalness:0" position="0 -0.05 0"></a-plane>
 
-<!-- ═══════════════════════════ VIEWER ═══════════════════════════ -->
-<div id="viewer-overlay">
+  <a-entity id="structure-root"></a-entity>
+
+  <a-entity id="rig" position="0 5 20" wasd-controls="acceleration:18;fly:false">
+    <a-camera look-controls="pointerLockEnabled:true" wasd-controls="enabled:false" fov="75"
+      rotation="-10 0 0">
+      <a-ring color="#fff" radius-inner="0.007" radius-outer="0.013"
+        position="0 0 -0.6" material="shader:flat;opacity:0.5"></a-ring>
+    </a-camera>
+  </a-entity>
+
+</a-scene>
+
+<!-- VIEWER UI (overlaid, pointer-events only on bar) -->
+<div id="viewer-ui">
   <div id="viewer-bar">
     <span id="viewer-title">Structure</span>
-    <button class="viewer-btn" onclick="toggleFly()">🚶 Toggle Fly</button>
-    <button class="viewer-btn" onclick="resetCamera()">🧭 Reset View</button>
-    <button class="viewer-btn danger" onclick="closeViewer()">✕ Close</button>
+    <button class="vbtn" id="fly-btn" onclick="toggleFly()">🪂 Fly: OFF</button>
+    <button class="vbtn" onclick="resetCam()">🧭 Reset</button>
+    <button class="vbtn red" onclick="closeViewer()">✕ Close</button>
   </div>
-  <div id="aframe-container">
-    <!-- A-Frame scene injected here -->
-    <div id="controls-hint">WASD / Arrow keys to move &nbsp;|&nbsp; Mouse to look &nbsp;|&nbsp; Click scene to lock pointer</div>
-  </div>
+  <div id="controls-hint">WASD / Arrows — move &nbsp;|&nbsp; Mouse — look (click to lock pointer) &nbsp;|&nbsp; Space — jump</div>
 </div>
 
-<!-- ═══════════════════════════ MAIN SHELL ═══════════════════════════ -->
-<div id="shell">
+<!-- LANDING PAGE (sits over A-Frame, hidden when viewing) -->
+<div id="landing">
   <header>
     <div class="logo">Structure <span>Forge</span></div>
     <div class="nav-hint">Minecraft .mcstructure Viewer</div>
   </header>
-
-  <!-- HERO / UPLOAD -->
   <div class="hero">
     <h1>Walk Through Your<br>Minecraft Creations</h1>
-    <p>Upload any <strong>.mcstructure</strong> file from Bedrock Edition and explore it in first-person 3D right in your browser — no mods, no installs.</p>
-
+    <p>Upload any <strong>.mcstructure</strong> file from Bedrock Edition and explore it in first-person 3D — right in your browser.</p>
     <div class="upload-zone" id="upload-zone">
-      <input type="file" id="file-input" accept=".mcstructure" />
+      <input type="file" id="file-input" accept=".mcstructure,.nbt"/>
       <div class="upload-icon">🧱</div>
       <h3>Drop your .mcstructure here</h3>
-      <p>or click to browse · Bedrock Edition only</p>
+      <p>or click to browse &nbsp;·&nbsp; Bedrock Edition</p>
     </div>
   </div>
-
-  <!-- GALLERY -->
   <div class="gallery-section">
     <div class="section-title">Example Structures</div>
-    <div class="gallery-grid" id="gallery-grid">
-      <!-- Cards injected by JS -->
-    </div>
+    <div class="gallery-grid" id="gallery-grid"></div>
   </div>
-
-  <footer>Structure Forge &nbsp;·&nbsp; Built with A-Frame &nbsp;·&nbsp; Minecraft is a trademark of Mojang / Microsoft</footer>
+  <footer>Structure Forge &nbsp;·&nbsp; A-Frame &nbsp;·&nbsp; Minecraft is a trademark of Mojang / Microsoft</footer>
 </div>
 
-<!-- ═══════════════════════════ SCRIPTS ═══════════════════════════ -->
+<div id="loading">
+  <div id="ltext">EXCAVATING…</div>
+  <div class="lbar-wrap"><div class="lbar" id="lbar"></div></div>
+</div>
+<div id="toast"></div>
+
 <script>
-// ─────────────────────────────────────────────────────────────────
-// NBT PARSER  (little-endian, Bedrock format)
-// ─────────────────────────────────────────────────────────────────
-const NBT_TAG = {
-  END:9, BYTE:1, SHORT:2, INT:3, LONG:4,
-  FLOAT:5, DOUBLE:6, BYTE_ARRAY:7, STRING:8,
-  LIST:9, COMPOUND:10, INT_ARRAY:11, LONG_ARRAY:12
-};
-
-// Remap constants so tag IDs line up with the spec (END=0)
-const T = {
-  END:0, BYTE:1, SHORT:2, INT:3, LONG:4,
-  FLOAT:5, DOUBLE:6, BYTE_ARRAY:7, STRING:8,
-  LIST:9, COMPOUND:10, INT_ARRAY:11, LONG_ARRAY:12
-};
-
+/* ══════════════ NBT PARSER ══════════════ */
+const T={END:0,BYTE:1,SHORT:2,INT:3,LONG:4,FLOAT:5,DOUBLE:6,BYTE_ARRAY:7,STRING:8,LIST:9,COMPOUND:10,INT_ARRAY:11,LONG_ARRAY:12};
 class NBTReader {
-  constructor(buffer) {
-    this.view = new DataView(buffer);
-    this.offset = 0;
-    this.le = true; // Bedrock = little-endian
-  }
-  byte()   { return this.view.getUint8(this.offset++); }
-  int8()   { return this.view.getInt8(this.offset++); }
-  short()  { const v = this.view.getInt16(this.offset, this.le); this.offset+=2; return v; }
-  int()    { const v = this.view.getInt32(this.offset, this.le); this.offset+=4; return v; }
-  float()  { const v = this.view.getFloat32(this.offset, this.le); this.offset+=4; return v; }
-  double() { const v = this.view.getFloat64(this.offset, this.le); this.offset+=8; return v; }
-  long()   { // return as BigInt
-    const lo = this.view.getInt32(this.offset, this.le);
-    const hi = this.view.getInt32(this.offset+4, this.le);
-    this.offset += 8;
-    return BigInt(hi) << 32n | BigInt(lo >>> 0);
-  }
-  string() {
-    const len = this.view.getUint16(this.offset, this.le); this.offset+=2;
-    const bytes = new Uint8Array(this.view.buffer, this.offset, len);
-    this.offset += len;
-    return new TextDecoder().decode(bytes);
-  }
-  payload(type) {
-    switch(type) {
-      case T.BYTE:       return this.int8();
-      case T.SHORT:      return this.short();
-      case T.INT:        return this.int();
-      case T.LONG:       return this.long();
-      case T.FLOAT:      return this.float();
-      case T.DOUBLE:     return this.double();
-      case T.BYTE_ARRAY: { const n=this.int(); const a=new Int8Array(n); for(let i=0;i<n;i++) a[i]=this.int8(); return a; }
-      case T.STRING:     return this.string();
-      case T.LIST:       {
-        const et=this.byte(), n=this.int(), a=[];
-        for(let i=0;i<n;i++) a.push(this.payload(et));
-        return {type:'list', elementType:et, value:a};
-      }
-      case T.COMPOUND:   return this.compound();
-      case T.INT_ARRAY:  { const n=this.int(); const a=new Int32Array(n); for(let i=0;i<n;i++) a[i]=this.int(); return a; }
-      case T.LONG_ARRAY: { const n=this.int(); const a=[]; for(let i=0;i<n;i++) a.push(this.long()); return a; }
-      default: throw new Error('Unknown NBT tag: '+type);
+  constructor(buf){this.v=new DataView(buf);this.o=0;}
+  u8(){return this.v.getUint8(this.o++);}
+  i8(){return this.v.getInt8(this.o++);}
+  i16(){const x=this.v.getInt16(this.o,true);this.o+=2;return x;}
+  i32(){const x=this.v.getInt32(this.o,true);this.o+=4;return x;}
+  u16(){const x=this.v.getUint16(this.o,true);this.o+=2;return x;}
+  f32(){const x=this.v.getFloat32(this.o,true);this.o+=4;return x;}
+  f64(){const x=this.v.getFloat64(this.o,true);this.o+=8;return x;}
+  str(){const n=this.u16();const b=new Uint8Array(this.v.buffer,this.o,n);this.o+=n;return new TextDecoder().decode(b);}
+  payload(t){
+    switch(t){
+      case T.BYTE:return this.i8();
+      case T.SHORT:return this.i16();
+      case T.INT:return this.i32();
+      case T.LONG:{const l=this.i32(),h=this.i32();return BigInt(h)<<32n|BigInt(l>>>0);}
+      case T.FLOAT:return this.f32();
+      case T.DOUBLE:return this.f64();
+      case T.BYTE_ARRAY:{const n=this.i32();const a=new Int8Array(n);for(let i=0;i<n;i++)a[i]=this.i8();return a;}
+      case T.STRING:return this.str();
+      case T.LIST:{const et=this.u8(),n=this.i32(),a=[];for(let i=0;i<n;i++)a.push(this.payload(et));return{_list:true,et,value:a};}
+      case T.COMPOUND:return this.compound();
+      case T.INT_ARRAY:{const n=this.i32();const a=new Int32Array(n);for(let i=0;i<n;i++)a[i]=this.i32();return a;}
+      case T.LONG_ARRAY:{const n=this.i32();const a=[];for(let i=0;i<n;i++)a.push(this.payload(T.LONG));return a;}
+      default:throw new Error('Unknown NBT tag '+t);
     }
   }
-  compound() {
-    const obj = {};
-    while(true) {
-      const type = this.byte();
-      if(type === T.END) break;
-      const name = this.string();
-      obj[name] = this.payload(type);
+  compound(){const o={};for(;;){const t=this.u8();if(t===T.END)break;o[this.str()]=this.payload(t);}return o;}
+  parse(){const t=this.u8();if(t!==T.COMPOUND)throw new Error('Root not compound, got tag '+t);this.str();return this.compound();}
+}
+function parseNBT(buf){
+  for(const skip of [8,0]){try{return new NBTReader(buf.slice(skip)).parse();}catch(e){}}
+  try{return new NBTReader(pako.ungzip(new Uint8Array(buf)).buffer).parse();}catch(e){}
+  throw new Error('Could not parse — is this a valid .mcstructure file?');
+}
+function parseMCStructure(buf){
+  const root=parseNBT(buf);
+  const st=root['size'];
+  if(!st) throw new Error('No "size" tag. Keys: '+Object.keys(root).join(', '));
+  const sv=st._list?st.value:(Array.isArray(st)?st:Object.values(st));
+  const[sX,sY,sZ]=sv.map(Number);
+  const str=root['structure'];
+  if(!str) throw new Error('No "structure" tag.');
+  let palette=[];
+  const pt=str['block_palette']??str['palette'];
+  if(pt){
+    const pa=pt._list?pt.value:(Array.isArray(pt)?pt:[]);
+    palette=pa.map(e=>{const n=e['name']??e['Name']??'minecraft:stone';return typeof n==='string'?n:'minecraft:stone';});
+  }
+  let indices=[];
+  const bi=str['block_indices'];
+  if(bi){
+    const layers=bi._list?bi.value:(Array.isArray(bi)?bi:[]);
+    if(layers.length>0){
+      const l0=layers[0];
+      indices=l0 instanceof Int32Array?Array.from(l0):(l0._list?l0.value:(Array.isArray(l0)?l0:[]));
     }
-    return obj;
   }
-  parse() {
-    // Bedrock .mcstructure: no file header — starts directly with a compound tag (type 10)
-    const type = this.byte();
-    if(type !== T.COMPOUND) throw new Error('Expected compound root, got tag '+type);
-    /*const name =*/ this.string(); // usually empty ""
-    return this.compound();
-  }
+  return{sX,sY,sZ,palette,indices};
 }
 
-// ─────────────────────────────────────────────────────────────────
-// BLOCK COLOUR MAP  (Bedrock block IDs → hex colour)
-// ─────────────────────────────────────────────────────────────────
-const BLOCK_COLORS = {
-  // Air / empty
-  'minecraft:air': null,
-  'air': null,
-
-  // Stone family
-  'minecraft:stone':         '#808080',
-  'minecraft:cobblestone':   '#706860',
-  'minecraft:mossy_cobblestone': '#607060',
-  'minecraft:stone_bricks':  '#787878',
-  'minecraft:cracked_stone_bricks': '#686868',
-  'minecraft:chiseled_stone_bricks': '#747474',
-  'minecraft:smooth_stone':  '#8a8a8a',
-  'minecraft:andesite':      '#8c8c8c',
-  'minecraft:diorite':       '#c0b8b0',
-  'minecraft:granite':       '#a07060',
-  'minecraft:deepslate':     '#505060',
-  'minecraft:cobbled_deepslate': '#484858',
-  'minecraft:calcite':       '#d4cfc8',
-  'minecraft:tuff':          '#7a7868',
-
-  // Dirt / grass
-  'minecraft:dirt':          '#8b5e3c',
-  'minecraft:grass':         '#5a8c3c',
-  'minecraft:grass_block':   '#5a8c3c',
-  'minecraft:podzol':        '#6a4830',
-  'minecraft:mycelium':      '#7a6878',
-  'minecraft:rooted_dirt':   '#7a5038',
-  'minecraft:mud':           '#4a3828',
-  'minecraft:farmland':      '#7a5030',
-
-  // Wood / logs
-  'minecraft:oak_log':       '#6e5028',
-  'minecraft:birch_log':     '#c0b898',
-  'minecraft:spruce_log':    '#4a3820',
-  'minecraft:jungle_log':    '#6a5030',
-  'minecraft:acacia_log':    '#7a5028',
-  'minecraft:dark_oak_log':  '#382818',
-  'minecraft:mangrove_log':  '#5a2820',
-  'minecraft:cherry_log':    '#8c5060',
-  'minecraft:oak_wood':      '#7a6040',
-  'minecraft:birch_wood':    '#c8c0a0',
-  'minecraft:spruce_wood':   '#503828',
-  'minecraft:stripped_oak_log':'#a0804a',
-
-  // Planks
-  'minecraft:oak_planks':    '#c09040',
-  'minecraft:birch_planks':  '#d4c888',
-  'minecraft:spruce_planks': '#785030',
-  'minecraft:jungle_planks': '#b07848',
-  'minecraft:acacia_planks': '#c06830',
-  'minecraft:dark_oak_planks':'#483018',
-  'minecraft:mangrove_planks':'#8a3828',
-  'minecraft:cherry_planks': '#d09088',
-  'minecraft:crimson_planks':'#7a3050',
-  'minecraft:warped_planks': '#307870',
-
-  // Leaves
-  'minecraft:oak_leaves':    '#3a7a28',
-  'minecraft:birch_leaves':  '#6a9a48',
-  'minecraft:spruce_leaves': '#285030',
-  'minecraft:jungle_leaves': '#287a28',
-  'minecraft:acacia_leaves': '#688a28',
-  'minecraft:dark_oak_leaves':'#205820',
-  'minecraft:mangrove_leaves':'#287828',
-  'minecraft:cherry_leaves': '#e8889a',
-  'minecraft:azalea_leaves': '#5a8a38',
-
-  // Sand / gravel
-  'minecraft:sand':          '#d8c888',
-  'minecraft:red_sand':      '#b86830',
-  'minecraft:gravel':        '#888078',
-  'minecraft:soul_sand':     '#6a5040',
-  'minecraft:soul_soil':     '#604838',
-
-  // Ores
-  'minecraft:coal_ore':      '#505050',
-  'minecraft:iron_ore':      '#986060',
-  'minecraft:gold_ore':      '#c8a030',
-  'minecraft:diamond_ore':   '#40c8c0',
-  'minecraft:emerald_ore':   '#30b830',
-  'minecraft:lapis_ore':     '#2850a0',
-  'minecraft:redstone_ore':  '#b03020',
-  'minecraft:copper_ore':    '#c06840',
-  'minecraft:ancient_debris':'#806050',
-  'minecraft:nether_quartz_ore':'#d0b8a0',
-  'minecraft:nether_gold_ore':'#b08020',
-
-  // Metals / minerals
-  'minecraft:iron_block':    '#d0c8c0',
-  'minecraft:gold_block':    '#f0d020',
-  'minecraft:diamond_block': '#50e0d8',
-  'minecraft:emerald_block': '#20c840',
-  'minecraft:lapis_block':   '#2848b0',
-  'minecraft:redstone_block':'#c02010',
-  'minecraft:coal_block':    '#202020',
-  'minecraft:copper_block':  '#b06040',
-  'minecraft:netherite_block':'#4a3838',
-  'minecraft:amethyst_block':'#9060c8',
-
-  // Concrete
-  'minecraft:white_concrete':    '#d8d8d8',
-  'minecraft:orange_concrete':   '#e07028',
-  'minecraft:magenta_concrete':  '#b840b8',
-  'minecraft:light_blue_concrete':'#4898d0',
-  'minecraft:yellow_concrete':   '#e0d020',
-  'minecraft:lime_concrete':     '#60c020',
-  'minecraft:pink_concrete':     '#e088a8',
-  'minecraft:gray_concrete':     '#484848',
-  'minecraft:light_gray_concrete':'#909090',
-  'minecraft:cyan_concrete':     '#208898',
-  'minecraft:purple_concrete':   '#7828b0',
-  'minecraft:blue_concrete':     '#2030a8',
-  'minecraft:brown_concrete':    '#603018',
-  'minecraft:green_concrete':    '#406020',
-  'minecraft:red_concrete':      '#a81820',
-  'minecraft:black_concrete':    '#101010',
-
-  // Wool
-  'minecraft:white_wool':    '#e8e8e0',
-  'minecraft:orange_wool':   '#e07828',
-  'minecraft:yellow_wool':   '#e8d820',
-  'minecraft:lime_wool':     '#68c828',
-  'minecraft:pink_wool':     '#e898b0',
-  'minecraft:gray_wool':     '#585858',
-  'minecraft:cyan_wool':     '#209898',
-  'minecraft:purple_wool':   '#8028b0',
-  'minecraft:blue_wool':     '#283898',
-  'minecraft:green_wool':    '#507828',
-  'minecraft:red_wool':      '#a82020',
-  'minecraft:black_wool':    '#181818',
-
-  // Glass
-  'minecraft:glass':              '#c8e8f880',
-  'minecraft:white_stained_glass':'#e0e0e880',
-  'minecraft:blue_stained_glass': '#2040c080',
-  'minecraft:red_stained_glass':  '#c0202080',
-  'minecraft:green_stained_glass':'#208030 80',
-
-  // Water / lava
-  'minecraft:water':         '#2050c080',
-  'minecraft:lava':          '#e0500880',
-  'minecraft:ice':           '#90c0e880',
-  'minecraft:packed_ice':    '#80b0e0',
-  'minecraft:blue_ice':      '#6090d8',
-  'minecraft:snow':          '#f0f0f0',
-  'minecraft:snow_block':    '#e8e8e8',
-
-  // Nether
-  'minecraft:netherrack':    '#703028',
-  'minecraft:nether_bricks': '#401818',
-  'minecraft:basalt':        '#484850',
-  'minecraft:blackstone':    '#282830',
-  'minecraft:magma_block':   '#903020',
-  'minecraft:glowstone':     '#e8c050',
-  'minecraft:shroomlight':   '#f0a840',
-  'minecraft:crimson_nylium':'#882840',
-  'minecraft:warped_nylium': '#287868',
-  'minecraft:crimson_stem':  '#7a2840',
-  'minecraft:warped_stem':   '#2a706a',
-
-  // End
-  'minecraft:end_stone':     '#d8d090',
-  'minecraft:end_stone_bricks':'#d0c880',
-  'minecraft:obsidian':      '#201828',
-  'minecraft:crying_obsidian':'#301040',
-  'minecraft:purpur_block':  '#a870b0',
-  'minecraft:purpur_pillar': '#b878b8',
-
-  // Misc
-  'minecraft:bookshelf':     '#a08040',
-  'minecraft:crafting_table':'#8a6030',
-  'minecraft:furnace':       '#707070',
-  'minecraft:chest':         '#a07030',
-  'minecraft:tnt':           '#c03020',
-  'minecraft:sponge':        '#c8c030',
-  'minecraft:wet_sponge':    '#a0a020',
-  'minecraft:hay_block':     '#d0b820',
-  'minecraft:melon':         '#70a030',
-  'minecraft:pumpkin':       '#d07820',
-  'minecraft:jack_o_lantern':'#d07820',
-  'minecraft:carved_pumpkin':'#d07820',
-  'minecraft:terracotta':    '#9a6040',
-  'minecraft:white_terracotta':  '#c8b8a8',
-  'minecraft:orange_terracotta': '#a05028',
-  'minecraft:red_terracotta':    '#883020',
-  'minecraft:brown_terracotta':  '#6a4028',
-  'minecraft:yellow_terracotta': '#c09848',
-  'minecraft:prismarine':    '#488888',
-  'minecraft:dark_prismarine':'#306060',
-  'minecraft:sea_lantern':   '#a8d8d0',
-  'minecraft:beacon':        '#70e0d8',
-  'minecraft:slime_block':   '#6aca50',
-  'minecraft:honey_block':   '#e0a840',
-  'minecraft:target':        '#e06880',
-  'minecraft:jukebox':       '#6a3820',
-  'minecraft:note_block':    '#6a4020',
-  'minecraft:barrel':        '#8a6030',
-  'minecraft:composter':     '#7a5828',
-  'minecraft:respawn_anchor':'#4820a0',
-
-  // Flowers / plants (show as green-ish)
-  'minecraft:grass_plant':   null,
-  'minecraft:tall_grass':    null,
-  'minecraft:fern':          null,
-  'minecraft:dandelion':     null,
-  'minecraft:poppy':         null,
-  'minecraft:blue_orchid':   null,
-  'minecraft:allium':        null,
-  'minecraft:azure_bluet':   null,
-  'minecraft:red_tulip':     null,
-  'minecraft:rose_bush':     null,
-  'minecraft:sunflower':     null,
-  'minecraft:torch':         null,
-  'minecraft:wall_torch':    null,
-  'minecraft:lantern':       null,
-  'minecraft:ladder':        null,
-  'minecraft:vine':          null,
-  'minecraft:tripwire':      null,
+/* ══════════════ BLOCK COLOURS ══════════════ */
+const BC={
+  'minecraft:air':null,'air':null,
+  'minecraft:stone':'#808080','minecraft:cobblestone':'#706860','minecraft:mossy_cobblestone':'#607060',
+  'minecraft:stone_bricks':'#787878','minecraft:chiseled_stone_bricks':'#747474','minecraft:smooth_stone':'#8a8a8a',
+  'minecraft:andesite':'#8c8c8c','minecraft:diorite':'#c0b8b0','minecraft:granite':'#a07060',
+  'minecraft:deepslate':'#505060','minecraft:cobbled_deepslate':'#484858','minecraft:tuff':'#7a7868',
+  'minecraft:dirt':'#8b5e3c','minecraft:grass':'#5a8c3c','minecraft:grass_block':'#5a8c3c','minecraft:podzol':'#6a4830',
+  'minecraft:mud':'#4a3828','minecraft:farmland':'#7a5030',
+  'minecraft:oak_log':'#6e5028','minecraft:birch_log':'#c0b898','minecraft:spruce_log':'#4a3820',
+  'minecraft:jungle_log':'#6a5030','minecraft:acacia_log':'#7a5028','minecraft:dark_oak_log':'#382818',
+  'minecraft:oak_planks':'#c09040','minecraft:birch_planks':'#d4c888','minecraft:spruce_planks':'#785030',
+  'minecraft:jungle_planks':'#b07848','minecraft:acacia_planks':'#c06830','minecraft:dark_oak_planks':'#483018',
+  'minecraft:crimson_planks':'#7a3050','minecraft:warped_planks':'#307870',
+  'minecraft:oak_leaves':'#3a7a28','minecraft:birch_leaves':'#6a9a48','minecraft:spruce_leaves':'#285030',
+  'minecraft:jungle_leaves':'#287a28','minecraft:acacia_leaves':'#688a28','minecraft:dark_oak_leaves':'#205820',
+  'minecraft:cherry_leaves':'#e8889a',
+  'minecraft:sand':'#d8c888','minecraft:red_sand':'#b86830','minecraft:gravel':'#888078','minecraft:soul_sand':'#6a5040',
+  'minecraft:coal_ore':'#505050','minecraft:iron_ore':'#986060','minecraft:gold_ore':'#c8a030',
+  'minecraft:diamond_ore':'#40c8c0','minecraft:emerald_ore':'#30b830','minecraft:lapis_ore':'#2850a0',
+  'minecraft:redstone_ore':'#b03020','minecraft:copper_ore':'#c06840',
+  'minecraft:iron_block':'#d0c8c0','minecraft:gold_block':'#f0d020','minecraft:diamond_block':'#50e0d8',
+  'minecraft:emerald_block':'#20c840','minecraft:lapis_block':'#2848b0','minecraft:redstone_block':'#c02010',
+  'minecraft:coal_block':'#202020','minecraft:copper_block':'#b06040','minecraft:netherite_block':'#4a3838',
+  'minecraft:white_concrete':'#d8d8d8','minecraft:orange_concrete':'#e07028','minecraft:magenta_concrete':'#b840b8',
+  'minecraft:light_blue_concrete':'#4898d0','minecraft:yellow_concrete':'#e0d020','minecraft:lime_concrete':'#60c020',
+  'minecraft:pink_concrete':'#e088a8','minecraft:gray_concrete':'#484848','minecraft:light_gray_concrete':'#909090',
+  'minecraft:cyan_concrete':'#208898','minecraft:purple_concrete':'#7828b0','minecraft:blue_concrete':'#2030a8',
+  'minecraft:brown_concrete':'#603018','minecraft:green_concrete':'#406020','minecraft:red_concrete':'#a81820','minecraft:black_concrete':'#101010',
+  'minecraft:white_wool':'#e8e8e0','minecraft:orange_wool':'#e07828','minecraft:yellow_wool':'#e8d820',
+  'minecraft:lime_wool':'#68c828','minecraft:pink_wool':'#e898b0','minecraft:gray_wool':'#585858',
+  'minecraft:cyan_wool':'#209898','minecraft:purple_wool':'#8028b0','minecraft:blue_wool':'#283898',
+  'minecraft:green_wool':'#507828','minecraft:red_wool':'#a82020','minecraft:black_wool':'#181818',
+  'minecraft:netherrack':'#703028','minecraft:nether_bricks':'#401818','minecraft:basalt':'#484850',
+  'minecraft:blackstone':'#282830','minecraft:magma_block':'#903020','minecraft:glowstone':'#e8c050',
+  'minecraft:end_stone':'#d8d090','minecraft:obsidian':'#201828','minecraft:purpur_block':'#a870b0',
+  'minecraft:terracotta':'#9a6040','minecraft:white_terracotta':'#c8b8a8','minecraft:orange_terracotta':'#a05028',
+  'minecraft:red_terracotta':'#883020','minecraft:brown_terracotta':'#6a4028','minecraft:yellow_terracotta':'#c09848',
+  'minecraft:bookshelf':'#a08040','minecraft:crafting_table':'#8a6030','minecraft:furnace':'#707070',
+  'minecraft:chest':'#a07030','minecraft:tnt':'#c03020','minecraft:hay_block':'#d0b820',
+  'minecraft:melon':'#70a030','minecraft:pumpkin':'#d07820','minecraft:jack_o_lantern':'#d07820',
+  'minecraft:prismarine':'#488888','minecraft:dark_prismarine':'#306060','minecraft:sea_lantern':'#a8d8d0',
+  'minecraft:slime_block':'#6aca50','minecraft:honey_block':'#e0a840',
+  'minecraft:packed_ice':'#80b0e0','minecraft:blue_ice':'#6090d8','minecraft:snow_block':'#e8e8e8',
 };
-
-function getBlockColor(name) {
-  if (!name) return '#808080';
-  const lower = name.toLowerCase();
-  if (BLOCK_COLORS.hasOwnProperty(lower)) return BLOCK_COLORS[lower];
-  // Fuzzy: check substrings
-  if (lower.includes('air')) return null;
-  if (lower.includes('leaves')) return '#3a7a28';
-  if (lower.includes('log') || lower.includes('wood')) return '#6e5028';
-  if (lower.includes('plank')) return '#c09040';
-  if (lower.includes('stone')) return '#808080';
-  if (lower.includes('sand')) return '#d8c888';
-  if (lower.includes('dirt') || lower.includes('grass')) return '#5a8c3c';
-  if (lower.includes('water')) return null;
-  if (lower.includes('glass')) return null; // skip transparent
-  if (lower.includes('concrete')) return '#808080';
-  if (lower.includes('wool')) return '#e8e8e0';
-  if (lower.includes('ore')) return '#707070';
-  // default
-  return '#909090';
+function blockColor(name){
+  if(!name)return'#808080';
+  const k=name.toLowerCase();
+  if(Object.prototype.hasOwnProperty.call(BC,k))return BC[k];
+  if(k.includes('air')||k.includes('glass')||k.includes('water')||k.includes('lava')||
+     k.includes('torch')||k.includes('vine')||k.includes('flower')||
+     k.includes('tall_grass')||k.includes('fern')||k.includes('sapling'))return null;
+  if(k.includes('leaves'))return'#3a7a28';
+  if(k.includes('log')||k.includes('stem'))return'#6e5028';
+  if(k.includes('plank'))return'#c09040';
+  if(k.includes('stone'))return'#808080';
+  if(k.includes('sand'))return'#d8c888';
+  if(k.includes('dirt')||k.includes('grass'))return'#5a8c3c';
+  if(k.includes('concrete'))return'#888';
+  if(k.includes('wool'))return'#e8e8e0';
+  if(k.includes('ore'))return'#707070';
+  if(k.includes('brick'))return'#904030';
+  if(k.includes('nether'))return'#703028';
+  return'#909090';
 }
 
-// ─────────────────────────────────────────────────────────────────
-// .mcstructure PARSER  (Bedrock NBT)
-// ─────────────────────────────────────────────────────────────────
-function parseMCStructure(buffer) {
-  // Bedrock uses little-endian NBT with a 8-byte header:
-  // [0] version (int32le), [4] size (int32le), then NBT data
-  // Some tools strip the header. Try with and without.
-  let nbt = null;
-  const errors = [];
+/* ══════════════ SCENE POPULATION ══════════════ */
+const MAX_BLOCKS=10000;
+function populateScene(sd,name){
+  const{sX,sY,sZ,palette,indices}=sd;
+  const root=document.getElementById('structure-root');
+  while(root.firstChild)root.removeChild(root.firstChild);
 
-  // Attempt 1: skip 8-byte bedrock header
-  try {
-    const reader = new NBTReader(buffer.slice(8));
-    nbt = reader.parse();
-  } catch(e) { errors.push('with-header: '+e.message); }
-
-  // Attempt 2: raw NBT (no header)
-  if (!nbt) {
-    try {
-      const reader = new NBTReader(buffer);
-      nbt = reader.parse();
-    } catch(e) { errors.push('raw: '+e.message); }
+  const cx=sX/2, cz=sZ/2;
+  const blocks=[];
+  for(let i=0;i<indices.length;i++){
+    const pidx=Number(indices[i]);
+    if(pidx<0||pidx>=palette.length)continue;
+    const color=blockColor(palette[pidx]);
+    if(!color)continue;
+    const bx=i%sX;
+    const by=Math.floor(i/(sX*sZ));
+    const bz=Math.floor((i%(sX*sZ))/sX);
+    blocks.push({bx,by,bz,color});
   }
-
-  if (!nbt) throw new Error('Failed to parse NBT: ' + errors.join('; '));
-
-  // Extract size
-  const sizeTag = nbt['size'];
-  if (!sizeTag) throw new Error('No "size" tag found in structure');
-  const sizeVals = sizeTag.value || sizeTag;
-  const [sX, sY, sZ] = Array.isArray(sizeVals) ? sizeVals : [sizeVals[0], sizeVals[1], sizeVals[2]];
-
-  // Block palette
-  const structure = nbt['structure'];
-  if (!structure) throw new Error('No "structure" tag found');
-
-  const blockPalette = structure['block_palette'] || structure['palette'];
-  let palette = [];
-  if (blockPalette) {
-    const pal = blockPalette.value || blockPalette;
-    if (Array.isArray(pal)) {
-      palette = pal.map(entry => {
-        const name = (entry['name'] || entry['Name'] || 'minecraft:stone');
-        return typeof name === 'string' ? name : String(name);
-      });
-    }
+  const step=Math.max(1,Math.ceil(blocks.length/MAX_BLOCKS));
+  const frag=document.createDocumentFragment();
+  for(let i=0;i<blocks.length;i+=step){
+    const{bx,by,bz,color}=blocks[i];
+    const box=document.createElement('a-box');
+    box.setAttribute('position',`${(bx-cx)+0.5} ${by+0.5} ${(bz-cz)+0.5}`);
+    box.setAttribute('color',color);
+    box.setAttribute('material','roughness:0.88;metalness:0.04');
+    frag.appendChild(box);
   }
+  root.appendChild(frag);
 
-  // Block indices  (indices[0] = primary layer)
-  const blockIndices = structure['block_indices'];
-  let indices = [];
-  if (blockIndices) {
-    const layers = blockIndices.value || blockIndices;
-    if (Array.isArray(layers) && layers.length > 0) {
-      const layer0 = layers[0];
-      indices = layer0.value || layer0;
-    }
-  }
-
-  return { sX: Number(sX), sY: Number(sY), sZ: Number(sZ), palette, indices };
+  // Position camera outside the structure looking toward it
+  const dist = Math.max(sX, sZ) + 8;
+  const camY = Math.max(4, sY * 0.6);
+  document.getElementById('rig').setAttribute('position', `0 ${camY} ${dist}`);
+  const rendered=Math.ceil(blocks.length/step);
+  document.getElementById('viewer-title').textContent=`${name}  ·  ${sX}×${sY}×${sZ}  ·  ${rendered.toLocaleString()} blocks`;
 }
 
-// ─────────────────────────────────────────────────────────────────
-// BUILD A-FRAME SCENE
-// ─────────────────────────────────────────────────────────────────
-let currentScene = null;
+/* ══════════════ OPEN / CLOSE ══════════════ */
+let flyMode=false, hintTimer=null;
 
-function buildScene(structData, name) {
-  const { sX, sY, sZ, palette, indices } = structData;
-
-  // Remove old scene if any
-  if (currentScene) {
-    currentScene.remove();
-    currentScene = null;
-  }
-
-  const container = document.getElementById('aframe-container');
-
-  // Player starts outside the structure, looking in
-  const startX = -3;
-  const startY = 1.6;
-  const startZ = Math.floor(sZ / 2);
-
-  const scene = document.createElement('a-scene');
-  scene.setAttribute('fog', 'type: exponential; color: #8a6030; density: 0.015');
-  scene.setAttribute('background', 'color: #6a9bb5');
-  scene.setAttribute('embedded', '');
-  scene.style.width = '100%';
-  scene.style.height = '100%';
-
-  // Sky gradient
-  const sky = document.createElement('a-sky');
-  sky.setAttribute('color', '#7ab3c8');
-  scene.appendChild(sky);
-
-  // Ambient + directional light (sunlight feel)
-  const ambient = document.createElement('a-light');
-  ambient.setAttribute('type', 'ambient');
-  ambient.setAttribute('color', '#d4b890');
-  ambient.setAttribute('intensity', '0.6');
-  scene.appendChild(ambient);
-
-  const sun = document.createElement('a-light');
-  sun.setAttribute('type', 'directional');
-  sun.setAttribute('color', '#fff8e8');
-  sun.setAttribute('intensity', '1.0');
-  sun.setAttribute('position', '1 3 1');
-  sun.setAttribute('cast-shadow', 'true');
-  scene.appendChild(sun);
-
-  // Ground plane
-  const ground = document.createElement('a-plane');
-  ground.setAttribute('rotation', '-90 0 0');
-  ground.setAttribute('width', '200');
-  ground.setAttribute('height', '200');
-  ground.setAttribute('color', '#4a3020');
-  ground.setAttribute('position', `${sX/2} 0 ${sZ/2}`);
-  ground.setAttribute('material', 'roughness: 1; metalness: 0');
-  scene.appendChild(ground);
-
-  // ── BLOCKS ──
-  // Group by color into merged geometry for performance
-  const colorMap = {}; // color -> [{x,y,z}]
-  let blockCount = 0;
-
-  for (let i = 0; i < indices.length; i++) {
-    const idx = Number(indices[i]);
-    if (idx < 0 || idx >= palette.length) continue;
-    const blockName = palette[idx];
-    const color = getBlockColor(blockName);
-    if (!color) continue; // air / transparent
-
-    const bX = i % sX;
-    const bY = Math.floor(i / (sX * sZ));
-    const bZ = Math.floor((i % (sX * sZ)) / sX);
-
-    if (!colorMap[color]) colorMap[color] = [];
-    colorMap[color].push({x: bX, y: bY, z: bZ});
-    blockCount++;
-  }
-
-  // Render blocks — use instanced approach via individual a-box
-  // For large structures, cap render count
-  const MAX_BLOCKS = 8000;
-  let rendered = 0;
-  const allBlocks = Object.entries(colorMap).flatMap(([c,ps]) => ps.map(p=>({...p,c})));
-
-  // Sort by y then render
-  allBlocks.sort((a,b) => a.y - b.y);
-
-  const skip = Math.max(1, Math.ceil(allBlocks.length / MAX_BLOCKS));
-
-  for (let i = 0; i < allBlocks.length; i += skip) {
-    const {x, y, z, c} = allBlocks[i];
-    const box = document.createElement('a-box');
-    box.setAttribute('position', `${x + 0.5} ${y + 0.5} ${z + 0.5}`);
-    box.setAttribute('color', c);
-    box.setAttribute('width', '1');
-    box.setAttribute('height', '1');
-    box.setAttribute('depth', '1');
-    box.setAttribute('material', 'roughness:0.9;metalness:0.05;shader:standard');
-    scene.appendChild(box);
-    rendered++;
-  }
-
-  // ── CAMERA RIG (first person) ──
-  const rig = document.createElement('a-entity');
-  rig.setAttribute('id', 'rig');
-  rig.setAttribute('position', `${startX} ${startY} ${startZ}`);
-  rig.setAttribute('wasd-controls', 'acceleration:20');
-  rig.setAttribute('keyboard-shortcuts', 'enterVR: false');
-
-  const camera = document.createElement('a-camera');
-  camera.setAttribute('look-controls', 'pointerLockEnabled: true');
-  camera.setAttribute('wasd-controls', 'enabled: false');
-  rig.appendChild(camera);
-
-  // Crosshair
-  const crosshair = document.createElement('a-entity');
-  crosshair.setAttribute('position', '0 0 -0.5');
-  crosshair.innerHTML = `
-    <a-entity geometry="primitive:ring;radiusInner:0.006;radiusOuter:0.01" material="color:#fff8e8;shader:flat" position="0 0 0"></a-entity>
-  `;
-  camera.appendChild(crosshair);
-
-  scene.appendChild(rig);
-
-  container.appendChild(scene);
-  currentScene = scene;
-
-  document.getElementById('viewer-title').textContent =
-    `${name} — ${sX}×${sY}×${sZ} — ${rendered.toLocaleString()} blocks rendered`;
-
-  return { blockCount, rendered };
+function openViewer(sd,name){
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('viewer-ui').classList.add('active');
+  populateScene(sd,name);
+  const hint=document.getElementById('controls-hint');
+  hint.classList.remove('fade');
+  clearTimeout(hintTimer);
+  hintTimer=setTimeout(()=>hint.classList.add('fade'),6000);
+}
+function closeViewer(){
+  document.getElementById('landing').classList.remove('hidden');
+  document.getElementById('viewer-ui').classList.remove('active');
+  const root=document.getElementById('structure-root');
+  while(root.firstChild)root.removeChild(root.firstChild);
+  flyMode=false;
+  document.getElementById('fly-btn').textContent='🪂 Fly: OFF';
+  document.getElementById('rig').setAttribute('wasd-controls','acceleration:18;fly:false');
+  // exit pointer lock if active
+  if(document.pointerLockElement) document.exitPointerLock();
+}
+function resetCam(){
+  document.getElementById('rig').setAttribute('position','0 5 20');
+}
+function toggleFly(){
+  flyMode=!flyMode;
+  document.getElementById('rig').setAttribute('wasd-controls',`acceleration:18;fly:${flyMode}`);
+  document.getElementById('fly-btn').textContent=`🪂 Fly: ${flyMode?'ON':'OFF'}`;
 }
 
-// ─────────────────────────────────────────────────────────────────
-// CAMERA CONTROLS
-// ─────────────────────────────────────────────────────────────────
-function resetCamera() {
-  const rig = document.getElementById('rig');
-  if (rig) rig.setAttribute('position', '-3 1.6 5');
-}
+/* ══════════════ FILE LOADING ══════════════ */
+function setP(p){document.getElementById('lbar').style.width=p+'%';}
+function showLoad(t){document.getElementById('ltext').textContent=t;setP(0);document.getElementById('loading').classList.add('on');}
+function hideLoad(){document.getElementById('loading').classList.remove('on');}
+let toastT;
+function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>e.style.display='none',5000);}
 
-function toggleFly() {
-  const rig = document.getElementById('rig');
-  if (!rig) return;
-  const ctrl = rig.getAttribute('wasd-controls') || {};
-  const flying = rig.dataset.fly !== 'true';
-  rig.dataset.fly = flying;
-  rig.setAttribute('wasd-controls', `acceleration:20; fly:${flying}`);
-}
-
-// ─────────────────────────────────────────────────────────────────
-// VIEWER OPEN / CLOSE
-// ─────────────────────────────────────────────────────────────────
-function openViewer(structData, name) {
-  document.getElementById('viewer-overlay').classList.add('active');
-  document.body.style.overflow = 'hidden';
-
-  // Reset hint
-  const hint = document.getElementById('controls-hint');
-  hint.style.animation = 'none';
-  hint.style.opacity = '1';
-  void hint.offsetWidth;
-  hint.style.animation = '';
-
-  buildScene(structData, name);
-}
-
-function closeViewer() {
-  document.getElementById('viewer-overlay').classList.remove('active');
-  document.body.style.overflow = '';
-  if (currentScene) {
-    currentScene.remove();
-    currentScene = null;
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────
-// LOADING + TOAST
-// ─────────────────────────────────────────────────────────────────
-function showLoading(text) {
-  document.getElementById('loading-text').textContent = text || 'LOADING…';
-  document.getElementById('loading-bar').style.width = '0%';
-  document.getElementById('loading-screen').classList.add('active');
-}
-
-function setLoadingProgress(pct) {
-  document.getElementById('loading-bar').style.width = pct + '%';
-}
-
-function hideLoading() {
-  document.getElementById('loading-screen').classList.remove('active');
-}
-
-let toastTimer;
-function showToast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.display = 'block';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 4500);
-}
-
-// ─────────────────────────────────────────────────────────────────
-// FILE LOADING
-// ─────────────────────────────────────────────────────────────────
-function loadFile(file) {
-  showLoading('READING FILE…');
-  setLoadingProgress(20);
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    setLoadingProgress(50);
-    try {
-      const structData = parseMCStructure(e.target.result);
-      setLoadingProgress(80);
-      setTimeout(() => {
-        hideLoading();
-        openViewer(structData, file.name.replace('.mcstructure',''));
-      }, 300);
-    } catch(err) {
-      hideLoading();
-      showToast('⚠️ Could not parse file: ' + err.message);
-      console.error(err);
-    }
+function loadFile(file){
+  showLoad('READING FILE…');setP(20);
+  const r=new FileReader();
+  r.onload=e=>{
+    setP(55);
+    try{
+      const data=parseMCStructure(e.target.result);
+      setP(88);
+      setTimeout(()=>{hideLoad();openViewer(data,file.name.replace(/\.mcstructure$|\.nbt$/,''));},150);
+    }catch(err){hideLoad();console.error(err);toast('⚠️ '+err.message);}
   };
-  reader.onerror = () => { hideLoading(); showToast('⚠️ Could not read file.'); };
-  reader.readAsArrayBuffer(file);
+  r.onerror=()=>{hideLoad();toast('⚠️ Could not read file.');};
+  r.readAsArrayBuffer(file);
 }
 
-// ─────────────────────────────────────────────────────────────────
-// DRAG + DROP
-// ─────────────────────────────────────────────────────────────────
-const zone = document.getElementById('upload-zone');
-const fileInput = document.getElementById('file-input');
-
-zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-zone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  zone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file && (file.name.endsWith('.mcstructure') || file.name.endsWith('.nbt'))) {
-    loadFile(file);
-  } else {
-    showToast('⚠️ Please drop a .mcstructure file.');
-  }
+const zone=document.getElementById('upload-zone');
+const fi=document.getElementById('file-input');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');});
+zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));
+zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)loadFile(f);else toast('⚠️ Drop a .mcstructure file.');});
+fi.addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&!document.pointerLockElement&&document.getElementById('viewer-ui').classList.contains('active'))
+    closeViewer();
 });
 
-fileInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) loadFile(file);
-});
-
-// ─────────────────────────────────────────────────────────────────
-// GALLERY — procedural demo structures
-// ─────────────────────────────────────────────────────────────────
-const DEMO_STRUCTURES = [
-  {
-    name: 'Oak Cottage',
-    desc: '12×8×10 · Cozy starter home',
-    emoji: '🏡',
-    color: '#6e5028',
-    generate: () => buildDemoCottage(),
-  },
-  {
-    name: 'Stone Tower',
-    desc: '7×20×7 · Medieval watchtower',
-    emoji: '🗼',
-    color: '#808080',
-    generate: () => buildDemoTower(),
-  },
-  {
-    name: 'Forest Shrine',
-    desc: '15×6×15 · Ancient mossy ruins',
-    emoji: '🌿',
-    color: '#3a7a28',
-    generate: () => buildDemoShrine(),
-  },
-  {
-    name: 'Mine Entrance',
-    desc: '8×6×5 · Underground passage',
-    emoji: '⛏️',
-    color: '#484848',
-    generate: () => buildDemoMine(),
-  },
+/* ══════════════ PROCEDURAL DEMOS ══════════════ */
+function makeStruct(sX,sY,sZ,fn){
+  const indices=new Array(sX*sY*sZ).fill(0);
+  const palette=['minecraft:air'];
+  function id(n){let i=palette.indexOf(n);if(i<0){i=palette.length;palette.push(n);}return i;}
+  function set(x,y,z,b){if(x<0||y<0||z<0||x>=sX||y>=sY||z>=sZ)return;indices[y*(sX*sZ)+z*sX+x]=id(b);}
+  fn(set,sX,sY,sZ);
+  return{sX,sY,sZ,palette,indices};
+}
+const DEMOS=[
+  {name:'Oak Cottage',desc:'12×8×10 · Cozy starter home',generate(){return makeStruct(12,8,10,(set,W,H,D)=>{
+    for(let x=0;x<W;x++)for(let z=0;z<D;z++)set(x,0,z,'minecraft:oak_planks');
+    for(let y=1;y<=4;y++){
+      for(let x=0;x<W;x++){set(x,y,0,'minecraft:oak_planks');set(x,y,D-1,'minecraft:oak_planks');}
+      for(let z=0;z<D;z++){set(0,y,z,'minecraft:oak_planks');set(W-1,y,z,'minecraft:oak_planks');}
+      set(0,y,0,'minecraft:oak_log');set(W-1,y,0,'minecraft:oak_log');set(0,y,D-1,'minecraft:oak_log');set(W-1,y,D-1,'minecraft:oak_log');
+    }
+    set(Math.floor(W/2),1,0,'minecraft:air');set(Math.floor(W/2),2,0,'minecraft:air');
+    set(3,3,0,'minecraft:glass');set(8,3,0,'minecraft:glass');set(3,3,D-1,'minecraft:glass');set(8,3,D-1,'minecraft:glass');
+    for(let y=5;y<H;y++){const ins=y-4;for(let x=ins;x<W-ins;x++)for(let z=0;z<D;z++)set(x,y,z,'minecraft:spruce_planks');}
+    for(let y=1;y<H;y++){set(2,y,2,'minecraft:cobblestone');set(3,y,2,'minecraft:cobblestone');set(2,y,3,'minecraft:cobblestone');set(3,y,3,'minecraft:cobblestone');}
+    set(5,1,5,'minecraft:crafting_table');set(2,1,7,'minecraft:chest');
+  });}},
+  {name:'Stone Tower',desc:'7×20×7 · Medieval watchtower',generate(){return makeStruct(7,20,7,(set,W,H,D)=>{
+    for(let y=0;y<H-3;y++)for(let x=0;x<W;x++)for(let z=0;z<D;z++)
+      if(x===0||x===W-1||z===0||z===D-1)set(x,y,z,(x===0||x===W-1)&&(z===0||z===D-1)?'minecraft:stone_bricks':'minecraft:cobblestone');
+    for(let fy=4;fy<H-3;fy+=5)for(let x=1;x<W-1;x++)for(let z=1;z<D-1;z++)set(x,fy,z,'minecraft:oak_planks');
+    for(let x=0;x<W;x++)for(let z=0;z<D;z++)if((x+z)%2===0&&(x===0||x===W-1||z===0||z===D-1))set(x,H-3,'minecraft:stone_bricks');
+    set(3,1,0,'minecraft:air');set(3,2,0,'minecraft:air');
+    set(1,5,1,'minecraft:glowstone');set(5,10,5,'minecraft:glowstone');
+  });}},
+  {name:'Forest Shrine',desc:'15×6×15 · Ancient mossy ruins',generate(){return makeStruct(15,6,15,(set,W,H,D)=>{
+    for(let x=0;x<W;x++)for(let z=0;z<D;z++)set(x,0,z,'minecraft:mossy_cobblestone');
+    [[2,2],[2,12],[12,2],[12,12]].forEach(([px,pz])=>{for(let y=1;y<H;y++)set(px,y,pz,'minecraft:stone_bricks');});
+    for(let x=2;x<13;x++){set(x,1,2,'minecraft:cobblestone');set(x,1,12,'minecraft:cobblestone');}
+    for(let z=2;z<13;z++){set(2,1,z,'minecraft:cobblestone');set(12,1,z,'minecraft:cobblestone');}
+    set(7,1,7,'minecraft:chiseled_stone_bricks');set(7,2,7,'minecraft:glowstone');set(7,3,7,'minecraft:stone_bricks');
+    [[4,4],[10,10],[4,10],[10,4]].forEach(([tx,tz])=>{
+      for(let y=1;y<4;y++)set(tx,y,tz,'minecraft:oak_log');
+      for(let lx=-1;lx<=1;lx++)for(let lz=-1;lz<=1;lz++)set(tx+lx,4,tz+lz,'minecraft:oak_leaves');
+    });
+  });}},
+  {name:'Mine Entrance',desc:'8×6×5 · Underground passage',generate(){return makeStruct(8,6,5,(set,W,H,D)=>{
+    for(let x=0;x<W;x++)for(let y=0;y<H;y++)for(let z=0;z<D;z++)set(x,y,z,'minecraft:stone');
+    for(let x=0;x<W;x++)for(let y=1;y<=3;y++)for(let z=1;z<=3;z++)set(x,y,z,'minecraft:air');
+    for(let x=0;x<W;x++)for(let z=1;z<=3;z++)set(x,0,z,'minecraft:gravel');
+    for(let x=1;x<W;x+=3){set(x,1,1,'minecraft:oak_log');set(x,3,1,'minecraft:oak_log');set(x,1,3,'minecraft:oak_log');set(x,3,3,'minecraft:oak_log');}
+    set(0,3,2,'minecraft:glowstone');set(4,3,2,'minecraft:glowstone');
+    set(2,2,0,'minecraft:coal_ore');set(5,1,0,'minecraft:iron_ore');set(7,2,2,'minecraft:gold_ore');
+  });}},
 ];
 
-function makeProceduralStructure(sX, sY, sZ, placeFn) {
-  const indices = new Array(sX * sY * sZ).fill(0); // 0 = air
-  const palette = ['minecraft:air'];
-
-  function getOrAddPalette(name) {
-    let idx = palette.indexOf(name);
-    if (idx === -1) { idx = palette.length; palette.push(name); }
-    return idx;
-  }
-
-  function set(x, y, z, block) {
-    if (x<0||y<0||z<0||x>=sX||y>=sY||z>=sZ) return;
-    indices[y * (sX * sZ) + z * sX + x] = getOrAddPalette(block);
-  }
-
-  placeFn(set, sX, sY, sZ);
-  return { sX, sY, sZ, palette, indices };
-}
-
-function buildDemoCottage() {
-  return makeProceduralStructure(12, 8, 10, (set, W, H, D) => {
-    // Floor
-    for (let x=0;x<W;x++) for (let z=0;z<D;z++) set(x,0,z,'minecraft:oak_planks');
-    // Walls
-    for (let y=1;y<=4;y++) {
-      for (let x=0;x<W;x++) { set(x,y,0,'minecraft:oak_log'); set(x,y,D-1,'minecraft:oak_log'); }
-      for (let z=0;z<D;z++) { set(0,y,z,'minecraft:oak_log'); set(W-1,y,z,'minecraft:oak_log'); }
+/* ══════════════ GALLERY ══════════════ */
+function drawMini(canvas,{sX,sY,sZ,palette,indices}){
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#1a0f08';ctx.fillRect(0,0,W,H);
+  const cell=Math.max(1,Math.floor(Math.min(W/sX,H/sZ)));
+  for(let x=0;x<sX;x++)for(let z=0;z<sZ;z++){
+    let col=null;
+    for(let y=sY-1;y>=0;y--){
+      const i=y*(sX*sZ)+z*sX+x;
+      if(i<indices.length){col=blockColor(palette[Number(indices[i])]);if(col)break;}
     }
-    // Fill walls with planks
-    for (let y=1;y<=4;y++) {
-      for (let x=1;x<W-1;x++) {
-        set(x,y,0,'minecraft:oak_planks'); set(x,y,D-1,'minecraft:oak_planks');
-      }
-      for (let z=1;z<D-1;z++) {
-        set(0,y,z,'minecraft:oak_planks'); set(W-1,y,z,'minecraft:oak_planks');
-      }
-    }
-    // Door opening
-    set(Math.floor(W/2),1,0,'minecraft:air'); set(Math.floor(W/2),2,0,'minecraft:air');
-    // Windows
-    set(3,3,0,'minecraft:glass'); set(8,3,0,'minecraft:glass');
-    set(3,3,D-1,'minecraft:glass'); set(8,3,D-1,'minecraft:glass');
-    // Roof - gable
-    for (let y=5;y<H;y++) {
-      const inset = y-4;
-      for (let x=inset;x<W-inset;x++) {
-        for (let z=0;z<D;z++) set(x,y,z,'minecraft:spruce_planks');
-      }
-    }
-    // Chimney
-    for (let y=1;y<H;y++) {
-      set(2,y,2,'minecraft:cobblestone'); set(3,y,2,'minecraft:cobblestone');
-      set(2,y,3,'minecraft:cobblestone'); set(3,y,3,'minecraft:cobblestone');
-    }
-    // Interior - crafting table, chest
-    set(5,1,5,'minecraft:crafting_table');
-    set(2,1,7,'minecraft:chest');
-  });
-}
-
-function buildDemoTower() {
-  return makeProceduralStructure(7, 20, 7, (set, W, H, D) => {
-    for (let y=0;y<H-3;y++) {
-      for (let x=0;x<W;x++) {
-        for (let z=0;z<D;z++) {
-          if (x===0||x===W-1||z===0||z===D-1) {
-            const isCorner = (x===0||x===W-1)&&(z===0||z===D-1);
-            set(x,y,z, isCorner ? 'minecraft:stone_bricks' : 'minecraft:cobblestone');
-          }
-        }
-      }
-    }
-    // Floors every 5
-    for (let fy=4;fy<H-3;fy+=5) {
-      for (let x=1;x<W-1;x++) for (let z=1;z<D-1;z++) set(x,fy,z,'minecraft:oak_planks');
-    }
-    // Battlements
-    for (let x=0;x<W;x++) for (let z=0;z<D;z++) {
-      if ((x+z)%2===0 && (x===0||x===W-1||z===0||z===D-1))
-        set(x,H-3,'minecraft:stone_bricks');
-    }
-    // Door
-    set(3,1,0,'minecraft:air'); set(3,2,0,'minecraft:air');
-    // Torches
-    set(1,6,1,'minecraft:lantern'); set(5,6,5,'minecraft:lantern');
-    set(1,11,1,'minecraft:lantern'); set(5,11,5,'minecraft:lantern');
-  });
-}
-
-function buildDemoShrine() {
-  return makeProceduralStructure(15, 6, 15, (set, W, H, D) => {
-    // Base platform
-    for (let x=0;x<W;x++) for (let z=0;z<D;z++) set(x,0,z,'minecraft:mossy_cobblestone');
-    // Pillars at corners
-    const pillars = [[2,2],[2,12],[12,2],[12,12]];
-    pillars.forEach(([px,pz]) => {
-      for (let y=1;y<H;y++) set(px,y,pz,'minecraft:stone_bricks');
-    });
-    // Broken walls
-    for (let x=2;x<13;x++) { set(x,1,2,'minecraft:cobblestone'); set(x,1,12,'minecraft:cobblestone'); }
-    for (let z=2;z<13;z++) { set(2,1,z,'minecraft:cobblestone'); set(12,1,z,'minecraft:cobblestone'); }
-    // Moss patches
-    for (let i=0;i<20;i++) {
-      const mx = 1 + Math.floor(Math.random()*13);
-      const mz = 1 + Math.floor(Math.random()*13);
-      set(mx,0,mz,'minecraft:moss_block'||'minecraft:mossy_cobblestone');
-    }
-    // Center altar
-    set(7,1,7,'minecraft:chiseled_stone_bricks');
-    set(7,2,7,'minecraft:glowstone');
-    set(7,3,7,'minecraft:chiseled_stone_bricks');
-    // Trees
-    [[4,4],[10,10],[4,10],[10,4]].forEach(([tx,tz]) => {
-      for (let y=1;y<4;y++) set(tx,y,tz,'minecraft:oak_log');
-      for (let lx=-1;lx<=1;lx++) for (let lz=-1;lz<=1;lz++)
-        set(tx+lx,4,tz+lz,'minecraft:oak_leaves');
-    });
-  });
-}
-
-function buildDemoMine() {
-  return makeProceduralStructure(8, 6, 5, (set, W, H, D) => {
-    // Fill solid
-    for (let x=0;x<W;x++) for (let y=0;y<H;y++) for (let z=0;z<D;z++)
-      set(x,y,z,'minecraft:stone');
-    // Carve tunnel
-    for (let x=0;x<W;x++) {
-      for (let y=1;y<=3;y++) for (let z=1;z<=3;z++) set(x,y,z,'minecraft:air');
-    }
-    // Floor
-    for (let x=0;x<W;x++) for (let z=1;z<=3;z++) set(x,0,z,'minecraft:gravel');
-    // Support beams
-    for (let x=1;x<W;x+=3) {
-      set(x,1,1,'minecraft:oak_log'); set(x,3,1,'minecraft:oak_log');
-      set(x,1,3,'minecraft:oak_log'); set(x,3,3,'minecraft:oak_log');
-      set(x,2,1,'minecraft:oak_planks'); set(x,2,3,'minecraft:oak_planks');
-    }
-    // Ores
-    set(2,2,0,'minecraft:coal_ore');
-    set(5,1,0,'minecraft:iron_ore');
-    set(7,2,2,'minecraft:gold_ore');
-    // Lanterns
-    set(0,3,2,'minecraft:lantern');
-    set(4,3,2,'minecraft:lantern');
-  });
-}
-
-// ─── MINI CANVAS PREVIEW ──────────────────────────────────────────
-function drawMiniPreview(canvas, structData) {
-  const ctx = canvas.getContext('2d');
-  const { sX, sY, sZ, palette, indices } = structData;
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0,0,W,H);
-
-  // Isometric-ish top slice
-  const cellW = Math.max(1, Math.floor(W / Math.max(sX, sZ)));
-  const topY = sY - 1;
-
-  for (let x=0;x<sX;x++) for (let z=0;z<sZ;z++) {
-    // find topmost non-air
-    let color = null;
-    for (let y=sY-1;y>=0;y--) {
-      const idx = y*(sX*sZ) + z*sX + x;
-      const bidx = Number(indices[idx]);
-      if (bidx >= 0 && bidx < palette.length) {
-        color = getBlockColor(palette[bidx]);
-        if (color) break;
-      }
-    }
-    if (!color) continue;
-    ctx.fillStyle = color;
-    ctx.fillRect(x*cellW, z*cellW, cellW, cellW);
-    // slight shade on right/bottom edge
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.fillRect(x*cellW+cellW-1, z*cellW, 1, cellW);
-    ctx.fillRect(x*cellW, z*cellW+cellW-1, cellW, 1);
+    if(!col)continue;
+    ctx.fillStyle=col;ctx.fillRect(x*cell,z*cell,cell,cell);
+    ctx.fillStyle='rgba(0,0,0,0.2)';
+    ctx.fillRect(x*cell+cell-1,z*cell,1,cell);
+    ctx.fillRect(x*cell,z*cell+cell-1,cell,1);
   }
 }
-
-// ─── RENDER GALLERY ──────────────────────────────────────────────
-const grid = document.getElementById('gallery-grid');
-DEMO_STRUCTURES.forEach(demo => {
-  const structData = demo.generate();
-
-  const card = document.createElement('div');
-  card.className = 'gallery-card';
-  card.innerHTML = `
-    <div class="card-preview">
-      <canvas class="pixel-preview" width="80" height="80"></canvas>
-      <span class="card-badge">Demo</span>
-    </div>
-    <div class="card-info">
-      <h4>${demo.name}</h4>
-      <p>${demo.desc}</p>
-    </div>
-  `;
+const grid=document.getElementById('gallery-grid');
+DEMOS.forEach(demo=>{
+  const sd=demo.generate();
+  const card=document.createElement('div');
+  card.className='gallery-card';
+  card.innerHTML=`<div class="card-preview"><canvas width="140" height="140" style="width:140px;height:140px"></canvas><span class="card-badge">Demo</span></div><div class="card-info"><h4>${demo.name}</h4><p>${demo.desc}</p></div>`;
+  drawMini(card.querySelector('canvas'),sd);
+  card.addEventListener('click',()=>openViewer(sd,demo.name));
   grid.appendChild(card);
-
-  // Draw mini preview
-  const canvas = card.querySelector('canvas');
-  drawMiniPreview(canvas, structData);
-
-  card.addEventListener('click', () => {
-    openViewer(structData, demo.name);
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────
-// ESC closes viewer
-// ─────────────────────────────────────────────────────────────────
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && document.getElementById('viewer-overlay').classList.contains('active')) {
-    // Only close if pointer is NOT locked (A-Frame captures ESC to exit pointer lock first)
-    if (!document.pointerLockElement) closeViewer();
-  }
 });
 </script>
 </body>
