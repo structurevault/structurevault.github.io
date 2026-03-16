@@ -1136,9 +1136,7 @@ async function fetchMyStructures() {
     return;
   }
 
-  const emptyStateHtml = '<div style="font-family:\'VT323\',monospace;font-size:18px;color:#555;text-align:center;padding:20px;">No structures found yet. Start uploading!</div>';
-
-  listEl.innerHTML = emptyStateHtml + unique.map(ev => {
+  listEl.innerHTML = unique.map(ev => {
     const name = ev.tags.find(t => t[0] === 'name')?.[1] || 'unknown.mcstructure';
     const size = ev.tags.find(t => t[0] === 'size')?.[1] || '?';
     const hash = ev.tags.find(t => t[0] === 'x')?.[1] || '';
