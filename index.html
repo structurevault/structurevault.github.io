@@ -839,7 +839,11 @@ function publishToRelay(url, event) {
           if (data[0] === 'OK' && data[1] === event.id) {
             clearTimeout(timeout);
             ws.removeEventListener('message', handler);
-            resolve(data[2]);
+            if (data[2] === true) {
+              resolve(true);
+            } else {
+              reject(new Error('Relay rejected: ' + (data[3] || 'unknown reason')));
+            }
           }
         } catch {}
       };
@@ -1057,12 +1061,13 @@ async function uploadFiles() {
       const base64 = await fileToBase64(file);
       const hash = bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer())));
 
-      // Create Nostr event (kind 1063 - file metadata, with base64 content)
+      // Create Nostr event (kind 30078 - NIP-78 app-specific replaceable event)
       const event = {
         pubkey,
         created_at: Math.floor(Date.now() / 1000),
-        kind: 1063,
+        kind: 30078,
         tags: [
+          ['d', hash],           // unique identifier per file (required for kind 30078)
           ['name', file.name],
           ['size', String(file.size)],
           ['m', 'application/octet-stream'],
@@ -1091,7 +1096,8 @@ async function uploadFiles() {
       if (successes > 0) {
         toast(`✅ ${file.name} published to ${successes}/${targets.length} relays`, 'success');
       } else {
-        toast(`❌ Failed to publish ${file.name}`, 'error');
+        const reasons = results.filter(r => r.status === 'rejected').map(r => r.reason?.message || '').join('; ');
+        toast(`❌ Failed to publish ${file.name} — ${reasons || 'all relays rejected'}`, 'error');
       }
 
     } catch(e) {
@@ -1119,7 +1125,7 @@ async function fetchMyStructures() {
   const listEl = document.getElementById('uploaded-list');
   listEl.innerHTML = '<div style="font-family:\'VT323\',monospace;font-size:18px;color:#555;text-align:center;padding:20px;">⏳ Scanning relays...</div>';
 
-  const filter = { kinds: [1063], authors: [pubkey], limit: 50 };
+  const filter = { kinds: [30078], authors: [pubkey], '#app': ['structurevault'], limit: 50 };
 
   // Fetch from multiple relays and deduplicate
   const allPromises = RELAYS.map(r => fetchFromRelay(r, filter));
