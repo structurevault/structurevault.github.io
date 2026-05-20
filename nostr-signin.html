@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOSTR // TERMINAL</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #00ff41;
+    --green-dim: #00cc33;
+    --green-dark: #003d10;
+    --green-glow: rgba(0,255,65,0.15);
+    --amber: #ffb700;
+    --red: #ff2222;
+    --bg: #020e04;
+    --scanline: rgba(0,0,0,0.35);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+  }
+
+  /* CRT scanlines */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      var(--scanline) 2px,
+      var(--scanline) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+    animation: flicker 0.15s infinite;
+  }
+
+  /* CRT vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 99;
+  }
+
+  @keyframes flicker {
+    0%   { opacity: 1; }
+    92%  { opacity: 1; }
+    93%  { opacity: 0.8; }
+    94%  { opacity: 1; }
+    96%  { opacity: 0.9; }
+    100% { opacity: 1; }
+  }
+
+  .container {
+    position: relative;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    gap: 2rem;
+    z-index: 1;
+  }
+
+  /* Matrix rain canvas */
+  canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.08;
+  }
+
+  .header {
+    text-align: center;
+    font-family: 'VT323', monospace;
+    position: relative;
+  }
+
+  .ascii-title {
+    font-size: clamp(10px, 1.2vw, 13px);
+    line-height: 1.2;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green);
+    white-space: pre;
+    letter-spacing: 0;
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { text-shadow: 0 0 6px var(--green); }
+    50%       { text-shadow: 0 0 18px var(--green), 0 0 30px var(--green-dim); }
+  }
+
+  .subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--green-dim);
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+  }
+
+  .terminal-box {
+    width: 100%;
+    max-width: 600px;
+    border: 1px solid var(--green-dim);
+    background: rgba(0,15,4,0.9);
+    position: relative;
+    box-shadow: 0 0 20px var(--green-glow), inset 0 0 20px rgba(0,255,65,0.03);
+  }
+
+  .terminal-box::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 1px solid var(--green);
+    opacity: 0.2;
+    pointer-events: none;
+  }
+
+  .term-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--green-dark);
+    background: rgba(0,255,65,0.05);
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--green-dark);
+    border: 1px solid var(--green-dim);
+  }
+
+  .term-title {
+    font-size: 11px;
+    color: var(--green-dim);
+    letter-spacing: 0.2em;
+    margin-left: 4px;
+  }
+
+  .term-body {
+    padding: 1.5rem;
+  }
+
+  .prompt-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+    font-size: 13px;
+    color: var(--green-dim);
+  }
+
+  .prompt-sym {
+    color: var(--green);
+    text-shadow: 0 0 6px var(--green);
+  }
+
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--green-dark);
+    background: rgba(0,0,0,0.5);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+
+  .input-row:focus-within {
+    border-color: var(--green);
+    box-shadow: 0 0 12px rgba(0,255,65,0.2);
+  }
+
+  .input-prefix {
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--green);
+    background: rgba(0,255,65,0.06);
+    border-right: 1px solid var(--green-dark);
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  input[type="password"], input[type="text"] {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 10px 12px;
+    letter-spacing: 0.05em;
+  }
+
+  input::placeholder {
+    color: var(--green-dark);
+    letter-spacing: 0.05em;
+  }
+
+  .show-toggle {
+    background: none;
+    border: none;
+    color: var(--green-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 10px 12px;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+  }
+
+  .show-toggle:hover { color: var(--green); }
+
+  .btn-execute {
+    width: 100%;
+    margin-top: 1rem;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-execute::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--green);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: -1;
+  }
+
+  .btn-execute:hover {
+    color: var(--bg);
+    text-shadow: none;
+    box-shadow: 0 0 20px var(--green-glow);
+  }
+
+  .btn-execute:hover::before {
+    transform: translateX(0);
+  }
+
+  .btn-execute:active { transform: scale(0.99); }
+
+  .log-lines {
+    margin-top: 1rem;
+    font-size: 12px;
+    color: var(--green-dim);
+    min-height: 18px;
+  }
+
+  .log-line { display: flex; gap: 8px; line-height: 1.8; }
+  .log-line .ts { color: #005515; }
+  .log-line .ok  { color: var(--green); }
+  .log-line .err { color: var(--red); }
+  .log-line .warn { color: var(--amber); }
+
+  .error-msg {
+    margin-top: 0.8rem;
+    font-size: 12px;
+    color: var(--red);
+    display: none;
+  }
+
+  /* Result screen */
+  .result-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 700px;
+    animation: fade-in 0.5s ease;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-label {
+    font-size: 12px;
+    letter-spacing: 0.4em;
+    color: var(--green-dim);
+  }
+
+  .result-name {
+    font-family: 'VT323', monospace;
+    font-size: clamp(3rem, 10vw, 7rem);
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green), 0 0 40px rgba(0,255,65,0.4);
+    line-height: 1;
+    letter-spacing: 0.05em;
+    animation: name-glitch 5s infinite;
+    word-break: break-all;
+  }
+
+  @keyframes name-glitch {
+    0%,90%,100% { clip-path: none; transform: none; }
+    91% { clip-path: inset(20% 0 60% 0); transform: translate(-4px,0); }
+    92% { clip-path: inset(60% 0 10% 0); transform: translate(4px,0); }
+    93% { clip-path: inset(40% 0 30% 0); transform: translate(-2px,0); }
+    94% { clip-path: none; transform: none; }
+  }
+
+  .result-meta {
+    font-size: 12px;
+    color: var(--green-dim);
+    letter-spacing: 0.15em;
+    max-width: 500px;
+    word-break: break-all;
+  }
+
+  .result-meta span { color: var(--green); }
+
+  .btn-back {
+    background: transparent;
+    border: 1px solid var(--green-dark);
+    color: var(--green-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-back:hover {
+    border-color: var(--green-dim);
+    color: var(--green);
+  }
+
+  .blink {
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0; }
+  }
+
+  .status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 16px;
+    font-size: 10px;
+    color: var(--green-dark);
+    border-top: 1px solid var(--green-dark);
+    background: rgba(0,10,2,0.95);
+    z-index: 50;
+    letter-spacing: 0.15em;
+  }
+
+  .status-bar .active { color: var(--green-dim); }
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<div class="container">
+
+  <!-- ASCII header -->
+  <div class="header">
+    <div class="ascii-title">
+ ███╗   ██╗ ██████╗ ███████╗████████╗██████╗
+ ████╗  ██║██╔═══██╗██╔════╝╚══██╔══╝██╔══██╗
+ ██╔██╗ ██║██║   ██║███████╗   ██║   ██████╔╝
+ ██║╚██╗██║██║   ██║╚════██║   ██║   ██╔══██╗
+ ██║ ╚████║╚██████╔╝███████║   ██║   ██║  ██║
+ ╚═╝  ╚═══╝ ╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═╝</div>
+    <div class="subtitle">decentralised identity terminal v2.1.0</div>
+  </div>
+
+  <!-- Login box -->
+  <div class="terminal-box" id="login-box">
+    <div class="term-header">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <span class="term-title">AUTH // nsec_input.sh</span>
+    </div>
+    <div class="term-body">
+      <div class="prompt-line">
+        <span class="prompt-sym">root@nostr:~$</span>
+        <span>authenticate --protocol nostr --key-type nsec</span>
+      </div>
+
+      <div class="input-row">
+        <span class="input-prefix">nsec</span>
+        <input type="password" id="nsec-input" placeholder="1••••••••••••••••••••••••••••••••••••••••••••••••••••••••" autocomplete="off" spellcheck="false" />
+        <button class="show-toggle" id="toggle-vis" onclick="toggleVis()">[ SHOW ]</button>
+      </div>
+
+      <div class="error-msg" id="err-msg">⚠ ERR: invalid nsec key — check format and retry</div>
+
+      <div class="log-lines" id="log-lines"></div>
+
+      <button class="btn-execute" onclick="doLogin()">[ EXECUTE AUTH ]<span class="blink">_</span></button>
+    </div>
+  </div>
+
+  <!-- Result screen -->
+  <div class="result-screen" id="result-screen">
+    <div class="result-label">// identity resolved //</div>
+    <div class="result-name" id="result-name">ANON</div>
+    <div class="result-meta" id="result-meta"></div>
+    <button class="btn-back" onclick="goBack()">[ ← NEW SESSION ]</button>
+  </div>
+
+</div>
+
+<div class="status-bar">
+  <span>protocol: <span class="active">NOSTR/NIPs-01,19</span></span>
+  <span>relay: <span class="active">local</span></span>
+  <span>enc: <span class="active">secp256k1</span></span>
+  <span id="clock"></span>
+</div>
+
+<!-- nostr-tools via CDN -->
+<script src="https://unpkg.com/nostr-tools@2.7.2/lib/nostr.bundle.js"></script>
+
+<script>
+// ── Matrix rain ──────────────────────────────────────────────
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+let cols, drops;
+
+function initMatrix() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  cols = Math.floor(canvas.width / 16);
+  drops = Array(cols).fill(1);
+}
+
+function drawMatrix() {
+  ctx.fillStyle = 'rgba(2,14,4,0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#00ff41';
+  ctx.font = '14px Share Tech Mono, monospace';
+  const chars = '01アイウエオカキクケコABCDEFnpubnsec$#@!{}[]<>';
+  drops.forEach((y, i) => {
+    const ch = chars[Math.floor(Math.random() * chars.length)];
+    ctx.fillText(ch, i * 16, y * 16);
+    if (y * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  });
+}
+
+initMatrix();
+window.addEventListener('resize', initMatrix);
+setInterval(drawMatrix, 50);
+
+// ── Clock ─────────────────────────────────────────────────────
+function tick() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    'time: ' + now.toISOString().replace('T',' ').slice(0,19) + ' UTC';
+}
+tick();
+setInterval(tick, 1000);
+
+// ── Log helper ────────────────────────────────────────────────
+function addLog(type, msg) {
+  const el = document.getElementById('log-lines');
+  const ts = new Date().toISOString().slice(11,23);
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="ts">[${ts}]</span><span class="${type}">${msg}</span>`;
+  el.appendChild(line);
+}
+
+// ── Toggle visibility ─────────────────────────────────────────
+let visible = false;
+function toggleVis() {
+  visible = !visible;
+  const inp = document.getElementById('nsec-input');
+  inp.type = visible ? 'text' : 'password';
+  document.getElementById('toggle-vis').textContent = visible ? '[ HIDE ]' : '[ SHOW ]';
+}
+
+// ── Parse bech32 nsec → raw hex ───────────────────────────────
+function bech32Decode(str) {
+  const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+  str = str.toLowerCase();
+  const p = str.lastIndexOf('1');
+  if (p < 1) throw new Error('no separator');
+  const hrp = str.slice(0, p);
+  if (hrp !== 'nsec') throw new Error('not nsec');
+  const data = [];
+  for (let i = p + 1; i < str.length; i++) {
+    const v = CHARSET.indexOf(str[i]);
+    if (v === -1) throw new Error('bad char');
+    data.push(v);
+  }
+  // convert 5-bit groups to 8-bit
+  let acc = 0, bits = 0;
+  const result = [];
+  for (const val of data.slice(0, -6)) {
+    acc = (acc << 5) | val;
+    bits += 5;
+    while (bits >= 8) { bits -= 8; result.push((acc >> bits) & 0xff); }
+  }
+  return result.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── Main auth ─────────────────────────────────────────────────
+async function doLogin() {
+  const raw = document.getElementById('nsec-input').value.trim();
+  const errEl = document.getElementById('err-msg');
+  const logEl = document.getElementById('log-lines');
+  logEl.innerHTML = '';
+  errEl.style.display = 'none';
+
+  addLog('ok', 'initiating key validation...');
+
+  if (!raw.startsWith('nsec1')) {
+    errEl.style.display = 'block';
+    addLog('err', 'key rejected — bad prefix');
+    return;
+  }
+
+  let privKeyHex;
+  try {
+    // Try nostr-tools first, fall back to manual bech32
+    if (window.NostrTools && window.NostrTools.nip19) {
+      const { type, data } = window.NostrTools.nip19.decode(raw);
+      if (type !== 'nsec') throw new Error('not nsec');
+      privKeyHex = typeof data === 'string' ? data
+                 : Array.from(data).map(b=>b.toString(16).padStart(2,'0')).join('');
+    } else {
+      privKeyHex = bech32Decode(raw);
+    }
+    addLog('ok', 'bech32 decode: OK');
+  } catch(e) {
+    errEl.style.display = 'block';
+    addLog('err', 'decode failed — ' + e.message);
+    return;
+  }
+
+  // Derive pubkey
+  let pubKeyHex;
+  try {
+    if (window.NostrTools && window.NostrTools.getPublicKey) {
+      pubKeyHex = window.NostrTools.getPublicKey(privKeyHex);
+    } else {
+      // Can't derive without lib — show npub unavailable
+      pubKeyHex = null;
+    }
+    addLog('ok', 'secp256k1 pubkey derived');
+  } catch(e) {
+    addLog('warn', 'pubkey derivation failed — ' + e.message);
+    pubKeyHex = null;
+  }
+
+  addLog('ok', 'fetching identity metadata...');
+
+  // Fetch profile via public relay using WebSocket
+  const npub = pubKeyHex
+    ? (window.NostrTools?.nip19?.npubEncode?.(pubKeyHex) ?? 'npub1...')
+    : 'npub1...';
+
+  let name = null;
+  if (pubKeyHex) {
+    name = await fetchName(pubKeyHex);
+  }
+
+  addLog('ok', name ? `profile resolved: ${name}` : 'no metadata found — using npub');
+
+  // Show result
+  showResult(name || shortenNpub(npub), npub, pubKeyHex);
+}
+
+function shortenNpub(npub) {
+  return npub.length > 20 ? npub.slice(0,12) + '...' + npub.slice(-6) : npub;
+}
+
+function fetchName(pubkeyHex) {
+  return new Promise(resolve => {
+    const relays = [
+      'wss://relay.damus.io',
+      'wss://nos.lol',
+      'wss://relay.nostr.band',
+    ];
+    let resolved = false;
+    let attempts = 0;
+    const timeout = setTimeout(() => { if (!resolved) { resolved = true; resolve(null); }}, 6000);
+
+    for (const url of relays) {
+      try {
+        const ws = new WebSocket(url);
+        ws.onopen = () => {
+          const sub = JSON.stringify(['REQ','meta',{kinds:[0],authors:[pubkeyHex],limit:1}]);
+          ws.send(sub);
+        };
+        ws.onmessage = (e) => {
+          if (resolved) return;
+          try {
+            const msg = JSON.parse(e.data);
+            if (msg[0] === 'EVENT' && msg[2].kind === 0) {
+              const meta = JSON.parse(msg[2].content);
+              const displayName = meta.display_name || meta.name || meta.username || null;
+              if (displayName) {
+                resolved = true;
+                clearTimeout(timeout);
+                ws.close();
+                resolve(displayName);
+              }
+            }
+          } catch(_) {}
+        };
+        ws.onerror = () => {
+          attempts++;
+          if (attempts === relays.length && !resolved) { resolved = true; resolve(null); }
+        };
+      } catch(_) {
+        attempts++;
+        if (attempts === relays.length && !resolved) { resolved = true; resolve(null); }
+      }
+    }
+  });
+}
+
+function showResult(displayName, npub, pubkeyHex) {
+  document.getElementById('login-box').style.display = 'none';
+  const rs = document.getElementById('result-screen');
+  rs.style.display = 'flex';
+  document.getElementById('result-name').textContent = displayName.toUpperCase();
+  const shortPub = npub.length > 30 ? npub.slice(0,20)+'...'+npub.slice(-8) : npub;
+  document.getElementById('result-meta').innerHTML =
+    `npub: <span>${shortPub}</span>`;
+}
+
+function goBack() {
+  document.getElementById('login-box').style.display = 'block';
+  document.getElementById('result-screen').style.display = 'none';
+  document.getElementById('nsec-input').value = '';
+  document.getElementById('log-lines').innerHTML = '';
+  document.getElementById('err-msg').style.display = 'none';
+}
+
+// Enter key shortcut
+document.getElementById('nsec-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+</script>
+
+</body>
+</html>
