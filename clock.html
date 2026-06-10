@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Australia Debt Clock + BTC Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --void: #0a0a0f;
+    --card: #111118;
+    --card2: #16161f;
+    --border: #222230;
+    --gold: #f7b731;
+    --gold-dim: #c49020;
+    --red: #e84040;
+    --green: #2ecc71;
+    --muted: #555570;
+    --text: #d0d0e0;
+    --bright: #f0f0ff;
+  }
+
+  body {
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 40px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--bright);
+  }
+  .logo .au-flag { font-size: 1.4rem; }
+  .logo span { color: var(--gold); }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--red);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+  }
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--red);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ── HERO DEBT CLOCK ── */
+  .debt-hero {
+    padding: 60px 40px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .debt-hero::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(247,183,49,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 14px;
+    opacity: 0.85;
+  }
+  .debt-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 300;
+    font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 28px;
+  }
+
+  /* The big number */
+  .debt-clock-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .debt-currency {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 300;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    color: var(--gold);
+    vertical-align: top;
+    margin-top: 8px;
+    margin-right: 4px;
+  }
+  #debt-number {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: clamp(2.8rem, 7vw, 6.5rem);
+    color: var(--bright);
+    letter-spacing: -0.01em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .debt-cents {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 300;
+    font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+    color: var(--muted);
+    vertical-align: bottom;
+    margin-bottom: 4px;
+  }
+  .currency-toggle {
+    margin-top: 20px;
+    display: flex;
+    gap: 0;
+    justify-content: center;
+  }
+  .currency-toggle button {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    padding: 6px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.1em;
+  }
+  .currency-toggle button:first-child { border-radius: 4px 0 0 4px; }
+  .currency-toggle button:last-child { border-radius: 0 4px 4px 0; }
+  .currency-toggle button.active {
+    background: var(--gold);
+    color: var(--void);
+    border-color: var(--gold);
+    font-weight: 600;
+  }
+
+  /* ── STATS GRID ── */
+  .stats-section {
+    padding: 20px 40px 50px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .stat-card {
+    background: var(--card);
+    padding: 22px 24px;
+    transition: background 0.2s;
+  }
+  .stat-card:hover { background: var(--card2); }
+  .stat-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .stat-value {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.55rem;
+    font-weight: 600;
+    color: var(--bright);
+    line-height: 1;
+  }
+  .stat-value.danger { color: var(--red); }
+  .stat-value.warn { color: var(--gold); }
+  .stat-sub {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 5px;
+    font-family: 'Inter', sans-serif;
+  }
+  .interest-ticker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--red);
+  }
+
+  /* ── DIVIDER ── */
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0 40px;
+    position: relative;
+  }
+  .section-divider::after {
+    content: '₿';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--void);
+    padding: 0 14px;
+    color: var(--gold);
+    font-size: 1.1rem;
+  }
+
+  /* ── BTC SECTION ── */
+  .btc-section {
+    padding: 50px 40px 60px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .btc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 768px) {
+    .btc-grid { grid-template-columns: 1fr; }
+    header { padding: 14px 20px; }
+    .debt-hero, .stats-section, .btc-section { padding-left: 20px; padding-right: 20px; }
+    .section-divider { margin: 0 20px; }
+  }
+
+  .btc-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 30px;
+  }
+  .btc-card-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .btc-card-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 24px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Converter inputs */
+  .converter-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .input-group {
+    position: relative;
+  }
+  .input-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .input-label .token {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.62rem;
+    color: var(--gold);
+  }
+  .converter-input {
+    width: 100%;
+    background: var(--void);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.05rem;
+    color: var(--bright);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .converter-input:focus { border-color: var(--gold); }
+  .converter-input::placeholder { color: var(--muted); }
+
+  .swap-arrow {
+    text-align: center;
+    color: var(--muted);
+    font-size: 1.2rem;
+    margin: -4px 0;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .swap-arrow:hover { color: var(--gold); }
+
+  /* BTC price strip */
+  .btc-price-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--void);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-top: 20px;
+  }
+  .btc-price-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .btc-price-value {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--bright);
+  }
+  .btc-price-change {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .btc-price-change.up { color: var(--green); }
+  .btc-price-change.down { color: var(--red); }
+
+  /* Satoshi table */
+  .sats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-top: 4px;
+  }
+  .sats-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+  .sats-table td {
+    padding: 9px 10px;
+    border-bottom: 1px solid rgba(34,34,48,0.5);
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+  }
+  .sats-table tr:last-child td { border-bottom: none; }
+  .sats-table tr:hover td { background: rgba(247,183,49,0.04); }
+  .sats-table td:first-child { color: var(--gold); }
+  .sats-table td:last-child { color: var(--bright); font-weight: 600; }
+
+  /* Debt-per-sat */
+  .debt-per-sat-box {
+    background: linear-gradient(135deg, rgba(232,64,64,0.08), rgba(247,183,49,0.04));
+    border: 1px solid rgba(232,64,64,0.2);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-top: 20px;
+    text-align: center;
+  }
+  .dps-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 10px;
+    opacity: 0.85;
+  }
+  .dps-value {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--bright);
+  }
+  .dps-sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+
+  /* Loading state */
+  .loading-shimmer {
+    background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+    display: inline-block;
+    color: transparent;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="au-flag">🇦🇺</span>
+    <span>Aus</span>Debt<span>Clock</span>
+  </div>
+  <div class="header-right">
+    <span id="clock-time">--:--:--</span>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      Live
+    </div>
+  </div>
+</header>
+
+<!-- DEBT HERO -->
+<section class="debt-hero">
+  <div class="section-label">National Debt of Australia — Real Time</div>
+  <div class="debt-title">Australian Government Gross Debt</div>
+
+  <div class="debt-clock-wrap">
+    <span class="debt-currency" id="currency-symbol">A$</span><span id="debt-number">1,161,862,669,000</span><span class="debt-cents" id="debt-cents">.00</span>
+  </div>
+
+  <div class="currency-toggle">
+    <button class="active" id="btn-aud" onclick="setCurrency('AUD')">AUD</button>
+    <button id="btn-usd" onclick="setCurrency('USD')">USD</button>
+  </div>
+
+  <p style="margin-top:16px; font-size:0.72rem; color:var(--muted); font-family:'JetBrains Mono',monospace;">
+    ▲ Increasing ~A$1,105 per second · Source: IMF / World Bank
+  </p>
+</section>
+
+<!-- STATS GRID -->
+<div class="stats-section">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Debt / GDP</div>
+      <div class="stat-value warn">43.77%</div>
+      <div class="stat-sub">Year: 2024</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">GDP (Nominal)</div>
+      <div class="stat-value">A$2.65T</div>
+      <div class="stat-sub">Year: 2024</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Interest / Year</div>
+      <div class="stat-value danger">A$34.86B</div>
+      <div class="stat-sub">≈ <span class="interest-ticker">A$1,105/sec</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Debt per Citizen</div>
+      <div class="stat-value danger">A$45,231</div>
+      <div class="stat-sub">Pop: 25.7 million</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Inflation (CPI)</div>
+      <div class="stat-value warn">3.16%</div>
+      <div class="stat-sub">Year: 2024</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">GDP Growth</div>
+      <div class="stat-value">1.43%</div>
+      <div class="stat-sub">Real, Year: 2024</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Unemployment</div>
+      <div class="stat-value">4.07%</div>
+      <div class="stat-sub">Year: 2024</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Budget Balance</div>
+      <div class="stat-value danger">−1.35%</div>
+      <div class="stat-sub">of GDP, 2022</div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- BTC SECTION -->
+<section class="btc-section">
+  <div class="section-label" style="text-align:center">Bitcoin Tools</div>
+  <div class="btc-grid">
+
+    <!-- CONVERTER -->
+    <div class="btc-card">
+      <div class="btc-card-title">Bitcoin ↔ AUD Converter</div>
+      <div class="btc-card-sub" id="btc-rate-sub">Fetching live BTC price…</div>
+
+      <div class="converter-fields">
+        <div class="input-group">
+          <div class="input-label"><span class="token">₿</span> Bitcoin (BTC)</div>
+          <input class="converter-input" id="input-btc" type="number" placeholder="0.00000000" step="0.00000001" oninput="convertFrom('btc')">
+        </div>
+
+        <div class="swap-arrow" onclick="swapInputs()">⇅</div>
+
+        <div class="input-group">
+          <div class="input-label"><span class="token">SATS</span> Satoshis</div>
+          <input class="converter-input" id="input-sats" type="number" placeholder="0" step="1" oninput="convertFrom('sats')">
+        </div>
+
+        <div class="swap-arrow" style="cursor:default; pointer-events:none;">↕</div>
+
+        <div class="input-group">
+          <div class="input-label"><span class="token">A$</span> Australian Dollar</div>
+          <input class="converter-input" id="input-aud" type="number" placeholder="0.00" step="0.01" oninput="convertFrom('aud')">
+        </div>
+      </div>
+
+      <div class="btc-price-strip">
+        <span class="btc-price-label">BTC / AUD</span>
+        <span class="btc-price-value" id="btc-aud-price">—</span>
+        <span class="btc-price-change" id="btc-change">—</span>
+      </div>
+
+      <div class="debt-per-sat-box">
+        <div class="dps-label">🇦🇺 National Debt in Bitcoin</div>
+        <div class="dps-value" id="debt-in-btc">— BTC</div>
+        <div class="dps-sub" id="debt-in-sats">— satoshis</div>
+      </div>
+    </div>
+
+    <!-- SATOSHI TABLE -->
+    <div class="btc-card">
+      <div class="btc-card-title">Satoshi Reference Table</div>
+      <div class="btc-card-sub" id="sats-table-sub">Live AUD values</div>
+
+      <table class="sats-table">
+        <thead>
+          <tr>
+            <th>Satoshis</th>
+            <th>BTC</th>
+            <th>AUD Value</th>
+          </tr>
+        </thead>
+        <tbody id="sats-table-body">
+          <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px;">Loading live prices…</td></tr>
+        </tbody>
+      </table>
+
+      <div class="btc-price-strip" style="margin-top:16px;">
+        <span class="btc-price-label">1 Sat =</span>
+        <span class="btc-price-value" id="one-sat-aud" style="font-size:0.95rem;">—</span>
+        <span class="btc-price-label">AUD</span>
+      </div>
+      <div class="btc-price-strip" style="margin-top:8px;">
+        <span class="btc-price-label">Debt per citizen in Sats</span>
+        <span class="btc-price-value" id="debt-per-citizen-sats" style="font-size:0.95rem;color:var(--red);">—</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer>
+  <span>Data: <a href="https://debtclock.io/australia" target="_blank">IMF / World Bank via debtclock.io</a> · BTC: <a href="https://coingecko.com" target="_blank">live web search</span>
+  <span id="last-btc-fetch">BTC price: fetching…</span>
+</footer>
+
+<script>
+  // ── BASE DATA (from IMF/World Bank via debtclock.io) ──
+  const BASE_DEBT_AUD = 1161862669000;
+  const INTEREST_PER_SECOND_AUD = 1105; // ~$34.86B/yr ÷ 31,557,600 sec
+  let debtStart = BASE_DEBT_AUD;
+  let sessionStartMs = Date.now();
+  let currentCurrency = 'AUD';
+  let fxUsdAud = 0.66; // AUD per 1 USD (so 1 AUD = 1/0.66 USD)
+  let btcAudPrice = null;
+  let btcChangePercent = null;
+
+  // ── CLOCK ──
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock-time').textContent =
+      now.toLocaleTimeString('en-AU', { hour12: false });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── DEBT CLOCK ──
+  function getCurrentDebt() {
+    const elapsedSec = (Date.now() - sessionStartMs) / 1000;
+    return debtStart + elapsedSec * INTEREST_PER_SECOND_AUD;
+  }
+
+  function formatDebt(value, decimals = 2) {
+    const intPart = Math.floor(value);
+    const decPart = (value - intPart).toFixed(decimals).slice(1); // ".XX"
+    const formatted = intPart.toLocaleString('en-AU');
+    return { int: formatted, dec: decPart };
+  }
+
+  function updateDebtDisplay() {
+    const raw = getCurrentDebt();
+    let display = raw;
+    let symbol = 'A$';
+
+    if (currentCurrency === 'USD') {
+      display = raw * fxUsdAud;
+      symbol = 'US$';
+    }
+
+    const { int, dec } = formatDebt(display, 2);
+    document.getElementById('currency-symbol').textContent = symbol;
+    document.getElementById('debt-number').textContent = int;
+    document.getElementById('debt-cents').textContent = dec;
+
+    // Update debt in BTC/sats
+    if (btcAudPrice) {
+      const debtInBtc = raw / btcAudPrice;
+      const debtInSats = Math.round(debtInBtc * 1e8);
+      document.getElementById('debt-in-btc').textContent = debtInBtc.toLocaleString('en-AU', { maximumFractionDigits: 2 }) + ' BTC';
+      document.getElementById('debt-in-sats').textContent = debtInSats.toLocaleString('en-AU') + ' satoshis';
+    }
+  }
+
+  setInterval(updateDebtDisplay, 100);
+
+  function setCurrency(c) {
+    currentCurrency = c;
+    document.getElementById('btn-aud').classList.toggle('active', c === 'AUD');
+    document.getElementById('btn-usd').classList.toggle('active', c === 'USD');
+  }
+
+  // ── BTC PRICE (via Anthropic API web search) ──
+  async function fetchBtcPrice() {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 200,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          system: 'You are a price lookup assistant. Always respond with ONLY a valid JSON object, no markdown, no explanation. Format: {"price_aud": <number>, "change_24h": <number>}',
+          messages: [{ role: 'user', content: 'What is the current Bitcoin price in Australian dollars (AUD) and the 24-hour percentage change? Return ONLY JSON: {"price_aud": <number>, "change_24h": <number>}' }]
+        })
+      });
+      const raw = await res.json();
+      // Extract the last text block from the response
+      const textBlock = raw.content && raw.content.filter(b => b.type === 'text').pop();
+      if (!textBlock) throw new Error('No text in response');
+      const clean = textBlock.text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      const price = parsed.price_aud;
+      const change = parsed.change_24h;
+
+      btcAudPrice = price;
+      btcChangePercent = change;
+
+      // Update UI
+      document.getElementById('btc-aud-price').textContent = 'A$' + price.toLocaleString('en-AU', { maximumFractionDigits: 0 });
+      document.getElementById('btc-rate-sub').textContent = `1 BTC = A$${price.toLocaleString('en-AU', { maximumFractionDigits: 0 })} (live)`;
+      document.getElementById('sats-table-sub').textContent = `Live AUD · 1 BTC = A$${price.toLocaleString('en-AU', { maximumFractionDigits: 0 })}`;
+
+      const changeEl = document.getElementById('btc-change');
+      changeEl.textContent = (change >= 0 ? '▲ +' : '▼ ') + change.toFixed(2) + '% (24h)';
+      changeEl.className = 'btc-price-change ' + (change >= 0 ? 'up' : 'down');
+
+      const oneSat = price / 1e8;
+      document.getElementById('one-sat-aud').textContent = oneSat.toFixed(6);
+
+      // Satoshi table
+      const rows = [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
+      const tbody = document.getElementById('sats-table-body');
+      tbody.innerHTML = rows.map(sats => {
+        const btc = sats / 1e8;
+        const aud = btc * price;
+        const audStr = aud < 0.01 ? aud.toFixed(8) :
+                       aud < 1 ? aud.toFixed(4) :
+                       'A$' + aud.toLocaleString('en-AU', { maximumFractionDigits: 2 });
+        return `<tr>
+          <td>${sats.toLocaleString()}</td>
+          <td>${btc.toFixed(8)}</td>
+          <td>${audStr}</td>
+        </tr>`;
+      }).join('');
+
+      // Debt per citizen in sats
+      const debtPerCitizenAud = 45231;
+      const debtPerCitizenSats = Math.round((debtPerCitizenAud / price) * 1e8);
+      document.getElementById('debt-per-citizen-sats').textContent =
+        debtPerCitizenSats.toLocaleString('en-AU') + ' sats';
+
+      document.getElementById('last-btc-fetch').textContent =
+        'BTC updated: ' + new Date().toLocaleTimeString('en-AU', { hour12: false });
+
+    } catch (e) {
+      document.getElementById('btc-rate-sub').textContent = 'Price fetch failed — check connection';
+      console.error('BTC fetch error:', e);
+    }
+  }
+
+  fetchBtcPrice();
+  setInterval(fetchBtcPrice, 30000); // refresh every 30s
+
+  // ── CONVERTER LOGIC ──
+  function convertFrom(source) {
+    if (!btcAudPrice) return;
+    const btcInput = document.getElementById('input-btc');
+    const satsInput = document.getElementById('input-sats');
+    const audInput = document.getElementById('input-aud');
+
+    if (source === 'btc') {
+      const btc = parseFloat(btcInput.value) || 0;
+      satsInput.value = btc > 0 ? Math.round(btc * 1e8) : '';
+      audInput.value = btc > 0 ? (btc * btcAudPrice).toFixed(2) : '';
+    } else if (source === 'sats') {
+      const sats = parseFloat(satsInput.value) || 0;
+      const btc = sats / 1e8;
+      btcInput.value = sats > 0 ? btc.toFixed(8) : '';
+      audInput.value = sats > 0 ? (btc * btcAudPrice).toFixed(2) : '';
+    } else if (source === 'aud') {
+      const aud = parseFloat(audInput.value) || 0;
+      const btc = aud / btcAudPrice;
+      btcInput.value = aud > 0 ? btc.toFixed(8) : '';
+      satsInput.value = aud > 0 ? Math.round(btc * 1e8) : '';
+    }
+  }
+
+  function swapInputs() {
+    // Clear all and focus BTC
+    document.getElementById('input-btc').value = '';
+    document.getElementById('input-sats').value = '';
+    document.getElementById('input-aud').value = '';
+    document.getElementById('input-btc').focus();
+  }
+</script>
+</body>
+</html>
