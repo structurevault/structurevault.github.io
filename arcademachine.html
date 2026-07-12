@@ -86,22 +86,7 @@
   }
   @keyframes travel{from{left:-100px}to{left:100%}}
 
-  /* ============ NAV ============ */
-  nav{display:flex;justify-content:center;gap:12px;padding:22px 14px;flex-wrap:wrap}
-  .btn{
-    font-family:'Audiowide',sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;
-    color:var(--text);background:var(--panel);
-    border:1px solid var(--line);border-radius:4px;
-    padding:12px 20px;cursor:pointer;position:relative;
-    clip-path:polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-  }
-  .btn:hover{border-color:var(--arc);color:var(--arc)}
-  .btn.volt{border-color:var(--volt);color:var(--volt)}
-  .btn.volt:hover{background:rgba(255,214,10,.08)}
-  .btn:focus-visible{outline:2px solid var(--arc);outline-offset:2px}
-  .btn:active{transform:translateY(1px)}
-
-  main{max-width:1520px;margin:0 auto;padding:6px 18px 40px}
+  main{max-width:1520px;margin:0 auto;padding:26px 18px 40px}
   .view{display:none}
   .view.active{display:block}
 
@@ -178,44 +163,10 @@
     line-height:2;margin-bottom:14px;text-transform:uppercase;
   }
 
-  /* ============ FORM / CARDS ============ */
-  .card{
-    max-width:640px;margin:0 auto;background:var(--panel);
-    border:1px solid var(--line);border-radius:8px;padding:30px;
-    border-top:3px solid var(--volt);
-  }
-  .card h2{font-family:'Audiowide',sans-serif;font-size:16px;letter-spacing:3px;color:var(--volt);margin-bottom:6px;text-transform:uppercase}
-  .card .hint{color:var(--dim);margin-bottom:22px}
-  .field{margin-bottom:18px}
-  label{
-    display:block;font-family:'Audiowide',sans-serif;font-size:10px;letter-spacing:2px;
-    color:var(--arc);margin-bottom:8px;text-transform:uppercase;
-  }
-  input[type=text],input[type=url],select{
-    width:100%;padding:12px 14px;font-family:'Share Tech Mono',monospace;font-size:18px;
-    background:#0a0f16;color:var(--text);
-    border:1px solid var(--line);border-radius:4px;
-  }
-  input:focus,select:focus{outline:none;border-color:var(--volt);box-shadow:0 0 0 1px var(--volt)}
-  .msg{margin-top:16px;padding:12px 14px;border-radius:4px;display:none}
+  /* ============ STATUS MESSAGE ============ */
+  .msg{margin:0 auto 16px;max-width:640px;padding:12px 14px;border-radius:4px;display:none;text-align:center}
   .msg.err{display:block;background:#2a1410;border:1px solid var(--hot);color:#ffb59e}
   .msg.ok{display:block;background:#0e2417;border:1px solid var(--ok);color:#a9f5c9}
-
-  /* ============ MANAGE ============ */
-  .manage-list{list-style:none;margin-top:14px}
-  .manage-list li{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
-    padding:10px 12px;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;background:var(--panel-2);
-  }
-  .manage-list .meta{overflow:hidden}
-  .manage-list .meta b{color:var(--volt);font-weight:normal;font-family:'Audiowide',sans-serif;font-size:13px;letter-spacing:1px}
-  .manage-list .meta span{color:var(--dim);display:block;font-size:15px}
-  .del{
-    background:none;border:1px solid var(--hot);color:var(--hot);border-radius:4px;
-    font-family:'Audiowide',sans-serif;font-size:9px;letter-spacing:1px;padding:8px 12px;cursor:pointer;flex-shrink:0;
-  }
-  .del:hover{background:var(--hot);color:#0b0f14}
-  .manage-tools{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
 
   footer{text-align:center;color:#3a4c60;padding:22px;font-size:14px;letter-spacing:2px;text-transform:uppercase}
 
@@ -234,16 +185,11 @@
   <div class="arcline" aria-hidden="true"></div>
 </header>
 
-<nav>
-  <button class="btn volt" data-view="play">&#9654; Game Wall</button>
-  <button class="btn" data-view="submit">+ Add Your Game</button>
-  <button class="btn" data-view="manage">&#9881; Manage</button>
-</nav>
-
 <main>
 
   <!-- ========== GAME WALL ========== -->
   <section id="view-play" class="view active">
+    <div class="msg" id="loadMsg" role="alert"></div>
     <div class="grid-head">
       <h2>Now Showing</h2>
       <div class="status">
@@ -255,56 +201,10 @@
     <div id="grid"></div>
     <div class="empty-state" id="emptyState" style="display:none">
       <div class="big">No games on the wall yet</div>
-      <p>Press <b style="color:var(--arc)">+ Add Your Game</b> to power up the first one.</p>
+      <p>New games added to the spreadsheet will appear here automatically.</p>
     </div>
     <div class="hintbar" id="hintbar">
       &#127918; <kbd>D-Pad / Stick</kbd> choose game &nbsp; <kbd>LB / RB</kbd> change screen &nbsp; <kbd>Start</kbd> auto-play &nbsp;&bull;&nbsp; keyboard arrows work too
-    </div>
-  </section>
-
-  <!-- ========== SUBMIT ========== -->
-  <section id="view-submit" class="view">
-    <div class="card">
-      <h2>Add Your Game</h2>
-      <p class="hint">In MakeCode Arcade press <b style="color:var(--volt)">Share</b>, copy your game link, and paste it below.</p>
-      <div class="field">
-        <label for="fName">First name</label>
-        <input type="text" id="fName" maxlength="30" autocomplete="off" placeholder="e.g. Ruby">
-      </div>
-      <div class="field">
-        <label for="fGrade">Grade</label>
-        <select id="fGrade">
-          <option value="">Choose your grade&hellip;</option>
-          <option>Prep</option><option>Grade 1</option><option>Grade 2</option>
-          <option>Grade 3</option><option>Grade 4</option><option>Grade 5</option>
-          <option>Grade 6</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="fGame">Name of your game</label>
-        <input type="text" id="fGame" maxlength="40" autocomplete="off" placeholder="e.g. Space Chase">
-      </div>
-      <div class="field">
-        <label for="fUrl">MakeCode share link</label>
-        <input type="url" id="fUrl" autocomplete="off" placeholder="https://makecode.com/_Fhbds4gdDPpp">
-      </div>
-      <button class="btn volt" id="submitBtn" style="width:100%">Power Up &#9889;</button>
-      <div class="msg" id="formMsg" role="alert"></div>
-    </div>
-  </section>
-
-  <!-- ========== MANAGE ========== -->
-  <section id="view-manage" class="view">
-    <div class="card">
-      <h2>Manage Games</h2>
-      <p class="hint">Games are saved in this browser. Use Export to back them up or move them to another machine.</p>
-      <ul class="manage-list" id="manageList"></ul>
-      <div class="manage-tools">
-        <button class="btn" id="exportBtn">&#8681; Export</button>
-        <button class="btn" id="importBtn">&#8679; Import</button>
-        <input type="file" id="importFile" accept=".json" hidden>
-      </div>
-      <div class="msg" id="manageMsg" role="alert"></div>
     </div>
   </section>
 
@@ -312,51 +212,88 @@
 
 <footer>SPARK Centre &bull; Boneo Primary School &bull; Free Play</footer>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 (function(){
   "use strict";
-  const STORE_KEY = "spark-arcade-games";
-  const LEGACY_KEY = "boneo-arcade-games";
   const COLS = 6, ROWS = 3, PAGE_SIZE = COLS * ROWS;   // 6 x 3 grid
   const AUTO_MS = 12000;        // auto mode: seconds each preview runs
   const LOAD_DELAY = 650;       // manual mode: pause before loading a preview
   const IDLE_BACK_TO_AUTO = 45000; // manual -> auto after 45s of no input
 
-  /* ---------- storage (migrates old Boneo Arcade saves) ---------- */
-  const load = () => {
-    try {
-      let g = JSON.parse(localStorage.getItem(STORE_KEY));
-      if (!g) {
-        g = JSON.parse(localStorage.getItem(LEGACY_KEY));
-        if (g) localStorage.setItem(STORE_KEY, JSON.stringify(g));
-      }
-      return g || [];
-    } catch(e){ return []; }
-  };
-  const save = g => localStorage.setItem(STORE_KEY, JSON.stringify(g));
-  let games = load();
+  /* ---------- game data source: published Google Sheet (xlsx) ---------- */
+  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQYOnFCDtaPGF_q7MDIkaXa8Bu8hjXR1rIMR1oZfND8uf8Z8An-VdEXty5WZL8OF7f3VHzLEYG4noED/pub?output=xlsx";
+  const REFRESH_MS = 5 * 60 * 1000; // re-check the sheet every 5 minutes so new entries appear without a page reload
+  const loadMsg = document.getElementById("loadMsg");
+  let games = [];
 
-  /* ---------- views ---------- */
-  const views = document.querySelectorAll(".view");
-  let wallActive = true;
-  let managed = false;   // unlocked for the rest of this session once the password is entered
-  document.querySelectorAll("nav .btn").forEach(btn=>{
-    btn.addEventListener("click", ()=> showView(btn.dataset.view));
-  });
-  function showView(name){
-    if (name === "manage" && !managed){
-      const pw = prompt("Enter the manager password:");
-      if (pw !== "kieranisthebest!"){
-        if (pw !== null) alert("Access denied. Nice try!");
-        return;
-      }
-      managed = true;
+  function findCol(headers, keywords, exclude){
+    for (let i=0;i<headers.length;i++){
+      if (exclude != null && i === exclude) continue;
+      const h = headers[i];
+      if (keywords.some(k => h.includes(k))) return i;
     }
-    views.forEach(v=> v.classList.toggle("active", v.id === "view-"+name));
-    wallActive = (name === "play");
-    if (wallActive) startWall(); else stopWall();
-    if (name === "manage") renderManage();
+    return -1;
   }
+
+  // Turns the sheet's rows into the {id, name, grade, game} shape the wall renders.
+  // Column headers are matched flexibly (case-insensitive, partial match) so small
+  // wording changes in the spreadsheet don't break the wall.
+  function rowsToGames(rows){
+    if (!rows.length) return [];
+    const headers = rows[0].map(h => String(h||"").trim().toLowerCase());
+    const gameIdx  = findCol(headers, ["game name","game title","game"]);
+    const urlIdx   = findCol(headers, ["makecode","share link","link","url"]);
+    const gradeIdx = findCol(headers, ["grade","year level","year"]);
+    const nameIdx  = findCol(headers, ["first name","student name","name"], gameIdx);
+
+    const out = [];
+    for (let r=1;r<rows.length;r++){
+      const row = rows[r];
+      if (!row || !row.length) continue;
+      const rawUrl = urlIdx  > -1 ? String(row[urlIdx]  ?? "").trim() : "";
+      const id = extractId(rawUrl);
+      if (!id) continue; // skip rows without a usable MakeCode link
+      out.push({
+        id,
+        name:  nameIdx  > -1 ? String(row[nameIdx]  ?? "").trim() : "",
+        grade: gradeIdx > -1 ? String(row[gradeIdx] ?? "").trim() : "",
+        game:  gameIdx  > -1 ? String(row[gameIdx]  ?? "").trim() || "Untitled" : "Untitled"
+      });
+    }
+    return out;
+  }
+
+  async function fetchGames(){
+    const res = await fetch(SHEET_URL, {cache:"no-store"});
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf, {type:"array"});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false, defval:""});
+    return rowsToGames(rows);
+  }
+
+  async function refreshGames(isFirstLoad){
+    try {
+      const next = await fetchGames();
+      const changed = JSON.stringify(next) !== JSON.stringify(games);
+      games = next;
+      loadMsg.className = "msg";
+      if (changed){
+        if (wallActive) startWall(); else renderPage();
+      }
+    } catch(e){
+      if (isFirstLoad){
+        loadMsg.textContent = "Couldn't load games from the spreadsheet. Check the sheet is published and try refreshing.";
+        loadMsg.className = "msg err";
+      }
+      console.error("SPARK Arcade: failed to load games", e);
+    }
+  }
+
+  /* ---------- wall state ---------- */
+  let wallActive = true;
 
   /* ---------- makecode helpers ---------- */
   function extractId(input){
@@ -554,81 +491,16 @@
     if (map[e.key]){ e.preventDefault(); manualInput(map[e.key]); }
   });
 
-  /* ---------- submit ---------- */
-  const formMsg = document.getElementById("formMsg");
-  document.getElementById("submitBtn").addEventListener("click", ()=>{
-    const name = val("fName"), grade = val("fGrade"), game = val("fGame"), url = val("fUrl");
-    formMsg.className = "msg";
-    if (!name || !grade || !game || !url) return err(formMsg,"Fill in every box before powering up.");
-    const id = extractId(url);
-    if (!id) return err(formMsg,"That link doesn't look like a MakeCode share link. It should look like https://makecode.com/_Fhbds4gdDPpp");
-    if (games.some(g=> g.id === id)) return err(formMsg,"That game is already on the wall!");
-    games.push({ id, name, grade, game, added: Date.now() });
-    save(games);
-    ["fName","fGame","fUrl"].forEach(x=> document.getElementById(x).value = "");
-    document.getElementById("fGrade").value = "";
-    ok(formMsg, game + " is on the wall!");
-    setTimeout(()=> showView("play"), 1400);
-  });
-
-  /* ---------- manage ---------- */
-  const manageList = document.getElementById("manageList");
-  const manageMsg = document.getElementById("manageMsg");
-  function renderManage(){
-    manageList.innerHTML = games.length ? "" : '<li style="justify-content:center;color:var(--dim)">No games yet.</li>';
-    games.forEach((g,i)=>{
-      const li = document.createElement("li");
-      li.innerHTML = '<div class="meta"><b>'+esc(g.game)+'</b><span>'+esc(g.name)+' • '+esc(g.grade)+' • '+esc(g.id)+'</span></div>';
-      const del = document.createElement("button");
-      del.className = "del"; del.textContent = "Remove";
-      del.addEventListener("click", ()=>{
-        if (confirm('Remove "'+g.game+'" from the wall?')){
-          games.splice(i,1); save(games); renderManage();
-        }
-      });
-      li.appendChild(del);
-      manageList.appendChild(li);
-    });
-  }
-  document.getElementById("exportBtn").addEventListener("click", ()=>{
-    const blob = new Blob([JSON.stringify(games,null,2)],{type:"application/json"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "spark-arcade-games.json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
-  document.getElementById("importBtn").addEventListener("click", ()=> document.getElementById("importFile").click());
-  document.getElementById("importFile").addEventListener("change", e=>{
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ()=>{
-      manageMsg.className = "msg";
-      try {
-        const data = JSON.parse(reader.result);
-        if (!Array.isArray(data)) throw 0;
-        let added = 0;
-        data.forEach(g=>{
-          if (g && g.id && g.game && !games.some(x=> x.id === g.id)){
-            games.push({ id:String(g.id), name:String(g.name||""), grade:String(g.grade||""), game:String(g.game), added:g.added||Date.now() });
-            added++;
-          }
-        });
-        save(games); renderManage();
-        ok(manageMsg, "Imported " + added + " game" + (added===1?"":"s") + ".");
-      } catch(_){ err(manageMsg,"That file isn't a SPARK Arcade backup."); }
-      e.target.value = "";
-    };
-    reader.readAsText(file);
-  });
-
   /* ---------- utils ---------- */
-  function val(id){ return document.getElementById(id).value.trim(); }
   function esc(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
-  function err(el,m){ el.textContent = m; el.className = "msg err"; }
-  function ok(el,m){ el.textContent = m; el.className = "msg ok"; }
 
-  startWall();
+  /* ---------- init ---------- */
+  loadMsg.textContent = "Loading games from the spreadsheet\u2026";
+  loadMsg.className = "msg ok";
+  refreshGames(true).then(()=>{
+    startWall();
+    setInterval(()=> refreshGames(false), REFRESH_MS);
+  });
 })();
 </script>
 </body>
