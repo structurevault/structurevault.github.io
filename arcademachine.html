@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPARK Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0f14;        /* carbon */
+    --panel:#141b24;
+    --panel-2:#1b2531;
+    --line:#2b3a4d;
+    --volt:#ffd60a;      /* spark yellow */
+    --arc:#4dc3ff;       /* plasma blue */
+    --hot:#ff6b35;       /* ember - used sparingly */
+    --ok:#54e38e;
+    --text:#e9f1f7;
+    --dim:#7f93a8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 500px at 50% -200px, rgba(77,195,255,.10), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Share Tech Mono',monospace;
+    font-size:17px;
+    overflow-x:hidden;
+  }
+  /* faint circuit-trace texture */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(rgba(77,195,255,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(77,195,255,.045) 1px, transparent 1px);
+    background-size:56px 56px;
+    mask-image:radial-gradient(ellipse at 50% 0%, black 20%, transparent 75%);
+  }
+  main,header,nav,footer{position:relative;z-index:1}
+
+  /* ============ HEADER ============ */
+  header{
+    text-align:center;
+    padding:30px 16px 0;
+  }
+  h1{
+    font-family:'Audiowide',sans-serif;
+    font-size:clamp(26px,5vw,52px);
+    letter-spacing:6px;
+    text-transform:uppercase;
+    color:var(--text);
+  }
+  h1 .spark{
+    color:var(--volt);
+    text-shadow:0 0 14px rgba(255,214,10,.65), 0 0 40px rgba(255,214,10,.3);
+  }
+  h1 .bolt{
+    display:inline-block;
+    color:var(--volt);
+    transform:translateY(2px);
+    filter:drop-shadow(0 0 8px rgba(255,214,10,.8));
+    animation:flicker 4s infinite;
+  }
+  @keyframes flicker{
+    0%,92%,96%,100%{opacity:1}
+    93%,95%{opacity:.35}
+  }
+  .tagline{margin-top:8px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;font-size:14px}
+  .tagline b{color:var(--arc);font-weight:normal}
+
+  /* animated energy line under the title */
+  .arcline{
+    height:3px;max-width:760px;margin:20px auto 0;position:relative;
+    background:linear-gradient(90deg, transparent, var(--line) 15%, var(--line) 85%, transparent);
+    overflow:hidden;border-radius:2px;
+  }
+  .arcline::after{
+    content:"";position:absolute;top:0;bottom:0;width:90px;
+    background:linear-gradient(90deg, transparent, var(--volt), var(--arc), transparent);
+    filter:blur(1px);
+    animation:travel 2.6s linear infinite;
+  }
+  @keyframes travel{from{left:-100px}to{left:100%}}
+
+  /* ============ NAV ============ */
+  nav{display:flex;justify-content:center;gap:12px;padding:22px 14px;flex-wrap:wrap}
+  .btn{
+    font-family:'Audiowide',sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--text);background:var(--panel);
+    border:1px solid var(--line);border-radius:4px;
+    padding:12px 20px;cursor:pointer;position:relative;
+    clip-path:polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  }
+  .btn:hover{border-color:var(--arc);color:var(--arc)}
+  .btn.volt{border-color:var(--volt);color:var(--volt)}
+  .btn.volt:hover{background:rgba(255,214,10,.08)}
+  .btn:focus-visible{outline:2px solid var(--arc);outline-offset:2px}
+  .btn:active{transform:translateY(1px)}
+
+  main{max-width:1520px;margin:0 auto;padding:6px 18px 40px}
+  .view{display:none}
+  .view.active{display:block}
+
+  /* ============ GAME WALL ============ */
+  .grid-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+  .grid-head h2{
+    font-family:'Audiowide',sans-serif;font-size:15px;letter-spacing:3px;color:var(--volt);text-transform:uppercase;
+  }
+  .status{display:flex;align-items:center;gap:16px;color:var(--dim);font-size:15px}
+  .pad-badge{
+    display:none;align-items:center;gap:8px;
+    border:1px solid var(--line);border-radius:4px;padding:5px 10px;color:var(--ok);
+  }
+  .pad-badge.on{display:inline-flex}
+  .pad-badge::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .mode-tag{color:var(--arc)}
+
+  #grid{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    grid-template-rows:repeat(3,1fr);
+    gap:13px;
+  }
+  @media (max-width:1100px){#grid{grid-template-columns:repeat(3,1fr);grid-template-rows:auto}}
+  @media (max-width:640px){#grid{grid-template-columns:repeat(2,1fr)}}
+
+  .cab{
+    position:relative;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);
+    border-radius:6px;
+    min-height:198px;
+    display:flex;flex-direction:column;
+    overflow:hidden;
+    transition:border-color .25s, box-shadow .25s, transform .25s;
+  }
+  .cab .screen{
+    flex:1;position:relative;background:#05080c;margin:9px 9px 5px;
+    border:1px solid #000;border-radius:4px;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+    aspect-ratio:16/10;
+  }
+  .cab .screen .idle{
+    font-family:'Audiowide',sans-serif;font-size:11px;letter-spacing:2px;color:#33465c;
+    text-align:center;line-height:2;padding:8px;text-transform:uppercase;
+  }
+  .cab iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .cab .label{padding:3px 10px 9px;text-align:center}
+  .cab .gname{
+    font-family:'Audiowide',sans-serif;font-size:12px;letter-spacing:1px;color:var(--arc);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .cab .who{color:var(--dim);font-size:15px;margin-top:2px}
+  .cab.spotlight{
+    border-color:var(--volt);
+    box-shadow:0 0 0 1px var(--volt), 0 0 22px rgba(255,214,10,.35), inset 0 0 14px rgba(255,214,10,.08);
+    transform:scale(1.02);
+    z-index:2;
+  }
+  .cab.spotlight .gname{color:var(--volt)}
+  .cab.empty{border-style:dashed;opacity:.5}
+
+  .hintbar{
+    margin-top:16px;text-align:center;color:var(--dim);font-size:15px;letter-spacing:1px;
+  }
+  .hintbar kbd{
+    font-family:inherit;border:1px solid var(--line);border-radius:4px;
+    padding:2px 8px;color:var(--arc);background:var(--panel);
+  }
+
+  .empty-state{text-align:center;padding:70px 20px;color:var(--dim)}
+  .empty-state .big{
+    font-family:'Audiowide',sans-serif;font-size:18px;letter-spacing:3px;color:var(--volt);
+    line-height:2;margin-bottom:14px;text-transform:uppercase;
+  }
+
+  /* ============ FORM / CARDS ============ */
+  .card{
+    max-width:640px;margin:0 auto;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;padding:30px;
+    border-top:3px solid var(--volt);
+  }
+  .card h2{font-family:'Audiowide',sans-serif;font-size:16px;letter-spacing:3px;color:var(--volt);margin-bottom:6px;text-transform:uppercase}
+  .card .hint{color:var(--dim);margin-bottom:22px}
+  .field{margin-bottom:18px}
+  label{
+    display:block;font-family:'Audiowide',sans-serif;font-size:10px;letter-spacing:2px;
+    color:var(--arc);margin-bottom:8px;text-transform:uppercase;
+  }
+  input[type=text],input[type=url],select{
+    width:100%;padding:12px 14px;font-family:'Share Tech Mono',monospace;font-size:18px;
+    background:#0a0f16;color:var(--text);
+    border:1px solid var(--line);border-radius:4px;
+  }
+  input:focus,select:focus{outline:none;border-color:var(--volt);box-shadow:0 0 0 1px var(--volt)}
+  .msg{margin-top:16px;padding:12px 14px;border-radius:4px;display:none}
+  .msg.err{display:block;background:#2a1410;border:1px solid var(--hot);color:#ffb59e}
+  .msg.ok{display:block;background:#0e2417;border:1px solid var(--ok);color:#a9f5c9}
+
+  /* ============ MANAGE ============ */
+  .manage-list{list-style:none;margin-top:14px}
+  .manage-list li{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 12px;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;background:var(--panel-2);
+  }
+  .manage-list .meta{overflow:hidden}
+  .manage-list .meta b{color:var(--volt);font-weight:normal;font-family:'Audiowide',sans-serif;font-size:13px;letter-spacing:1px}
+  .manage-list .meta span{color:var(--dim);display:block;font-size:15px}
+  .del{
+    background:none;border:1px solid var(--hot);color:var(--hot);border-radius:4px;
+    font-family:'Audiowide',sans-serif;font-size:9px;letter-spacing:1px;padding:8px 12px;cursor:pointer;flex-shrink:0;
+  }
+  .del:hover{background:var(--hot);color:#0b0f14}
+  .manage-tools{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+
+  footer{text-align:center;color:#3a4c60;padding:22px;font-size:14px;letter-spacing:2px;text-transform:uppercase}
+
+  @media (prefers-reduced-motion:reduce){
+    .arcline::after{animation:none;left:40%}
+    h1 .bolt{animation:none}
+    .cab{transition:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="spark">SPARK</span> <span class="bolt">&#9889;</span> ARCADE</h1>
+  <div class="tagline">Student-built games &bull; <b>SPARK Centre</b> &bull; Boneo Primary</div>
+  <div class="arcline" aria-hidden="true"></div>
+</header>
+
+<nav>
+  <button class="btn volt" data-view="play">&#9654; Game Wall</button>
+  <button class="btn" data-view="submit">+ Add Your Game</button>
+  <button class="btn" data-view="manage">&#9881; Manage</button>
+</nav>
+
+<main>
+
+  <!-- ========== GAME WALL ========== -->
+  <section id="view-play" class="view active">
+    <div class="grid-head">
+      <h2>Now Showing</h2>
+      <div class="status">
+        <span class="mode-tag" id="modeTag">AUTO</span>
+        <span id="pageInfo"></span>
+        <span class="pad-badge" id="padBadge">controller connected</span>
+      </div>
+    </div>
+    <div id="grid"></div>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="big">No games on the wall yet</div>
+      <p>Press <b style="color:var(--arc)">+ Add Your Game</b> to power up the first one.</p>
+    </div>
+    <div class="hintbar" id="hintbar">
+      &#127918; <kbd>D-Pad / Stick</kbd> choose game &nbsp; <kbd>LB / RB</kbd> change screen &nbsp; <kbd>Start</kbd> auto-play &nbsp;&bull;&nbsp; keyboard arrows work too
+    </div>
+  </section>
+
+  <!-- ========== SUBMIT ========== -->
+  <section id="view-submit" class="view">
+    <div class="card">
+      <h2>Add Your Game</h2>
+      <p class="hint">In MakeCode Arcade press <b style="color:var(--volt)">Share</b>, copy your game link, and paste it below.</p>
+      <div class="field">
+        <label for="fName">First name</label>
+        <input type="text" id="fName" maxlength="30" autocomplete="off" placeholder="e.g. Ruby">
+      </div>
+      <div class="field">
+        <label for="fGrade">Grade</label>
+        <select id="fGrade">
+          <option value="">Choose your grade&hellip;</option>
+          <option>Prep</option><option>Grade 1</option><option>Grade 2</option>
+          <option>Grade 3</option><option>Grade 4</option><option>Grade 5</option>
+          <option>Grade 6</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fGame">Name of your game</label>
+        <input type="text" id="fGame" maxlength="40" autocomplete="off" placeholder="e.g. Space Chase">
+      </div>
+      <div class="field">
+        <label for="fUrl">MakeCode share link</label>
+        <input type="url" id="fUrl" autocomplete="off" placeholder="https://makecode.com/_Fhbds4gdDPpp">
+      </div>
+      <button class="btn volt" id="submitBtn" style="width:100%">Power Up &#9889;</button>
+      <div class="msg" id="formMsg" role="alert"></div>
+    </div>
+  </section>
+
+  <!-- ========== MANAGE ========== -->
+  <section id="view-manage" class="view">
+    <div class="card">
+      <h2>Manage Games</h2>
+      <p class="hint">Games are saved in this browser. Use Export to back them up or move them to another machine.</p>
+      <ul class="manage-list" id="manageList"></ul>
+      <div class="manage-tools">
+        <button class="btn" id="exportBtn">&#8681; Export</button>
+        <button class="btn" id="importBtn">&#8679; Import</button>
+        <input type="file" id="importFile" accept=".json" hidden>
+      </div>
+      <div class="msg" id="manageMsg" role="alert"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>SPARK Centre &bull; Boneo Primary School &bull; Free Play</footer>
+
+<script>
+(function(){
+  "use strict";
+  const STORE_KEY = "spark-arcade-games";
+  const LEGACY_KEY = "boneo-arcade-games";
+  const COLS = 6, ROWS = 3, PAGE_SIZE = COLS * ROWS;   // 6 x 3 grid
+  const AUTO_MS = 12000;        // auto mode: seconds each preview runs
+  const LOAD_DELAY = 650;       // manual mode: pause before loading a preview
+  const IDLE_BACK_TO_AUTO = 45000; // manual -> auto after 45s of no input
+
+  /* ---------- storage (migrates old Boneo Arcade saves) ---------- */
+  const load = () => {
+    try {
+      let g = JSON.parse(localStorage.getItem(STORE_KEY));
+      if (!g) {
+        g = JSON.parse(localStorage.getItem(LEGACY_KEY));
+        if (g) localStorage.setItem(STORE_KEY, JSON.stringify(g));
+      }
+      return g || [];
+    } catch(e){ return []; }
+  };
+  const save = g => localStorage.setItem(STORE_KEY, JSON.stringify(g));
+  let games = load();
+
+  /* ---------- views ---------- */
+  const views = document.querySelectorAll(".view");
+  let wallActive = true;
+  let managed = false;   // unlocked for the rest of this session once the password is entered
+  document.querySelectorAll("nav .btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> showView(btn.dataset.view));
+  });
+  function showView(name){
+    if (name === "manage" && !managed){
+      const pw = prompt("Enter the manager password:");
+      if (pw !== "kieranisthebest!"){
+        if (pw !== null) alert("Access denied. Nice try!");
+        return;
+      }
+      managed = true;
+    }
+    views.forEach(v=> v.classList.toggle("active", v.id === "view-"+name));
+    wallActive = (name === "play");
+    if (wallActive) startWall(); else stopWall();
+    if (name === "manage") renderManage();
+  }
+
+  /* ---------- makecode helpers ---------- */
+  function extractId(input){
+    input = (input||"").trim();
+    let m = input.match(/(?:makecode\.com\/(?:#pub:)?|^)(_[A-Za-z0-9]{8,})$/);
+    if (m) return m[1];
+    m = input.match(/_[A-Za-z0-9]{8,}/);
+    return m ? m[0] : null;
+  }
+  const simUrl = id => "https://arcade.makecode.com/---run?id=" + encodeURIComponent(id);
+
+  /* ---------- game wall state ---------- */
+  const grid = document.getElementById("grid");
+  const pageInfo = document.getElementById("pageInfo");
+  const emptyState = document.getElementById("emptyState");
+  const hintbar = document.getElementById("hintbar");
+  const modeTag = document.getElementById("modeTag");
+  let page = 0, spot = 0;
+  let mode = "auto";            // "auto" | "manual"
+  let autoTimer = null, loadTimer = null, lastInput = 0;
+
+  const totalPages = () => Math.max(1, Math.ceil(games.length / PAGE_SIZE));
+  const pageSlice  = () => games.slice(page*PAGE_SIZE, page*PAGE_SIZE + PAGE_SIZE);
+
+  function startWall(){
+    stopWall();
+    page = 0; spot = 0;
+    renderPage();
+    if (games.length){ highlight(); loadSim(); setMode("auto"); }
+  }
+  function stopWall(){
+    clearInterval(autoTimer); autoTimer = null;
+    clearTimeout(loadTimer); loadTimer = null;
+    grid.querySelectorAll("iframe").forEach(f=> f.remove());
+  }
+
+  function setMode(m){
+    mode = m;
+    modeTag.textContent = m.toUpperCase();
+    clearInterval(autoTimer); autoTimer = null;
+    if (m === "auto" && games.length){
+      autoTimer = setInterval(()=> move(1, true), AUTO_MS);
+    }
+  }
+
+  function renderPage(){
+    grid.innerHTML = "";
+    page = ((page % totalPages()) + totalPages()) % totalPages();
+    const slice = pageSlice();
+
+    emptyState.style.display = games.length ? "none" : "block";
+    grid.style.display = games.length ? "grid" : "none";
+    hintbar.style.display = games.length ? "block" : "none";
+    pageInfo.textContent = games.length
+      ? games.length + " game" + (games.length===1?"":"s") + (totalPages()>1 ? " • screen " + (page+1) + "/" + totalPages() : "")
+      : "";
+
+    for (let i=0;i<PAGE_SIZE;i++){
+      const g = slice[i];
+      const cab = document.createElement("div");
+      cab.className = "cab" + (g ? "" : " empty");
+      if (g){
+        cab.dataset.idx = i;
+        cab.innerHTML =
+          '<div class="screen"><div class="idle">' + esc(g.game) + '<br>standby</div></div>' +
+          '<div class="label"><div class="gname">' + esc(g.game) + '</div>' +
+          '<div class="who">by ' + esc(g.name) + ' &bull; ' + esc(g.grade) + '</div></div>';
+      } else {
+        cab.innerHTML = '<div class="screen"><div class="idle">open slot</div></div><div class="label"><div class="who">&nbsp;</div></div>';
+      }
+      grid.appendChild(cab);
+    }
+  }
+
+  function clearSpotlight(){
+    const prev = grid.querySelector(".cab.spotlight");
+    if (prev){
+      prev.classList.remove("spotlight");
+      const fr = prev.querySelector("iframe"); if (fr) fr.remove();
+      const idle = prev.querySelector(".idle"); if (idle) idle.style.display = "";
+    }
+  }
+  function highlight(){
+    clearSpotlight();
+    const cab = grid.querySelector('.cab[data-idx="'+spot+'"]');
+    if (cab) cab.classList.add("spotlight");
+  }
+  function loadSim(){
+    const slice = pageSlice();
+    const g = slice[spot];
+    const cab = grid.querySelector('.cab[data-idx="'+spot+'"]');
+    if (!g || !cab || cab.querySelector("iframe")) return;
+    const screen = cab.querySelector(".screen");
+    const idle = screen.querySelector(".idle"); if (idle) idle.style.display = "none";
+    const iframe = document.createElement("iframe");
+    iframe.src = simUrl(g.id);
+    iframe.setAttribute("allow","autoplay");
+    iframe.title = g.game + " preview";
+    screen.appendChild(iframe);
+  }
+  function queueLoad(){
+    clearTimeout(loadTimer);
+    loadTimer = setTimeout(loadSim, LOAD_DELAY);
+  }
+
+  /* move selection forward/back n steps (wraps across pages) */
+  function move(n, autoAdvance){
+    if (!games.length) return;
+    const slice = pageSlice();
+    let next = spot + n;
+    if (next >= slice.length || next < 0){
+      if (totalPages() > 1){
+        page += (next < 0 ? -1 : 1);
+        renderPage();
+        const s = pageSlice();
+        spot = next < 0 ? s.length - 1 : 0;
+      } else {
+        spot = ((next % slice.length) + slice.length) % slice.length;
+      }
+    } else {
+      spot = next;
+    }
+    highlight();
+    if (autoAdvance) loadSim(); else queueLoad();
+  }
+  function changePage(n){
+    if (totalPages() <= 1 || !games.length) return;
+    page += n; spot = 0;
+    renderPage(); highlight(); queueLoad();
+  }
+
+  /* ---------- input: gamepad + keyboard ---------- */
+  const padBadge = document.getElementById("padBadge");
+  const DEADZONE = 0.5;
+  const prevBtns = {};      // per-gamepad previous button state
+  let stickHeld = {x:0, y:0};
+
+  window.addEventListener("gamepadconnected", ()=> padBadge.classList.add("on"));
+  window.addEventListener("gamepaddisconnected", ()=>{
+    if (![...navigator.getGamepads()].some(Boolean)) padBadge.classList.remove("on");
+  });
+
+  function manualInput(fn){
+    lastInput = Date.now();
+    if (mode !== "manual") setMode("manual");
+    fn();
+  }
+
+  function pollPads(){
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const pad of pads){
+      if (!pad) continue;
+      const prev = prevBtns[pad.index] || [];
+      const pressed = i => pad.buttons[i] && pad.buttons[i].pressed;
+      const justPressed = i => pressed(i) && !prev[i];
+
+      if (wallActive && games.length){
+        // D-pad: 12 up, 13 down, 14 left, 15 right
+        if (justPressed(15)) manualInput(()=> move(1));
+        if (justPressed(14)) manualInput(()=> move(-1));
+        if (justPressed(13)) manualInput(()=> move(COLS));
+        if (justPressed(12)) manualInput(()=> move(-COLS));
+        // Left stick with edge detection
+        const x = pad.axes[0] || 0, y = pad.axes[1] || 0;
+        const sx = Math.abs(x) > DEADZONE ? Math.sign(x) : 0;
+        const sy = Math.abs(y) > DEADZONE ? Math.sign(y) : 0;
+        if (sx !== 0 && sx !== stickHeld.x) manualInput(()=> move(sx));
+        if (sy !== 0 && sy !== stickHeld.y) manualInput(()=> move(sy * COLS));
+        stickHeld = {x:sx, y:sy};
+        // Bumpers: 4 LB, 5 RB -> change screen
+        if (justPressed(5)) manualInput(()=> changePage(1));
+        if (justPressed(4)) manualInput(()=> changePage(-1));
+        // A (0): load the selected preview right now
+        if (justPressed(0)) manualInput(loadSim);
+        // Start (9): hand back to auto-play
+        if (justPressed(9)) setMode(mode === "auto" ? "manual" : "auto");
+      }
+      prevBtns[pad.index] = pad.buttons.map(b=> b.pressed);
+    }
+    // idle in manual mode -> resume auto
+    if (mode === "manual" && Date.now() - lastInput > IDLE_BACK_TO_AUTO) setMode("auto");
+    requestAnimationFrame(pollPads);
+  }
+  requestAnimationFrame(pollPads);
+
+  document.addEventListener("keydown", e=>{
+    if (!wallActive || !games.length) return;
+    const map = {
+      ArrowRight: ()=> move(1),   ArrowLeft: ()=> move(-1),
+      ArrowDown:  ()=> move(COLS), ArrowUp:  ()=> move(-COLS),
+      PageDown:   ()=> changePage(1), PageUp: ()=> changePage(-1),
+      Enter:      loadSim
+    };
+    if (e.key === " "){ e.preventDefault(); setMode(mode==="auto"?"manual":"auto"); return; }
+    if (map[e.key]){ e.preventDefault(); manualInput(map[e.key]); }
+  });
+
+  /* ---------- submit ---------- */
+  const formMsg = document.getElementById("formMsg");
+  document.getElementById("submitBtn").addEventListener("click", ()=>{
+    const name = val("fName"), grade = val("fGrade"), game = val("fGame"), url = val("fUrl");
+    formMsg.className = "msg";
+    if (!name || !grade || !game || !url) return err(formMsg,"Fill in every box before powering up.");
+    const id = extractId(url);
+    if (!id) return err(formMsg,"That link doesn't look like a MakeCode share link. It should look like https://makecode.com/_Fhbds4gdDPpp");
+    if (games.some(g=> g.id === id)) return err(formMsg,"That game is already on the wall!");
+    games.push({ id, name, grade, game, added: Date.now() });
+    save(games);
+    ["fName","fGame","fUrl"].forEach(x=> document.getElementById(x).value = "");
+    document.getElementById("fGrade").value = "";
+    ok(formMsg, game + " is on the wall!");
+    setTimeout(()=> showView("play"), 1400);
+  });
+
+  /* ---------- manage ---------- */
+  const manageList = document.getElementById("manageList");
+  const manageMsg = document.getElementById("manageMsg");
+  function renderManage(){
+    manageList.innerHTML = games.length ? "" : '<li style="justify-content:center;color:var(--dim)">No games yet.</li>';
+    games.forEach((g,i)=>{
+      const li = document.createElement("li");
+      li.innerHTML = '<div class="meta"><b>'+esc(g.game)+'</b><span>'+esc(g.name)+' • '+esc(g.grade)+' • '+esc(g.id)+'</span></div>';
+      const del = document.createElement("button");
+      del.className = "del"; del.textContent = "Remove";
+      del.addEventListener("click", ()=>{
+        if (confirm('Remove "'+g.game+'" from the wall?')){
+          games.splice(i,1); save(games); renderManage();
+        }
+      });
+      li.appendChild(del);
+      manageList.appendChild(li);
+    });
+  }
+  document.getElementById("exportBtn").addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify(games,null,2)],{type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "spark-arcade-games.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  document.getElementById("importBtn").addEventListener("click", ()=> document.getElementById("importFile").click());
+  document.getElementById("importFile").addEventListener("change", e=>{
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      manageMsg.className = "msg";
+      try {
+        const data = JSON.parse(reader.result);
+        if (!Array.isArray(data)) throw 0;
+        let added = 0;
+        data.forEach(g=>{
+          if (g && g.id && g.game && !games.some(x=> x.id === g.id)){
+            games.push({ id:String(g.id), name:String(g.name||""), grade:String(g.grade||""), game:String(g.game), added:g.added||Date.now() });
+            added++;
+          }
+        });
+        save(games); renderManage();
+        ok(manageMsg, "Imported " + added + " game" + (added===1?"":"s") + ".");
+      } catch(_){ err(manageMsg,"That file isn't a SPARK Arcade backup."); }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  /* ---------- utils ---------- */
+  function val(id){ return document.getElementById(id).value.trim(); }
+  function esc(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function err(el,m){ el.textContent = m; el.className = "msg err"; }
+  function ok(el,m){ el.textContent = m; el.className = "msg ok"; }
+
+  startWall();
+})();
+</script>
+</body>
+</html>
