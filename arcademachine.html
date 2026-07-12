@@ -121,8 +121,10 @@
     min-height:198px;
     display:flex;flex-direction:column;
     overflow:hidden;
+    cursor:pointer;
     transition:border-color .25s, box-shadow .25s, transform .25s;
   }
+  .cab:hover{border-color:var(--arc)}
   .cab .screen{
     flex:1;position:relative;background:#05080c;margin:9px 9px 5px;
     border:1px solid #000;border-radius:4px;overflow:hidden;
@@ -161,6 +163,27 @@
   .empty-state .big{
     font-family:'Audiowide',sans-serif;font-size:18px;letter-spacing:3px;color:var(--volt);
     line-height:2;margin-bottom:14px;text-transform:uppercase;
+  }
+
+  /* ============ FULL-WINDOW PLAYER ============ */
+  #player{
+    position:fixed;inset:0;z-index:100;background:#000;
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+  }
+  #player.active{display:flex}
+  #player iframe{
+    width:100vw;height:100vh;border:0;background:#000;
+  }
+  #playerHint{
+    position:fixed;left:0;right:0;bottom:0;z-index:101;
+    text-align:center;color:var(--dim);font-size:14px;letter-spacing:1px;
+    padding:10px;background:linear-gradient(0deg, rgba(0,0,0,.85), transparent);
+    pointer-events:none;
+    display:none;
+  }
+  #playerHint kbd{
+    font-family:inherit;border:1px solid var(--line);border-radius:4px;
+    padding:2px 8px;color:var(--arc);background:var(--panel);
   }
 
   /* ============ STATUS MESSAGE ============ */
@@ -204,11 +227,16 @@
       <p>New games added to the spreadsheet will appear here automatically.</p>
     </div>
     <div class="hintbar" id="hintbar">
-      &#127918; <kbd>D-Pad / Stick</kbd> choose game &nbsp; <kbd>LB / RB</kbd> change screen &nbsp; <kbd>Start</kbd> auto-play &nbsp;&bull;&nbsp; keyboard arrows work too
+      &#127918; <kbd>D-Pad / Stick</kbd> choose game &nbsp; <kbd>A</kbd> launch &nbsp; <kbd>LB / RB</kbd> change screen &nbsp; <kbd>Start</kbd> auto-play &nbsp;&bull;&nbsp; arrows + Enter work too
     </div>
   </section>
 
 </main>
+
+<div id="player">
+  <iframe id="playerFrame" title="Game player" allow="autoplay" src="about:blank"></iframe>
+</div>
+<div id="playerHint">Hold <kbd>Start</kbd> + <kbd>Back</kbd> together (or press <kbd>Esc</kbd>) to return to the menu</div>
 
 <footer>SPARK Centre &bull; Boneo Primary School &bull; Free Play</footer>
 
@@ -315,6 +343,31 @@
   let mode = "auto";            // "auto" | "manual"
   let autoTimer = null, loadTimer = null, lastInput = 0;
 
+  /* ---------- full-window player ---------- */
+  const player = document.getElementById("player");
+  const playerFrame = document.getElementById("playerFrame");
+  const playerHint = document.getElementById("playerHint");
+  let inGame = false;
+
+  function launchGame(g){
+    if (!g) return;
+    stopWall();
+    playerFrame.src = simUrl(g.id);
+    player.classList.add("active");
+    playerHint.style.display = "block";
+    inGame = true;
+    wallActive = false;
+  }
+  function returnToMenu(){
+    if (!inGame) return;
+    playerFrame.src = "about:blank";
+    player.classList.remove("active");
+    playerHint.style.display = "none";
+    inGame = false;
+    wallActive = true;
+    startWall();
+  }
+
   const totalPages = () => Math.max(1, Math.ceil(games.length / PAGE_SIZE));
   const pageSlice  = () => games.slice(page*PAGE_SIZE, page*PAGE_SIZE + PAGE_SIZE);
 
@@ -361,6 +414,11 @@
           '<div class="screen"><div class="idle">' + esc(g.game) + '<br>standby</div></div>' +
           '<div class="label"><div class="gname">' + esc(g.game) + '</div>' +
           '<div class="who">by ' + esc(g.name) + ' &bull; ' + esc(g.grade) + '</div></div>';
+        cab.addEventListener("click", ()=>{
+          spot = i;
+          highlight();
+          launchGame(g);
+        });
       } else {
         cab.innerHTML = '<div class="screen"><div class="idle">open slot</div></div><div class="label"><div class="who">&nbsp;</div></div>';
       }
@@ -430,6 +488,7 @@
   const DEADZONE = 0.5;
   const prevBtns = {};      // per-gamepad previous button state
   let stickHeld = {x:0, y:0};
+  let comboHeld = {};       // per-gamepad Start+Back combo edge detection
 
   window.addEventListener("gamepadconnected", ()=> padBadge.classList.add("on"));
   window.addEventListener("gamepaddisconnected", ()=>{
@@ -450,7 +509,12 @@
       const pressed = i => pad.buttons[i] && pad.buttons[i].pressed;
       const justPressed = i => pressed(i) && !prev[i];
 
-      if (wallActive && games.length){
+      // Start (9) + Back/Select (8) together -> return to the menu, works while a game is playing
+      const comboNow = pressed(9) && pressed(8);
+      if (comboNow && !comboHeld[pad.index] && inGame) returnToMenu();
+      comboHeld[pad.index] = comboNow;
+
+      if (wallActive && !inGame && games.length){
         // D-pad: 12 up, 13 down, 14 left, 15 right
         if (justPressed(15)) manualInput(()=> move(1));
         if (justPressed(14)) manualInput(()=> move(-1));
@@ -466,26 +530,27 @@
         // Bumpers: 4 LB, 5 RB -> change screen
         if (justPressed(5)) manualInput(()=> changePage(1));
         if (justPressed(4)) manualInput(()=> changePage(-1));
-        // A (0): load the selected preview right now
-        if (justPressed(0)) manualInput(loadSim);
-        // Start (9): hand back to auto-play
-        if (justPressed(9)) setMode(mode === "auto" ? "manual" : "auto");
+        // A (0): launch the selected game full-window
+        if (justPressed(0)) manualInput(()=> launchGame(pageSlice()[spot]));
+        // Start (9) alone: hand back to auto-play
+        if (justPressed(9) && !pressed(8)) setMode(mode === "auto" ? "manual" : "auto");
       }
       prevBtns[pad.index] = pad.buttons.map(b=> b.pressed);
     }
     // idle in manual mode -> resume auto
-    if (mode === "manual" && Date.now() - lastInput > IDLE_BACK_TO_AUTO) setMode("auto");
+    if (mode === "manual" && !inGame && Date.now() - lastInput > IDLE_BACK_TO_AUTO) setMode("auto");
     requestAnimationFrame(pollPads);
   }
   requestAnimationFrame(pollPads);
 
   document.addEventListener("keydown", e=>{
-    if (!wallActive || !games.length) return;
+    if (e.key === "Escape"){ if (inGame){ e.preventDefault(); returnToMenu(); } return; }
+    if (!wallActive || inGame || !games.length) return;
     const map = {
       ArrowRight: ()=> move(1),   ArrowLeft: ()=> move(-1),
       ArrowDown:  ()=> move(COLS), ArrowUp:  ()=> move(-COLS),
       PageDown:   ()=> changePage(1), PageUp: ()=> changePage(-1),
-      Enter:      loadSim
+      Enter:      ()=> launchGame(pageSlice()[spot])
     };
     if (e.key === " "){ e.preventDefault(); setMode(mode==="auto"?"manual":"auto"); return; }
     if (map[e.key]){ e.preventDefault(); manualInput(map[e.key]); }
