@@ -177,7 +177,9 @@
   }
   #player.active{display:flex}
   #player iframe{
-    width:100vw;height:100vh;border:0;background:#000;
+    width:min(100vw, calc(100vh * 16 / 10));
+    height:min(100vh, calc(100vw * 10 / 16));
+    border:0;background:#000;display:block;
   }
   #playerHint{
     position:fixed;left:0;right:0;bottom:0;z-index:101;
@@ -292,7 +294,7 @@
         game:  gameIdx  > -1 ? String(row[gameIdx]  ?? "").trim() || "Untitled" : "Untitled"
       });
     }
-    return out;
+    return out.reverse();
   }
 
   async function fetchGames(){
