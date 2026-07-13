@@ -29,7 +29,9 @@
     color:var(--text);
     font-family:'Share Tech Mono',monospace;
     font-size:17px;
-    overflow-x:hidden;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
   }
   /* faint circuit-trace texture */
   body::before{
@@ -46,6 +48,7 @@
   header{
     text-align:center;
     padding:30px 16px 0;
+    flex:none;
   }
   h1{
     font-family:'Audiowide',sans-serif;
@@ -86,12 +89,12 @@
   }
   @keyframes travel{from{left:-100px}to{left:100%}}
 
-  main{max-width:1520px;margin:0 auto;padding:26px 18px 40px}
+  main{max-width:1520px;width:100%;margin:0 auto;padding:26px 18px 14px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .view{display:none}
-  .view.active{display:block}
+  .view.active{display:flex;flex-direction:column;flex:1;min-height:0}
 
   /* ============ GAME WALL ============ */
-  .grid-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+  .grid-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;flex:none}
   .grid-head h2{
     font-family:'Audiowide',sans-serif;font-size:15px;letter-spacing:3px;color:var(--volt);text-transform:uppercase;
   }
@@ -104,13 +107,19 @@
   .pad-badge::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
   .mode-tag{color:var(--arc)}
 
+  #wallScroll{
+    flex:1;min-height:0;overflow-y:auto;
+    scrollbar-width:none;
+  }
+  #wallScroll::-webkit-scrollbar{display:none}
+
   #grid{
     display:grid;
     grid-template-columns:repeat(6,1fr);
-    grid-template-rows:repeat(3,1fr);
     gap:13px;
+    padding-bottom:6px;
   }
-  @media (max-width:1100px){#grid{grid-template-columns:repeat(3,1fr);grid-template-rows:auto}}
+  @media (max-width:1100px){#grid{grid-template-columns:repeat(3,1fr)}}
   @media (max-width:640px){#grid{grid-template-columns:repeat(2,1fr)}}
 
   .cab{
@@ -131,10 +140,6 @@
     display:flex;align-items:center;justify-content:center;
     aspect-ratio:16/10;
   }
-  .cab .screen .idle{
-    font-family:'Audiowide',sans-serif;font-size:11px;letter-spacing:2px;color:#33465c;
-    text-align:center;line-height:2;padding:8px;text-transform:uppercase;
-  }
   .cab iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
   .cab .label{padding:3px 10px 9px;text-align:center}
   .cab .gname{
@@ -149,17 +154,17 @@
     z-index:2;
   }
   .cab.spotlight .gname{color:var(--volt)}
-  .cab.empty{border-style:dashed;opacity:.5}
 
   .hintbar{
-    margin-top:16px;text-align:center;color:var(--dim);font-size:15px;letter-spacing:1px;
+    margin-top:12px;text-align:center;color:var(--dim);font-size:15px;letter-spacing:1px;
+    flex:none;
   }
   .hintbar kbd{
     font-family:inherit;border:1px solid var(--line);border-radius:4px;
     padding:2px 8px;color:var(--arc);background:var(--panel);
   }
 
-  .empty-state{text-align:center;padding:70px 20px;color:var(--dim)}
+  .empty-state{text-align:center;padding:70px 20px;color:var(--dim);flex:none}
   .empty-state .big{
     font-family:'Audiowide',sans-serif;font-size:18px;letter-spacing:3px;color:var(--volt);
     line-height:2;margin-bottom:14px;text-transform:uppercase;
@@ -187,11 +192,11 @@
   }
 
   /* ============ STATUS MESSAGE ============ */
-  .msg{margin:0 auto 16px;max-width:640px;padding:12px 14px;border-radius:4px;display:none;text-align:center}
+  .msg{margin:0 auto 16px;max-width:640px;padding:12px 14px;border-radius:4px;display:none;text-align:center;flex:none}
   .msg.err{display:block;background:#2a1410;border:1px solid var(--hot);color:#ffb59e}
   .msg.ok{display:block;background:#0e2417;border:1px solid var(--ok);color:#a9f5c9}
 
-  footer{text-align:center;color:#3a4c60;padding:22px;font-size:14px;letter-spacing:2px;text-transform:uppercase}
+  footer{text-align:center;color:#3a4c60;padding:22px;font-size:14px;letter-spacing:2px;text-transform:uppercase;flex:none}
 
   @media (prefers-reduced-motion:reduce){
     .arcline::after{animation:none;left:40%}
@@ -221,13 +226,13 @@
         <span class="pad-badge" id="padBadge">controller connected</span>
       </div>
     </div>
-    <div id="grid"></div>
+    <div id="wallScroll"><div id="grid"></div></div>
     <div class="empty-state" id="emptyState" style="display:none">
       <div class="big">No games on the wall yet</div>
       <p>New games added to the spreadsheet will appear here automatically.</p>
     </div>
     <div class="hintbar" id="hintbar">
-      &#127918; <kbd>D-Pad / Stick</kbd> choose game &nbsp; <kbd>A</kbd> launch &nbsp; <kbd>LB / RB</kbd> change screen &nbsp; <kbd>Start</kbd> auto-play &nbsp;&bull;&nbsp; arrows + Enter work too
+      &#127918; <kbd>D-Pad / Stick</kbd> scroll &amp; select &nbsp; <kbd>A</kbd> launch &nbsp; <kbd>LB / RB</kbd> jump &nbsp; <kbd>Start</kbd> auto-scroll &nbsp;&bull;&nbsp; arrows + Enter work too
     </div>
   </section>
 
@@ -244,10 +249,8 @@
 <script>
 (function(){
   "use strict";
-  const COLS = 6, ROWS = 3, PAGE_SIZE = COLS * ROWS;   // 6 x 3 grid
-  const AUTO_MS = 12000;        // auto mode: seconds each preview runs
-  const LOAD_DELAY = 650;       // manual mode: pause before loading a preview
-  const IDLE_BACK_TO_AUTO = 45000; // manual -> auto after 45s of no input
+  const IDLE_BACK_TO_AUTO = 45000;   // manual -> auto after 45s of no input
+  const AUTO_SCROLL_SPEED = 0.6;     // px per animation frame while auto-scrolling (~36px/sec)
 
   /* ---------- game data source: published Google Sheet (xlsx) ---------- */
   const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQYOnFCDtaPGF_q7MDIkaXa8Bu8hjXR1rIMR1oZfND8uf8Z8An-VdEXty5WZL8OF7f3VHzLEYG4noED/pub?output=xlsx";
@@ -309,7 +312,7 @@
       games = next;
       loadMsg.className = "msg";
       if (changed){
-        if (wallActive) startWall(); else renderPage();
+        if (wallActive) startWall(); else renderWall();
       }
     } catch(e){
       if (isFirstLoad){
@@ -335,13 +338,14 @@
 
   /* ---------- game wall state ---------- */
   const grid = document.getElementById("grid");
+  const wallScroll = document.getElementById("wallScroll");
   const pageInfo = document.getElementById("pageInfo");
   const emptyState = document.getElementById("emptyState");
   const hintbar = document.getElementById("hintbar");
   const modeTag = document.getElementById("modeTag");
-  let page = 0, spot = 0;
+  let spot = 0;
   let mode = "auto";            // "auto" | "manual"
-  let autoTimer = null, loadTimer = null, lastInput = 0;
+  let autoScrollFrame = null, lastInput = 0;
 
   /* ---------- full-window player ---------- */
   const player = document.getElementById("player");
@@ -368,119 +372,103 @@
     startWall();
   }
 
-  const totalPages = () => Math.max(1, Math.ceil(games.length / PAGE_SIZE));
-  const pageSlice  = () => games.slice(page*PAGE_SIZE, page*PAGE_SIZE + PAGE_SIZE);
-
   function startWall(){
     stopWall();
-    page = 0; spot = 0;
-    renderPage();
-    if (games.length){ highlight(); loadSim(); setMode("auto"); }
+    spot = 0;
+    renderWall();
+    wallScroll.scrollTop = 0;
+    if (games.length){ highlight(); setMode("auto"); }
   }
   function stopWall(){
-    clearInterval(autoTimer); autoTimer = null;
-    clearTimeout(loadTimer); loadTimer = null;
+    cancelAnimationFrame(autoScrollFrame); autoScrollFrame = null;
     grid.querySelectorAll("iframe").forEach(f=> f.remove());
   }
 
   function setMode(m){
     mode = m;
     modeTag.textContent = m.toUpperCase();
-    clearInterval(autoTimer); autoTimer = null;
-    if (m === "auto" && games.length){
-      autoTimer = setInterval(()=> move(1, true), AUTO_MS);
-    }
+    cancelAnimationFrame(autoScrollFrame); autoScrollFrame = null;
+    if (m === "auto" && games.length) autoScrollFrame = requestAnimationFrame(autoScrollTick);
   }
 
-  function renderPage(){
+  let syncCounter = 0;
+  function autoScrollTick(){
+    wallScroll.scrollTop += AUTO_SCROLL_SPEED;
+    if (wallScroll.scrollTop + wallScroll.clientHeight >= wallScroll.scrollHeight - 2){
+      wallScroll.scrollTop = 0;
+    }
+    if (++syncCounter % 12 === 0) syncSpotFromViewport();
+    if (mode === "auto") autoScrollFrame = requestAnimationFrame(autoScrollTick);
+  }
+
+  // Every cabinet gets its own live iframe up front, so all the games animate
+  // simultaneously instead of only the currently-selected one loading.
+  function renderWall(){
     grid.innerHTML = "";
-    page = ((page % totalPages()) + totalPages()) % totalPages();
-    const slice = pageSlice();
-
     emptyState.style.display = games.length ? "none" : "block";
-    grid.style.display = games.length ? "grid" : "none";
+    wallScroll.style.display = games.length ? "block" : "none";
     hintbar.style.display = games.length ? "block" : "none";
-    pageInfo.textContent = games.length
-      ? games.length + " game" + (games.length===1?"":"s") + (totalPages()>1 ? " • screen " + (page+1) + "/" + totalPages() : "")
-      : "";
+    pageInfo.textContent = games.length ? games.length + " game" + (games.length===1?"":"s") : "";
 
-    for (let i=0;i<PAGE_SIZE;i++){
-      const g = slice[i];
+    games.forEach((g,i)=>{
       const cab = document.createElement("div");
-      cab.className = "cab" + (g ? "" : " empty");
-      if (g){
-        cab.dataset.idx = i;
-        cab.innerHTML =
-          '<div class="screen"><div class="idle">' + esc(g.game) + '<br>standby</div></div>' +
-          '<div class="label"><div class="gname">' + esc(g.game) + '</div>' +
-          '<div class="who">by ' + esc(g.name) + ' &bull; ' + esc(g.grade) + '</div></div>';
-        cab.addEventListener("click", ()=>{
-          spot = i;
-          highlight();
-          launchGame(g);
-        });
-      } else {
-        cab.innerHTML = '<div class="screen"><div class="idle">open slot</div></div><div class="label"><div class="who">&nbsp;</div></div>';
-      }
+      cab.className = "cab";
+      cab.dataset.idx = i;
+      cab.innerHTML =
+        '<div class="screen"><iframe src="' + simUrl(g.id) + '" allow="autoplay" title="' + esc(g.game) + ' preview"></iframe></div>' +
+        '<div class="label"><div class="gname">' + esc(g.game) + '</div>' +
+        '<div class="who">by ' + esc(g.name) + ' &bull; ' + esc(g.grade) + '</div></div>';
+      cab.addEventListener("click", ()=>{
+        spot = i;
+        highlight();
+        launchGame(g);
+      });
       grid.appendChild(cab);
-    }
+    });
   }
 
-  function clearSpotlight(){
-    const prev = grid.querySelector(".cab.spotlight");
-    if (prev){
-      prev.classList.remove("spotlight");
-      const fr = prev.querySelector("iframe"); if (fr) fr.remove();
-      const idle = prev.querySelector(".idle"); if (idle) idle.style.display = "";
-    }
-  }
   function highlight(){
-    clearSpotlight();
+    const prev = grid.querySelector(".cab.spotlight");
+    if (prev) prev.classList.remove("spotlight");
     const cab = grid.querySelector('.cab[data-idx="'+spot+'"]');
     if (cab) cab.classList.add("spotlight");
   }
-  function loadSim(){
-    const slice = pageSlice();
-    const g = slice[spot];
-    const cab = grid.querySelector('.cab[data-idx="'+spot+'"]');
-    if (!g || !cab || cab.querySelector("iframe")) return;
-    const screen = cab.querySelector(".screen");
-    const idle = screen.querySelector(".idle"); if (idle) idle.style.display = "none";
-    const iframe = document.createElement("iframe");
-    iframe.src = simUrl(g.id);
-    iframe.setAttribute("allow","autoplay");
-    iframe.title = g.game + " preview";
-    screen.appendChild(iframe);
-  }
-  function queueLoad(){
-    clearTimeout(loadTimer);
-    loadTimer = setTimeout(loadSim, LOAD_DELAY);
+
+  // While auto-scrolling, periodically figure out which cabinet is nearest
+  // the centre of the visible wall area and treat that as the selection.
+  function syncSpotFromViewport(){
+    const cabs = grid.children;
+    if (!cabs.length) return;
+    const box = wallScroll.getBoundingClientRect();
+    const centerY = box.top + box.height / 2;
+    let best = 0, bestDist = Infinity;
+    for (let i=0;i<cabs.length;i++){
+      const r = cabs[i].getBoundingClientRect();
+      const d = Math.abs((r.top + r.bottom)/2 - centerY);
+      if (d < bestDist){ bestDist = d; best = i; }
+    }
+    if (best !== spot){ spot = best; highlight(); }
   }
 
-  /* move selection forward/back n steps (wraps across pages) */
-  function move(n, autoAdvance){
-    if (!games.length) return;
-    const slice = pageSlice();
-    let next = spot + n;
-    if (next >= slice.length || next < 0){
-      if (totalPages() > 1){
-        page += (next < 0 ? -1 : 1);
-        renderPage();
-        const s = pageSlice();
-        spot = next < 0 ? s.length - 1 : 0;
-      } else {
-        spot = ((next % slice.length) + slice.length) % slice.length;
-      }
-    } else {
-      spot = next;
-    }
-    highlight();
-    if (autoAdvance) loadSim(); else queueLoad();
+  function actualCols(){
+    const cols = getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length;
+    return cols || 1;
   }
-  function changePage(n){
-    if (totalPages() <= 1 || !games.length) return;
-    page += n; spot = 0;
-    renderPage(); highlight(); queueLoad();
+
+  /* move selection by n cabinets and bring it to the centre of the wall (wraps) */
+  function moveSpot(n){
+    if (!games.length) return;
+    spot = ((spot + n) % games.length + games.length) % games.length;
+    highlight();
+    const cab = grid.querySelector('.cab[data-idx="'+spot+'"]');
+    if (cab) cab.scrollIntoView({behavior:"smooth", block:"center"});
+  }
+
+  /* bigger scroll nudge for LB/RB and Page Up/Down */
+  function jumpScroll(dir){
+    if (!games.length) return;
+    wallScroll.scrollBy({top: dir * wallScroll.clientHeight * 0.85, behavior:"smooth"});
+    setTimeout(syncSpotFromViewport, 450);
   }
 
   /* ---------- input: gamepad + keyboard ---------- */
@@ -515,24 +503,25 @@
       comboHeld[pad.index] = comboNow;
 
       if (wallActive && !inGame && games.length){
+        const cols = actualCols();
         // D-pad: 12 up, 13 down, 14 left, 15 right
-        if (justPressed(15)) manualInput(()=> move(1));
-        if (justPressed(14)) manualInput(()=> move(-1));
-        if (justPressed(13)) manualInput(()=> move(COLS));
-        if (justPressed(12)) manualInput(()=> move(-COLS));
+        if (justPressed(15)) manualInput(()=> moveSpot(1));
+        if (justPressed(14)) manualInput(()=> moveSpot(-1));
+        if (justPressed(13)) manualInput(()=> moveSpot(cols));
+        if (justPressed(12)) manualInput(()=> moveSpot(-cols));
         // Left stick with edge detection
         const x = pad.axes[0] || 0, y = pad.axes[1] || 0;
         const sx = Math.abs(x) > DEADZONE ? Math.sign(x) : 0;
         const sy = Math.abs(y) > DEADZONE ? Math.sign(y) : 0;
-        if (sx !== 0 && sx !== stickHeld.x) manualInput(()=> move(sx));
-        if (sy !== 0 && sy !== stickHeld.y) manualInput(()=> move(sy * COLS));
+        if (sx !== 0 && sx !== stickHeld.x) manualInput(()=> moveSpot(sx));
+        if (sy !== 0 && sy !== stickHeld.y) manualInput(()=> moveSpot(sy * cols));
         stickHeld = {x:sx, y:sy};
-        // Bumpers: 4 LB, 5 RB -> change screen
-        if (justPressed(5)) manualInput(()=> changePage(1));
-        if (justPressed(4)) manualInput(()=> changePage(-1));
+        // Bumpers: 4 LB, 5 RB -> jump-scroll by roughly one screen
+        if (justPressed(5)) manualInput(()=> jumpScroll(1));
+        if (justPressed(4)) manualInput(()=> jumpScroll(-1));
         // A (0): launch the selected game full-window
-        if (justPressed(0)) manualInput(()=> launchGame(pageSlice()[spot]));
-        // Start (9) alone: hand back to auto-play
+        if (justPressed(0)) manualInput(()=> launchGame(games[spot]));
+        // Start (9) alone: hand back to auto-scroll
         if (justPressed(9) && !pressed(8)) setMode(mode === "auto" ? "manual" : "auto");
       }
       prevBtns[pad.index] = pad.buttons.map(b=> b.pressed);
@@ -546,11 +535,12 @@
   document.addEventListener("keydown", e=>{
     if (e.key === "Escape"){ if (inGame){ e.preventDefault(); returnToMenu(); } return; }
     if (!wallActive || inGame || !games.length) return;
+    const cols = actualCols();
     const map = {
-      ArrowRight: ()=> move(1),   ArrowLeft: ()=> move(-1),
-      ArrowDown:  ()=> move(COLS), ArrowUp:  ()=> move(-COLS),
-      PageDown:   ()=> changePage(1), PageUp: ()=> changePage(-1),
-      Enter:      ()=> launchGame(pageSlice()[spot])
+      ArrowRight: ()=> moveSpot(1),   ArrowLeft: ()=> moveSpot(-1),
+      ArrowDown:  ()=> moveSpot(cols), ArrowUp:  ()=> moveSpot(-cols),
+      PageDown:   ()=> jumpScroll(1), PageUp: ()=> jumpScroll(-1),
+      Enter:      ()=> launchGame(games[spot])
     };
     if (e.key === " "){ e.preventDefault(); setMode(mode==="auto"?"manual":"auto"); return; }
     if (map[e.key]){ e.preventDefault(); manualInput(map[e.key]); }
