@@ -148,6 +148,14 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
   .cab .who{color:var(--dim);font-size:15px;margin-top:2px}
+  .cab .edit-link{
+    display:block;margin-top:4px;
+    font-size:11px;letter-spacing:.5px;
+    color:var(--arc);text-decoration:none;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    opacity:.85;
+  }
+  .cab .edit-link:hover{text-decoration:underline;opacity:1}
   .cab.spotlight{
     border-color:var(--volt);
     box-shadow:0 0 0 1px var(--volt), 0 0 22px rgba(255,214,10,.35), inset 0 0 14px rgba(255,214,10,.08);
@@ -638,17 +646,23 @@
       cab.dataset.idx = i;
       cab.dataset.id = g.id;
       cab.dataset.gname = g.game;
+      const gEditUrl = editUrl(g.id);
       cab.innerHTML =
         '<div class="screen">' + COIN_HTML + '</div>' +
         '<button class="remix-btn" type="button" title="Open this game in the MakeCode editor and make your own version">&#9889; Remix</button>' +
         '<div class="label"><div class="gname">' + esc(g.game) + '</div>' +
-        '<div class="who">by ' + esc(g.name) + ' &bull; ' + esc(g.grade) + '</div></div>';
+        '<div class="who">by ' + esc(g.name) + ' &bull; ' + esc(g.grade) + '</div>' +
+        '<a class="edit-link" href="' + esc(gEditUrl) + '" target="_blank" rel="noopener" title="Edit this game in MakeCode">' + esc(gEditUrl.replace(/^https:\/\//, "")) + '</a></div>';
+
+      // The text link opens in a new tab on its own; just stop the click from
+      // bubbling up so it doesn't also launch the game full-screen.
+      cab.querySelector(".edit-link").addEventListener("click", (e)=> e.stopPropagation());
 
       // Remix: open the game in the MakeCode editor in a new tab. Stop the
       // click from bubbling so it doesn't also launch the game full-screen.
       cab.querySelector(".remix-btn").addEventListener("click", (e)=>{
         e.stopPropagation();
-        window.open(editUrl(g.id), "_blank", "noopener");
+        window.open(gEditUrl, "_blank", "noopener");
       });
 
       // Shared image: animated GIF where one was recorded, else the static
