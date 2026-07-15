@@ -156,6 +156,69 @@
   }
   .cab.spotlight .gname{color:var(--volt)}
 
+  /* "remix" button — opens the game in the MakeCode editor */
+  .remix-btn{
+    position:absolute;top:14px;right:14px;z-index:3;
+    font-family:inherit;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+    background:rgba(11,15,20,.85);border:1px solid var(--volt);border-radius:4px;
+    color:var(--volt);padding:4px 10px;cursor:pointer;
+    opacity:0;transition:opacity .2s, background .2s, transform .15s;
+    backdrop-filter:blur(2px);
+  }
+  .cab:hover .remix-btn,
+  .cab.spotlight .remix-btn,
+  .remix-btn:focus-visible{opacity:1}
+  .remix-btn:hover{
+    background:var(--volt);color:#0b0f14;
+    box-shadow:0 0 14px rgba(255,214,10,.55);
+    transform:scale(1.06);
+  }
+  .remix-btn:focus-visible{outline:2px solid var(--arc);outline-offset:2px}
+  @media (hover:none){.remix-btn{opacity:1}}
+
+  /* rotating arcade machine placeholder (no usable screenshot / game-over shot) */
+  .screen .coinup{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+    background:#05080c;perspective:320px;
+  }
+  .coinup .spin{
+    width:34%;max-width:74px;min-width:44px;
+    animation:spinY 7s linear infinite;
+    transform-style:preserve-3d;
+    filter:drop-shadow(0 0 10px rgba(77,195,255,.25));
+  }
+  .coinup .spin svg{display:block;width:100%;height:auto}
+  @keyframes spinY{from{transform:rotateY(0deg)}to{transform:rotateY(360deg)}}
+  .coinup .coin-text{
+    color:var(--volt);font-size:11px;letter-spacing:3px;text-transform:uppercase;
+    animation:blinkCoin 1.6s steps(1) infinite;
+  }
+  @keyframes blinkCoin{0%,64%{opacity:1}65%,100%{opacity:.15}}
+  /* static screenshot for non-spotlighted cabinets */
+  .screen .shot{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:contain;image-rendering:pixelated;
+  }
+
+  /* ============ SEARCH ============ */
+  .search{
+    font-family:inherit;font-size:14px;letter-spacing:1px;
+    background:var(--panel);border:1px solid var(--line);border-radius:4px;
+    color:var(--text);padding:6px 12px;width:220px;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .search::placeholder{color:var(--dim)}
+  .search:focus{outline:none;border-color:var(--arc);box-shadow:0 0 10px rgba(77,195,255,.25)}
+
+  .sort-btn{
+    font-family:inherit;font-size:14px;letter-spacing:1px;text-transform:uppercase;
+    background:var(--panel);border:1px solid var(--line);border-radius:4px;
+    color:var(--arc);padding:6px 12px;cursor:pointer;
+    transition:border-color .2s;
+  }
+  .sort-btn:hover{border-color:var(--arc)}
+
   .hintbar{
     margin-top:12px;text-align:center;color:var(--dim);font-size:15px;letter-spacing:1px;
     flex:none;
@@ -205,6 +268,8 @@
     .arcline::after{animation:none;left:40%}
     h1 .bolt{animation:none}
     .cab{transition:none}
+    .coinup .spin{animation:none}
+    .coinup .coin-text{animation:none}
   }
 </style>
 </head>
@@ -224,6 +289,8 @@
     <div class="grid-head">
       <h2>Now Showing</h2>
       <div class="status">
+        <input class="search" id="searchBox" type="search" placeholder="Search games&#8230;" autocomplete="off" spellcheck="false" aria-label="Search games by name">
+        <button class="sort-btn" id="sortBtn" title="Flip between newest-first and oldest-first">Sort: Newest</button>
         <span class="mode-tag" id="modeTag">AUTO</span>
         <span id="pageInfo"></span>
         <span class="pad-badge" id="padBadge">controller connected</span>
@@ -231,11 +298,11 @@
     </div>
     <div id="wallScroll"><div id="grid"></div></div>
     <div class="empty-state" id="emptyState" style="display:none">
-      <div class="big">No games on the wall yet</div>
-      <p>New games added to the spreadsheet will appear here automatically.</p>
+      <div class="big" id="emptyTitle">No games on the wall yet</div>
+      <p id="emptyText">New games added to the spreadsheet will appear here automatically.</p>
     </div>
     <div class="hintbar" id="hintbar">
-      &#127918; <kbd>D-Pad / Stick</kbd> scroll &amp; select &nbsp; <kbd>A</kbd> launch &nbsp; <kbd>LB / RB</kbd> jump &nbsp; <kbd>Start</kbd> auto-scroll &nbsp;&bull;&nbsp; arrows + Enter work too
+      &#127918; <kbd>D-Pad / Stick</kbd> scroll &amp; select &nbsp; <kbd>A</kbd> launch &nbsp; <kbd>LB / RB</kbd> jump &nbsp; <kbd>Start</kbd> auto-scroll &nbsp;&bull;&nbsp; arrows + Enter work too &nbsp; <kbd>/</kbd> search
     </div>
   </section>
 
@@ -259,7 +326,62 @@
   const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQYOnFCDtaPGF_q7MDIkaXa8Bu8hjXR1rIMR1oZfND8uf8Z8An-VdEXty5WZL8OF7f3VHzLEYG4noED/pub?output=xlsx";
   const REFRESH_MS = 5 * 60 * 1000; // re-check the sheet every 5 minutes so new entries appear without a page reload
   const loadMsg = document.getElementById("loadMsg");
-  let games = [];
+  let games = [];   // oldest-first, straight from the sheet
+  let view = [];    // the games currently shown on the wall (after search filter)
+
+  /* ---------- game-name word filter ----------
+     Words in this list are removed from displayed game names (whole words,
+     any capitalisation). Edit freely — one word per entry. */
+  const BLOCKED_WORDS = [
+    "shoot","shoots","shooter","shooters","shooting","shootout",
+    "kill","kills","killer","killers","killing",
+    "gun","guns","gunner","murder","murderer",
+    "blood","bloody","gore","gory",
+    "stab","knife","knives","bomb","bombs","bombing",
+    "die","dies","dead","death","deadly",
+    "terror","terrorist","drug","drugs"
+  ];
+  const BLOCKED_RE = new RegExp("\\b(" + BLOCKED_WORDS.join("|") + ")\\b", "gi");
+  function cleanName(s){
+    const cleaned = String(s)
+      .replace(BLOCKED_RE, "")
+      .replace(/\s{2,}/g, " ")
+      .replace(/\s+([!?.,:;])/g, "$1")
+      .trim();
+    return cleaned || "Untitled";
+  }
+
+  /* ---------- search + sort ---------- */
+  const searchBox = document.getElementById("searchBox");
+  const sortBtn = document.getElementById("sortBtn");
+  let query = "";
+  let sortOrder = "newest";   // "newest" | "oldest" — sheet rows are oldest-first
+  function visibleGames(){
+    let list = games.slice();
+    if (query){
+      const q = query.toLowerCase();
+      list = list.filter(g =>
+        g.game.toLowerCase().includes(q) || g.name.toLowerCase().includes(q));
+    }
+    if (sortOrder === "newest") list.reverse();
+    return list;
+  }
+  function refreshView(){
+    spot = 0;
+    renderWall();
+    wallScroll.scrollTop = 0;
+    if (view.length) highlight();
+  }
+  function applySearch(){
+    query = searchBox.value.trim();
+    refreshView();
+  }
+  searchBox.addEventListener("input", applySearch);
+  sortBtn.addEventListener("click", ()=>{
+    sortOrder = sortOrder === "newest" ? "oldest" : "newest";
+    sortBtn.textContent = sortOrder === "newest" ? "Sort: Newest" : "Sort: Oldest";
+    refreshView();
+  });
 
   function findCol(headers, keywords, exclude){
     for (let i=0;i<headers.length;i++){
@@ -292,10 +414,10 @@
         id,
         name:  nameIdx  > -1 ? String(row[nameIdx]  ?? "").trim() : "",
         grade: gradeIdx > -1 ? String(row[gradeIdx] ?? "").trim() : "",
-        game:  gameIdx  > -1 ? String(row[gameIdx]  ?? "").trim() || "Untitled" : "Untitled"
+        game:  cleanName(gameIdx > -1 ? String(row[gameIdx] ?? "").trim() : "")
       });
     }
-    return out.reverse();
+    return out;   // sheet order: oldest entries first, newest at the bottom
   }
 
   async function fetchGames(){
@@ -338,12 +460,99 @@
     return m ? m[0] : null;
   }
   const simUrl = id => "https://arcade.makecode.com/---run?id=" + encodeURIComponent(id);
+  // Loads the shared project straight into the MakeCode editor — students can
+  // start changing blocks immediately and MakeCode saves it as their own copy.
+  const editUrl = id => "https://arcade.makecode.com/#pub:" + encodeURIComponent(id);
+  // Candidate URLs for a cabinet's preview image, tried in order until one loads.
+  // MakeCode stores the full-size share image (the animated GIF, when the student
+  // recorded one) separately from the small static thumbnail — so we try the
+  // full-size /screenshot asset first and only fall back to /thumb, with and
+  // without the leading underscore on the share id.
+  function shotSources(id){
+    const api = "https://makecode.com/api/";
+    const ids = [id];
+    const bare = id.replace(/^_/, "");
+    if (bare !== id) ids.push(bare);
+    const urls = [];
+    for (const kind of ["screenshot", "thumb"]){
+      for (const i of ids) urls.push(api + encodeURIComponent(i) + "/" + kind);
+    }
+    return urls;
+  }
+
+  /* rotating arcade machine shown when a cabinet has no usable screenshot */
+  const COIN_HTML =
+    '<div class="coinup" aria-hidden="true">' +
+      '<div class="spin">' +
+        '<svg viewBox="0 0 60 92" xmlns="http://www.w3.org/2000/svg">' +
+          '<rect x="7" y="2" width="46" height="13" rx="2" fill="#1b2531" stroke="#4dc3ff" stroke-width="1.5"/>' +
+          '<polygon points="32,4 25,10 29,10 27,14 35,8 30.5,8" fill="#ffd60a"/>' +
+          '<rect x="10" y="15" width="40" height="34" fill="#141b24" stroke="#2b3a4d" stroke-width="1.5"/>' +
+          '<rect x="15" y="20" width="30" height="21" rx="1" fill="#05080c" stroke="#4dc3ff" stroke-width="1.5"/>' +
+          '<polygon points="30,23 25.5,30 28.5,30 27,36 34.5,28 30.8,28" fill="#ffd60a"/>' +
+          '<polygon points="8,49 52,49 56,60 4,60" fill="#1b2531" stroke="#2b3a4d" stroke-width="1.5"/>' +
+          '<circle cx="21" cy="54.5" r="2.6" fill="#ff6b35"/>' +
+          '<circle cx="30" cy="54.5" r="2.6" fill="#54e38e"/>' +
+          '<circle cx="39" cy="54.5" r="2.6" fill="#4dc3ff"/>' +
+          '<rect x="6" y="60" width="48" height="26" fill="#0e141c" stroke="#2b3a4d" stroke-width="1.5"/>' +
+          '<rect x="25" y="67" width="10" height="4" rx="1" fill="#05080c" stroke="#ffd60a"/>' +
+          '<rect x="4" y="86" width="52" height="5" rx="1" fill="#1b2531" stroke="#2b3a4d" stroke-width="1.5"/>' +
+        '</svg>' +
+      '</div>' +
+      '<div class="coin-text">insert coin</div>' +
+    '</div>';
+
+  /* If a screenshot is a "GAME OVER" screen — a dark screen with a band of
+     pixel-font text (any colour) — hide it so the rotating arcade machine shows
+     instead. Text is recognised by rows with many bright/dark alternations
+     (letters make lots of edges; sprites and stars make very few). Pixel checks
+     need CORS access to the image; if the host doesn't allow it, we quietly
+     keep the screenshot rather than break anything. */
+  function hideIfGameOver(url, shot){
+    const probe = new Image();
+    probe.crossOrigin = "anonymous";
+    probe.onload = ()=>{
+      try {
+        const w = 160, h = 120;
+        const cv = document.createElement("canvas");
+        cv.width = w; cv.height = h;
+        const ctx = cv.getContext("2d");
+        ctx.drawImage(probe, 0, 0, w, h);
+        const px = ctx.getImageData(0, 0, w, h).data;
+        let dark = 0, brightTotal = 0, texty = 0, run = 0, maxRun = 0;
+        for (let y = 0; y < h; y++){
+          let prev = false, trans = 0, rowBright = 0;
+          for (let x = 0; x < w; x++){
+            const i = (y * w + x) * 4;
+            const lum = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
+            const b = lum > 120;
+            if (lum < 80) dark++;
+            if (b){ rowBright++; brightTotal++; }
+            if (b !== prev){ trans++; prev = b; }
+          }
+          // a "text row": many edges, but not a mostly-bright row
+          if (trans >= 14 && rowBright < w * 0.5){ texty++; run++; if (run > maxRun) maxRun = run; }
+          else run = 0;
+        }
+        const n = w * h;
+        const looksGameOver =
+          dark / n > 0.62 &&            // screen is dark / dimmed out
+          brightTotal / n < 0.2 &&      // sparse content, not a busy scene
+          maxRun >= 4 &&                // a solid band of text rows...
+          texty <= h * 0.25;            // ...but text isn't covering the screen
+        if (looksGameOver && shot.isConnected) shot.remove();
+      } catch(e){ /* cross-origin pixels blocked -> keep the screenshot */ }
+    };
+    probe.src = url;
+  }
 
   /* ---------- game wall state ---------- */
   const grid = document.getElementById("grid");
   const wallScroll = document.getElementById("wallScroll");
   const pageInfo = document.getElementById("pageInfo");
   const emptyState = document.getElementById("emptyState");
+  const emptyTitle = document.getElementById("emptyTitle");
+  const emptyText = document.getElementById("emptyText");
   const hintbar = document.getElementById("hintbar");
   const modeTag = document.getElementById("modeTag");
   let spot = 0;
@@ -380,7 +589,7 @@
     spot = 0;
     renderWall();
     wallScroll.scrollTop = 0;
-    if (games.length){ highlight(); setMode("auto"); }
+    if (view.length){ highlight(); setMode("auto"); }
   }
   function stopWall(){
     cancelAnimationFrame(autoScrollFrame); autoScrollFrame = null;
@@ -391,7 +600,7 @@
     mode = m;
     modeTag.textContent = m.toUpperCase();
     cancelAnimationFrame(autoScrollFrame); autoScrollFrame = null;
-    if (m === "auto" && games.length) autoScrollFrame = requestAnimationFrame(autoScrollTick);
+    if (m === "auto" && view.length) autoScrollFrame = requestAnimationFrame(autoScrollTick);
   }
 
   let syncCounter = 0;
@@ -404,23 +613,62 @@
     if (mode === "auto") autoScrollFrame = requestAnimationFrame(autoScrollTick);
   }
 
-  // Every cabinet gets its own live iframe up front, so all the games animate
-  // simultaneously instead of only the currently-selected one loading.
+  // Only the spotlighted cabinet runs a live sim; every other cabinet shows the
+  // image MakeCode saved when the game was shared — the animated GIF if the
+  // student recorded one, otherwise the static screenshot. The live preview
+  // follows the spotlight as it moves (auto-scroll, controller, or mouse).
   function renderWall(){
+    view = visibleGames();
     grid.innerHTML = "";
-    emptyState.style.display = games.length ? "none" : "block";
-    wallScroll.style.display = games.length ? "block" : "none";
-    hintbar.style.display = games.length ? "block" : "none";
-    pageInfo.textContent = games.length ? games.length + " game" + (games.length===1?"":"s") : "";
+    const noneAtAll = !games.length;
+    emptyState.style.display = view.length ? "none" : "block";
+    emptyTitle.textContent = noneAtAll ? "No games on the wall yet" : "No games match your search";
+    emptyText.textContent = noneAtAll
+      ? "New games added to the spreadsheet will appear here automatically."
+      : "Try a different name, or clear the search box to see the whole wall.";
+    wallScroll.style.display = view.length ? "block" : "none";
+    hintbar.style.display = view.length ? "block" : "none";
+    pageInfo.textContent = view.length
+      ? (query ? view.length + " match" + (view.length===1?"":"es") : view.length + " game" + (view.length===1?"":"s"))
+      : "";
 
-    games.forEach((g,i)=>{
+    view.forEach((g,i)=>{
       const cab = document.createElement("div");
       cab.className = "cab";
       cab.dataset.idx = i;
+      cab.dataset.id = g.id;
+      cab.dataset.gname = g.game;
       cab.innerHTML =
-        '<div class="screen"><iframe src="' + simUrl(g.id) + '" allow="autoplay" title="' + esc(g.game) + ' preview"></iframe></div>' +
+        '<div class="screen">' + COIN_HTML + '</div>' +
+        '<button class="remix-btn" type="button" title="Open this game in the MakeCode editor and make your own version">&#9889; Remix</button>' +
         '<div class="label"><div class="gname">' + esc(g.game) + '</div>' +
         '<div class="who">by ' + esc(g.name) + ' &bull; ' + esc(g.grade) + '</div></div>';
+
+      // Remix: open the game in the MakeCode editor in a new tab. Stop the
+      // click from bubbling so it doesn't also launch the game full-screen.
+      cab.querySelector(".remix-btn").addEventListener("click", (e)=>{
+        e.stopPropagation();
+        window.open(editUrl(g.id), "_blank", "noopener");
+      });
+
+      // Shared image: animated GIF where one was recorded, else the static
+      // screenshot; walks the candidate URLs until one loads. Game-over
+      // screenshots are hidden so the rotating machine shows instead.
+      const sources = shotSources(g.id);
+      let srcIdx = 0;
+      const shot = document.createElement("img");
+      shot.className = "shot";
+      shot.loading = "lazy";
+      shot.alt = "";
+      shot.src = sources[srcIdx];
+      shot.addEventListener("error", ()=>{
+        srcIdx++;
+        if (srcIdx < sources.length) shot.src = sources[srcIdx];
+        else shot.remove();             // nothing saved -> rotating machine shows
+      });
+      shot.addEventListener("load", ()=> hideIfGameOver(shot.src, shot));
+      cab.querySelector(".screen").appendChild(shot);
+
       cab.addEventListener("click", ()=>{
         spot = i;
         highlight();
@@ -430,11 +678,30 @@
     });
   }
 
+  /* run the live sim only inside the spotlighted cabinet (debounced so fast
+     scrolling shows screenshots and only boots the sim once you settle) */
+  let spotSimTimer = null;
+  function animateSpot(cab){
+    clearTimeout(spotSimTimer);
+    grid.querySelectorAll(".screen iframe").forEach(f=> f.remove());
+    if (!cab || inGame) return;
+    spotSimTimer = setTimeout(()=>{
+      if (inGame || !cab.classList.contains("spotlight")) return;
+      const screen = cab.querySelector(".screen");
+      const f = document.createElement("iframe");
+      f.src = simUrl(cab.dataset.id);
+      f.setAttribute("allow", "autoplay");
+      f.title = cab.dataset.gname + " preview";
+      screen.appendChild(f);   // sits on top of the screenshot
+    }, 350);
+  }
+
   function highlight(){
     const prev = grid.querySelector(".cab.spotlight");
     if (prev) prev.classList.remove("spotlight");
     const cab = grid.querySelector('.cab[data-idx="'+spot+'"]');
     if (cab) cab.classList.add("spotlight");
+    animateSpot(cab);
   }
 
   // While auto-scrolling, periodically figure out which cabinet is nearest
@@ -460,8 +727,8 @@
 
   /* move selection by n cabinets and bring it to the centre of the wall (wraps) */
   function moveSpot(n){
-    if (!games.length) return;
-    spot = ((spot + n) % games.length + games.length) % games.length;
+    if (!view.length) return;
+    spot = ((spot + n) % view.length + view.length) % view.length;
     highlight();
     const cab = grid.querySelector('.cab[data-idx="'+spot+'"]');
     if (cab) cab.scrollIntoView({behavior:"smooth", block:"center"});
@@ -469,7 +736,7 @@
 
   /* bigger scroll nudge for LB/RB and Page Up/Down */
   function jumpScroll(dir){
-    if (!games.length) return;
+    if (!view.length) return;
     wallScroll.scrollBy({top: dir * wallScroll.clientHeight * 0.85, behavior:"smooth"});
     setTimeout(syncSpotFromViewport, 450);
   }
@@ -505,7 +772,7 @@
       if (comboNow && !comboHeld[pad.index] && inGame) returnToMenu();
       comboHeld[pad.index] = comboNow;
 
-      if (wallActive && !inGame && games.length){
+      if (wallActive && !inGame && view.length){
         const cols = actualCols();
         // D-pad: 12 up, 13 down, 14 left, 15 right
         if (justPressed(15)) manualInput(()=> moveSpot(1));
@@ -523,7 +790,7 @@
         if (justPressed(5)) manualInput(()=> jumpScroll(1));
         if (justPressed(4)) manualInput(()=> jumpScroll(-1));
         // A (0): launch the selected game full-window
-        if (justPressed(0)) manualInput(()=> launchGame(games[spot]));
+        if (justPressed(0)) manualInput(()=> launchGame(view[spot]));
         // Start (9) alone: hand back to auto-scroll
         if (justPressed(9) && !pressed(8)) setMode(mode === "auto" ? "manual" : "auto");
       }
@@ -536,14 +803,26 @@
   requestAnimationFrame(pollPads);
 
   document.addEventListener("keydown", e=>{
+    // While typing in the search box, keys belong to it (Esc clears & exits).
+    if (e.target === searchBox){
+      if (e.key === "Escape"){
+        e.preventDefault();
+        searchBox.value = "";
+        applySearch();
+        searchBox.blur();
+      }
+      return;
+    }
     if (e.key === "Escape"){ if (inGame){ e.preventDefault(); returnToMenu(); } return; }
-    if (!wallActive || inGame || !games.length) return;
+    if (!wallActive || inGame) return;
+    if (e.key === "/"){ e.preventDefault(); searchBox.focus(); return; }
+    if (!view.length) return;
     const cols = actualCols();
     const map = {
       ArrowRight: ()=> moveSpot(1),   ArrowLeft: ()=> moveSpot(-1),
       ArrowDown:  ()=> moveSpot(cols), ArrowUp:  ()=> moveSpot(-cols),
       PageDown:   ()=> jumpScroll(1), PageUp: ()=> jumpScroll(-1),
-      Enter:      ()=> launchGame(games[spot])
+      Enter:      ()=> launchGame(view[spot])
     };
     if (e.key === " "){ e.preventDefault(); setMode(mode==="auto"?"manual":"auto"); return; }
     if (map[e.key]){ e.preventDefault(); manualInput(map[e.key]); }
