@@ -646,13 +646,14 @@
       cab.dataset.idx = i;
       cab.dataset.id = g.id;
       cab.dataset.gname = g.game;
-      const gEditUrl = editUrl(g.id);
+      // Share link in the standard MakeCode format, e.g. https://makecode.com/_LmgRUJatoKwY
+      const gPlayUrl = "https://makecode.com/" + g.id;
       cab.innerHTML =
         '<div class="screen">' + COIN_HTML + '</div>' +
-        '<button class="remix-btn" type="button" title="Open this game in the MakeCode editor and make your own version">&#9889; Remix</button>' +
+        '<button class="remix-btn" type="button" title="Open this game in MakeCode">&#9889; Remix</button>' +
         '<div class="label"><div class="gname">' + esc(g.game) + '</div>' +
         '<div class="who">by ' + esc(g.name) + ' &bull; ' + esc(g.grade) + '</div>' +
-        '<a class="edit-link" href="' + esc(gEditUrl) + '" target="_blank" rel="noopener" title="Edit this game in MakeCode">' + esc(gEditUrl.replace(/^https:\/\//, "")) + '</a></div>';
+        '<a class="edit-link" href="' + esc(gPlayUrl) + '" target="_blank" rel="noopener" title="Open this game in MakeCode">' + esc(gPlayUrl) + '</a></div>';
 
       // The text link opens in a new tab on its own; just stop the click from
       // bubbling up so it doesn't also launch the game full-screen.
@@ -662,7 +663,7 @@
       // click from bubbling so it doesn't also launch the game full-screen.
       cab.querySelector(".remix-btn").addEventListener("click", (e)=>{
         e.stopPropagation();
-        window.open(gEditUrl, "_blank", "noopener");
+        window.open(gPlayUrl, "_blank", "noopener");
       });
 
       // Shared image: animated GIF where one was recorded, else the static
