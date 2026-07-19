@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Think · Puzzle · Explore — Live Wall</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:ital,wght@0,400;0,600;0,700;1,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#0B1220;
+    --ink:#EAF2FF;
+    --muted:#9FB2CE;
+    --card:#131F38;
+    --think:#38E1FF;
+    --puzzle:#FFC94D;
+    --explore:#5DF0A6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Nunito',sans-serif;
+    background:radial-gradient(1200px 700px at 70% -10%, #16264a 0%, var(--bg) 55%);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:.75rem;
+    padding:1.2rem 2rem .6rem;
+  }
+  h1{
+    font-family:'Baloo 2',cursive;font-weight:800;
+    font-size:clamp(1.4rem,3.2vw,2.2rem);line-height:1.1;
+  }
+  h1 .t{color:var(--think)} h1 .p{color:var(--puzzle)} h1 .e{color:var(--explore)}
+  h1 .dot{color:var(--muted);font-weight:600}
+  .stats{display:flex;align-items:center;gap:1.2rem;color:var(--muted);font-size:.95rem}
+  .stats strong{color:var(--ink);font-size:1.15rem}
+  .pulse{
+    width:9px;height:9px;border-radius:50%;background:var(--explore);
+    display:inline-block;margin-right:.4rem;
+    animation:pulse 2s ease infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+  main{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;
+    padding:0 2rem 2rem;align-items:start;
+  }
+  .col{
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.07);
+    border-top:5px solid var(--c);
+    border-radius:14px;
+    padding:1rem;
+    min-height:60vh;
+  }
+  .col h2{
+    font-family:'Baloo 2',cursive;font-weight:700;
+    color:var(--c);font-size:1.25rem;letter-spacing:.05em;
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:.8rem;
+  }
+  .count{
+    font-family:'Nunito',sans-serif;font-weight:700;font-size:.85rem;
+    background:var(--c);color:#0B1220;border-radius:999px;
+    padding:.1rem .6rem;
+  }
+  .col-think{--c:var(--think)}
+  .col-puzzle{--c:var(--puzzle)}
+  .col-explore{--c:var(--explore)}
+
+  .card{
+    background:var(--card);
+    border:1px solid rgba(255,255,255,.06);
+    border-left:3px solid var(--c);
+    border-radius:10px;
+    padding:.7rem .85rem;
+    margin-bottom:.7rem;
+    font-size:.98rem;line-height:1.45;
+    overflow-wrap:anywhere;
+  }
+  .card .meta{
+    display:block;margin-top:.4rem;
+    color:var(--muted);font-size:.75rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:.08em;
+  }
+  .card.new{animation:pop .5s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes pop{from{opacity:0;transform:scale(.92) translateY(10px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){
+    .card.new{animation:none}
+    .pulse{animation:none}
+  }
+
+  .empty{
+    color:var(--muted);font-style:italic;text-align:center;
+    padding:2rem .5rem;font-size:.95rem;
+  }
+  .error{
+    margin:0 2rem 1rem;padding:.8rem 1rem;border-radius:10px;
+    background:rgba(255,110,110,.12);border:1px solid rgba(255,110,110,.4);
+    color:#ffb3b3;font-size:.9rem;display:none;
+  }
+  @media (max-width:820px){
+    main{grid-template-columns:1fr}
+    .col{min-height:auto}
+    header{padding:1rem 1rem .5rem}
+    main{padding:0 1rem 1.5rem}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1><span class="t">Think</span><span class="dot"> · </span><span class="p">Puzzle</span><span class="dot"> · </span><span class="e">Explore</span> <span style="color:var(--muted);font-weight:600;font-size:.6em">— AI</span></h1>
+    <div class="stats">
+      <span><span class="pulse"></span><span id="status">Loading…</span></span>
+      <span>Responses <strong id="total">0</strong></span>
+      <span id="avgWrap" style="display:none">Avg self-rating <strong id="avg">–</strong>/5</span>
+    </div>
+  </header>
+
+  <div class="error" id="error"></div>
+
+  <main>
+    <section class="col col-think">
+      <h2>🧠 THINK <span class="count" id="count-think">0</span></h2>
+      <div id="col-think"><div class="empty">Waiting for the first response…</div></div>
+    </section>
+    <section class="col col-puzzle">
+      <h2>🧩 PUZZLE <span class="count" id="count-puzzle">0</span></h2>
+      <div id="col-puzzle"><div class="empty">Waiting for the first response…</div></div>
+    </section>
+    <section class="col col-explore">
+      <h2>🔍 EXPLORE <span class="count" id="count-explore">0</span></h2>
+      <div id="col-explore"><div class="empty">Waiting for the first response…</div></div>
+    </section>
+  </main>
+
+<script>
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ7f-aHmuAV1R74WMvVHGaBrqk1Yt0L4RLqSCbI6r6K6AiDM-0DIUd3NQiiZwqZMGNadOpLoMDlHuA/pub?output=xlsx';
+const REFRESH_MS = 30000;
+
+const seen = new Set();          // keys of cards already rendered
+let firstLoad = true;
+
+function key(rowIdx, colName){ return rowIdx + '|' + colName; }
+
+function matchHeader(headers, word){
+  return headers.find(h => h && h.toString().toUpperCase().includes(word)) || null;
+}
+
+async function load(){
+  try{
+    const res = await fetch(SHEET_URL + '&cb=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+    if(!rows.length){ setStatus('Live — no responses yet'); return; }
+
+    const headers = Object.keys(rows[0]);
+    const cols = {
+      think:   matchHeader(headers, 'THINK'),
+      puzzle:  matchHeader(headers, 'PUZZLE'),
+      explore: matchHeader(headers, 'EXPLORE')
+    };
+    const classCol = headers.find(h => h.toString().toLowerCase().includes('class')) || null;
+    const scaleCol = headers.find(h => h.toString().toLowerCase().includes('understand')) || null;
+
+    let counts = {think:0, puzzle:0, explore:0};
+    let scaleSum = 0, scaleN = 0;
+
+    rows.forEach((row, i) => {
+      if(scaleCol){
+        const v = parseFloat(row[scaleCol]);
+        if(!isNaN(v)){ scaleSum += v; scaleN++; }
+      }
+      ['think','puzzle','explore'].forEach(name => {
+        const col = cols[name];
+        if(!col) return;
+        const text = (row[col] || '').toString().trim();
+        if(!text) return;
+        counts[name]++;
+        const k = key(i, name);
+        if(seen.has(k)) return;
+        seen.add(k);
+        addCard(name, text, classCol ? row[classCol] : '', !firstLoad);
+      });
+    });
+
+    document.getElementById('total').textContent = rows.length;
+    ['think','puzzle','explore'].forEach(n =>
+      document.getElementById('count-' + n).textContent = counts[n]);
+
+    if(scaleN){
+      document.getElementById('avgWrap').style.display = '';
+      document.getElementById('avg').textContent = (scaleSum / scaleN).toFixed(1);
+    }
+
+    setStatus('Live — updated ' + new Date().toLocaleTimeString());
+    hideError();
+    firstLoad = false;
+  }catch(err){
+    showError('Could not load responses (' + err.message + '). Retrying automatically — check the sheet is published to the web.');
+    setStatus('Retrying…');
+  }
+}
+
+function addCard(colName, text, klass, animate){
+  const wrap = document.getElementById('col-' + colName);
+  const empty = wrap.querySelector('.empty');
+  if(empty) empty.remove();
+  const card = document.createElement('div');
+  card.className = 'card' + (animate ? ' new' : '');
+  card.textContent = text;
+  if(klass){
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    meta.textContent = klass;
+    card.appendChild(meta);
+  }
+  wrap.prepend(card); // newest first
+}
+
+function setStatus(t){ document.getElementById('status').textContent = t; }
+function showError(t){ const e = document.getElementById('error'); e.textContent = t; e.style.display = 'block'; }
+function hideError(){ document.getElementById('error').style.display = 'none'; }
+
+load();
+setInterval(load, REFRESH_MS);
+</script>
+</body>
+</html>
