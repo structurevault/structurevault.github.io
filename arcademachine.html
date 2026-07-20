@@ -1,408 +1,254 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SPARK Arcade</title>
-<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIHJ4PSIyMCIgZmlsbD0iIzBiMGYxNCIvPgo8cG9seWdvbiBwb2ludHM9IjU4LDYgMjAsNTggNDYsNTggNDAsOTQgODIsNDAgNTQsNDAiIGZpbGw9IiNmZmQ2MGEiLz4KPC9zdmc+">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPARK Arcade &mdash; Cartridge Library</title>
 <style>
+  /* ============ TOKENS ============ */
   :root{
-    --bg:#0b0f14;        /* carbon */
-    --panel:#141b24;
-    --panel-2:#1b2531;
-    --line:#2b3a4d;
-    --volt:#ffd60a;      /* spark yellow */
-    --arc:#4dc3ff;       /* plasma blue */
-    --hot:#ff6b35;       /* ember - used sparingly */
-    --ok:#54e38e;
-    --text:#e9f1f7;
-    --dim:#7f93a8;
+    --bg:#0b0f14;
+    --panel:#131a22;
+    --line:#22303e;
+    --ink:#e8eef4;
+    --dim:#7b8a99;
+    --volt:#ffd60a;   /* spark yellow */
+    --arc:#4dc3ff;    /* arc blue */
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
   body{
-    background:
-      radial-gradient(1200px 500px at 50% -200px, rgba(77,195,255,.10), transparent 60%),
-      var(--bg);
-    color:var(--text);
-    font-family:'Share Tech Mono',monospace;
-    font-size:17px;
-    overflow:hidden;
-    display:flex;
-    flex-direction:column;
+    background:var(--bg);color:var(--ink);
+    font-family:ui-monospace,"Cascadia Mono","Menlo","Consolas",monospace;
+    min-height:100vh;display:flex;flex-direction:column;
   }
-  /* faint circuit-trace texture */
-  body::before{
-    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-    background-image:
-      linear-gradient(rgba(77,195,255,.045) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(77,195,255,.045) 1px, transparent 1px);
-    background-size:56px 56px;
-    mask-image:radial-gradient(ellipse at 50% 0%, black 20%, transparent 75%);
-  }
-  main,header,nav,footer{position:relative;z-index:1}
 
   /* ============ HEADER ============ */
   header{
-    text-align:center;
-    padding:30px 16px 0;
-    flex:none;
+    position:sticky;top:0;z-index:10;
+    background:rgba(11,15,20,.94);backdrop-filter:blur(4px);
+    border-bottom:1px solid var(--line);
+    padding:14px 20px 12px;
   }
+  .head-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;max-width:1280px;margin:0 auto}
   h1{
-    font-family:'Audiowide',sans-serif;
-    font-size:clamp(26px,5vw,52px);
-    letter-spacing:6px;
-    text-transform:uppercase;
-    color:var(--text);
+    margin:0;font-size:20px;letter-spacing:4px;font-weight:800;
+    color:var(--volt);white-space:nowrap;
   }
-  h1 .spark{
-    color:var(--volt);
-    text-shadow:0 0 14px rgba(255,214,10,.65), 0 0 40px rgba(255,214,10,.3);
-  }
-  h1 .bolt{
-    display:inline-block;
-    color:var(--volt);
-    transform:translateY(2px);
-    filter:drop-shadow(0 0 8px rgba(255,214,10,.8));
-    animation:flicker 4s infinite;
-  }
-  @keyframes flicker{
-    0%,92%,96%,100%{opacity:1}
-    93%,95%{opacity:.35}
-  }
-  .tagline{margin-top:8px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;font-size:14px}
-  .tagline b{color:var(--arc);font-weight:normal}
-
-  /* animated energy line under the title */
-  .arcline{
-    height:3px;max-width:760px;margin:20px auto 0;position:relative;
-    background:linear-gradient(90deg, transparent, var(--line) 15%, var(--line) 85%, transparent);
-    overflow:hidden;border-radius:2px;
-  }
-  .arcline::after{
-    content:"";position:absolute;top:0;bottom:0;width:90px;
-    background:linear-gradient(90deg, transparent, var(--volt), var(--arc), transparent);
-    filter:blur(1px);
-    animation:travel 2.6s linear infinite;
-  }
-  @keyframes travel{from{left:-100px}to{left:100%}}
-
-  main{max-width:1520px;width:100%;margin:0 auto;padding:26px 18px 14px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-  .view{display:none}
-  .view.active{display:flex;flex-direction:column;flex:1;min-height:0}
-
-  /* ============ GAME WALL ============ */
-  .grid-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;flex:none}
-  .grid-head h2{
-    font-family:'Audiowide',sans-serif;font-size:15px;letter-spacing:3px;color:var(--volt);text-transform:uppercase;
-  }
-  .status{display:flex;align-items:center;gap:16px;color:var(--dim);font-size:15px}
-  .pad-badge{
-    display:none;align-items:center;gap:8px;
-    border:1px solid var(--line);border-radius:4px;padding:5px 10px;color:var(--ok);
-  }
-  .pad-badge.on{display:inline-flex}
-  .pad-badge::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
-  .mode-tag{color:var(--arc)}
-
-  #wallScroll{
-    flex:1;min-height:0;overflow-y:auto;
-    scrollbar-width:none;
-  }
-  #wallScroll::-webkit-scrollbar{display:none}
-
-  #grid{
-    display:grid;
-    grid-template-columns:repeat(6,1fr);
-    gap:13px;
-    padding-bottom:6px;
-  }
-  @media (max-width:1100px){#grid{grid-template-columns:repeat(3,1fr)}}
-  @media (max-width:640px){#grid{grid-template-columns:repeat(2,1fr)}}
-
-  .cab{
-    position:relative;
-    background:linear-gradient(180deg,var(--panel-2),var(--panel));
-    border:1px solid var(--line);
-    border-radius:6px;
-    min-height:198px;
-    display:flex;flex-direction:column;
-    overflow:hidden;
-    cursor:pointer;
-    transition:border-color .25s, box-shadow .25s, transform .25s;
-  }
-  .cab:hover{border-color:var(--arc)}
-  .cab .screen{
-    flex:1;position:relative;background:#05080c;margin:9px 9px 5px;
-    border:1px solid #000;border-radius:4px;overflow:hidden;
-    display:flex;align-items:center;justify-content:center;
-    aspect-ratio:16/10;
-  }
-  .cab iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-  .cab .label{padding:3px 10px 9px;text-align:center}
-  .cab .gname{
-    font-family:'Audiowide',sans-serif;font-size:12px;letter-spacing:1px;color:var(--arc);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .cab .who{color:var(--dim);font-size:15px;margin-top:2px}
-  .cab .edit-link{
-    display:block;margin-top:4px;
-    font-size:11px;letter-spacing:.5px;
-    color:var(--arc);text-decoration:none;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    opacity:.85;
-  }
-  .cab .edit-link:hover{text-decoration:underline;opacity:1}
-  .cab.spotlight{
-    border-color:var(--volt);
-    box-shadow:0 0 0 1px var(--volt), 0 0 22px rgba(255,214,10,.35), inset 0 0 14px rgba(255,214,10,.08);
-    transform:scale(1.02);
-    z-index:2;
-  }
-  .cab.spotlight .gname{color:var(--volt)}
-
-  /* "remix" button — opens the game in the MakeCode editor */
-  .remix-btn{
-    position:absolute;top:14px;right:14px;z-index:3;
-    font-family:inherit;font-size:11px;letter-spacing:2px;text-transform:uppercase;
-    background:rgba(11,15,20,.85);border:1px solid var(--volt);border-radius:4px;
-    color:var(--volt);padding:4px 10px;cursor:pointer;
-    opacity:0;transition:opacity .2s, background .2s, transform .15s;
-    backdrop-filter:blur(2px);
-  }
-  .cab:hover .remix-btn,
-  .cab.spotlight .remix-btn,
-  .remix-btn:focus-visible{opacity:1}
-  .remix-btn:hover{
-    background:var(--volt);color:#0b0f14;
-    box-shadow:0 0 14px rgba(255,214,10,.55);
-    transform:scale(1.06);
-  }
-  .remix-btn:focus-visible{outline:2px solid var(--arc);outline-offset:2px}
-  @media (hover:none){.remix-btn{opacity:1}}
-
-  /* rotating arcade machine placeholder (no usable screenshot / game-over shot) */
-  .screen .coinup{
-    position:absolute;inset:0;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
-    background:#05080c;perspective:320px;
-  }
-  .coinup .spin{
-    width:34%;max-width:74px;min-width:44px;
-    animation:spinY 7s linear infinite;
-    transform-style:preserve-3d;
-    filter:drop-shadow(0 0 10px rgba(77,195,255,.25));
-  }
-  .coinup .spin svg{display:block;width:100%;height:auto}
-  @keyframes spinY{from{transform:rotateY(0deg)}to{transform:rotateY(360deg)}}
-  .coinup .coin-text{
-    color:var(--volt);font-size:11px;letter-spacing:3px;text-transform:uppercase;
-    animation:blinkCoin 1.6s steps(1) infinite;
-  }
-  @keyframes blinkCoin{0%,64%{opacity:1}65%,100%{opacity:.15}}
-  /* static screenshot for non-spotlighted cabinets */
-  .screen .shot{
-    position:absolute;inset:0;width:100%;height:100%;
-    object-fit:contain;image-rendering:pixelated;
-  }
-
-  /* ============ SEARCH ============ */
+  h1 .zap{color:var(--arc)}
+  .subtag{font-size:11px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;white-space:nowrap}
+  .spacer{flex:1}
   .search{
-    font-family:inherit;font-size:14px;letter-spacing:1px;
-    background:var(--panel);border:1px solid var(--line);border-radius:4px;
-    color:var(--text);padding:6px 12px;width:220px;
-    transition:border-color .2s, box-shadow .2s;
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    color:var(--ink);font:inherit;font-size:14px;
+    padding:8px 12px;min-width:220px;flex:0 1 320px;
   }
   .search::placeholder{color:var(--dim)}
   .search:focus{outline:none;border-color:var(--arc);box-shadow:0 0 10px rgba(77,195,255,.25)}
-
   .sort-btn{
-    font-family:inherit;font-size:14px;letter-spacing:1px;text-transform:uppercase;
-    background:var(--panel);border:1px solid var(--line);border-radius:4px;
-    color:var(--arc);padding:6px 12px;cursor:pointer;
-    transition:border-color .2s;
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    color:var(--ink);font:inherit;font-size:12px;letter-spacing:1px;
+    padding:8px 12px;cursor:pointer;white-space:nowrap;
   }
   .sort-btn:hover{border-color:var(--arc)}
+  .count{font-size:12px;color:var(--dim);white-space:nowrap}
 
-  .hintbar{
-    margin-top:12px;text-align:center;color:var(--dim);font-size:15px;letter-spacing:1px;
-    flex:none;
-  }
-  .hintbar kbd{
-    font-family:inherit;border:1px solid var(--line);border-radius:4px;
-    padding:2px 8px;color:var(--arc);background:var(--panel);
-  }
+  /* ============ STATUS ============ */
+  .msg{max-width:1280px;margin:10px auto 0;padding:0 20px;font-size:13px;color:var(--dim)}
+  .msg.err{color:#ff7a7a}
+  .msg:empty{display:none}
 
-  .empty-state{text-align:center;padding:70px 20px;color:var(--dim);flex:none}
-  .empty-state .big{
-    font-family:'Audiowide',sans-serif;font-size:18px;letter-spacing:3px;color:var(--volt);
-    line-height:2;margin-bottom:14px;text-transform:uppercase;
+  /* ============ SHELF ============ */
+  main{flex:1;width:100%;max-width:1280px;margin:0 auto;padding:18px 20px 40px}
+  #shelf{
+    display:grid;gap:18px;
+    grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
   }
 
-  /* ============ FULL-WINDOW PLAYER ============ */
-  #player{
-    position:fixed;inset:0;z-index:100;background:#000;
-    display:none;flex-direction:column;align-items:center;justify-content:center;
+  /* ============ CARTRIDGE ============ */
+  .cart{
+    --shell:#4dc3ff;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px 10px 6px 6px;
+    padding:0 0 10px;
+    position:relative;
+    overflow:hidden;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
   }
-  #player.active{display:flex}
-  #player iframe{
-    width:min(94vw, calc(90vh * 4 / 3));
-    height:min(90vh, calc(94vw * 3 / 4));
-    border:0;background:#000;display:block;
+  .cart:hover,.cart:focus-within{
+    transform:translateY(-3px);
+    border-color:var(--shell);
+    box-shadow:0 6px 18px rgba(0,0,0,.5);
   }
-  #playerHint{
-    position:fixed;left:0;right:0;bottom:0;z-index:101;
-    text-align:center;color:var(--dim);font-size:14px;letter-spacing:1px;
-    padding:10px;background:linear-gradient(0deg, rgba(0,0,0,.85), transparent);
-    pointer-events:none;
-    display:none;
+  /* top grip ridges, like the finger grooves on a real cartridge */
+  .cart .grip{
+    height:22px;
+    background:
+      repeating-linear-gradient(90deg,
+        rgba(255,255,255,.14) 0 6px,
+        rgba(0,0,0,0) 6px 14px),
+      var(--shell);
+    border-bottom:3px solid rgba(0,0,0,.35);
   }
-  #playerHint kbd{
-    font-family:inherit;border:1px solid var(--line);border-radius:4px;
-    padding:2px 8px;color:var(--arc);background:var(--panel);
+  /* the notched corner every cart has */
+  .cart::after{
+    content:"";position:absolute;top:0;right:0;
+    border-style:solid;border-width:0 18px 18px 0;
+    border-color:transparent var(--bg) transparent transparent;
   }
+  /* label sticker */
+  .cart .sticker{
+    margin:10px 12px 8px;
+    background:#0d1218;
+    border:1px solid var(--line);
+    border-left:4px solid var(--shell);
+    border-radius:4px;
+    padding:9px 10px 8px;
+    min-height:74px;
+  }
+  .cart .gname{
+    font-size:15px;font-weight:800;line-height:1.25;
+    color:var(--shell);
+    overflow-wrap:anywhere;
+  }
+  .cart .who{margin-top:4px;font-size:12px;color:var(--dim)}
+  /* actions */
+  .cart .actions{display:flex;align-items:center;gap:8px;padding:0 12px}
+  .remix-btn{
+    font:inherit;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+    background:transparent;border:1px solid var(--volt);border-radius:4px;
+    color:var(--volt);padding:5px 10px;cursor:pointer;
+    transition:background .15s,color .15s;
+    white-space:nowrap;
+  }
+  .remix-btn:hover{background:var(--volt);color:#0b0f14}
+  .remix-btn:focus-visible,.play-link:focus-visible,.search:focus-visible,.sort-btn:focus-visible{
+    outline:2px solid var(--arc);outline-offset:2px;
+  }
+  .play-link{
+    font-size:11px;color:var(--arc);text-decoration:none;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    flex:1;min-width:0;
+  }
+  .play-link:hover{text-decoration:underline}
 
-  /* ============ STATUS MESSAGE ============ */
-  .msg{margin:0 auto 16px;max-width:640px;padding:12px 14px;border-radius:4px;display:none;text-align:center;flex:none}
-  .msg.err{display:block;background:#2a1410;border:1px solid var(--hot);color:#ffb59e}
-  .msg.ok{display:block;background:#0e2417;border:1px solid var(--ok);color:#a9f5c9}
+  /* ============ EMPTY / ERROR ============ */
+  .empty{display:none;text-align:center;padding:60px 20px;color:var(--dim)}
+  .empty .big{font-size:18px;color:var(--ink);letter-spacing:2px;margin-bottom:8px}
 
-  footer{text-align:center;color:#3a4c60;padding:22px;font-size:14px;letter-spacing:2px;text-transform:uppercase;flex:none}
+  footer{
+    border-top:1px solid var(--line);
+    padding:12px 20px;text-align:center;
+    font-size:11px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;
+  }
 
   @media (prefers-reduced-motion:reduce){
-    .arcline::after{animation:none;left:40%}
-    h1 .bolt{animation:none}
-    .cab{transition:none}
-    .coinup .spin{animation:none}
-    .coinup .coin-text{animation:none}
+    .cart,.remix-btn{transition:none}
+    .cart:hover,.cart:focus-within{transform:none}
+  }
+  @media (max-width:520px){
+    #shelf{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+    .search{min-width:0;flex:1 1 100%}
   }
 </style>
 </head>
 <body>
 
 <header>
-  <h1><span class="spark">SPARK</span> <span class="bolt">&#9889;</span> ARCADE</h1>
-  <div class="tagline">Student-built games &bull; <b>SPARK Centre</b> &bull; Boneo Primary</div>
-  <div class="arcline" aria-hidden="true"></div>
+  <div class="head-row">
+    <h1><span class="zap">&#9889;</span> SPARK ARCADE</h1>
+    <span class="subtag">Cartridge library</span>
+    <span class="spacer"></span>
+    <input class="search" id="searchBox" type="search" placeholder="Search games, names, grades&#8230;" autocomplete="off" spellcheck="false" aria-label="Search games">
+    <button class="sort-btn" id="sortBtn" title="Flip between newest-first and oldest-first">Sort: Newest</button>
+    <span class="count" id="count"></span>
+  </div>
 </header>
+<div class="msg" id="loadMsg">Loading games&hellip;</div>
 
 <main>
-
-  <!-- ========== GAME WALL ========== -->
-  <section id="view-play" class="view active">
-    <div class="msg" id="loadMsg" role="alert"></div>
-    <div class="grid-head">
-      <h2>Now Showing</h2>
-      <div class="status">
-        <input class="search" id="searchBox" type="search" placeholder="Search games&#8230;" autocomplete="off" spellcheck="false" aria-label="Search games by name">
-        <button class="sort-btn" id="sortBtn" title="Flip between newest-first and oldest-first">Sort: Newest</button>
-        <span class="mode-tag" id="modeTag">AUTO</span>
-        <span id="pageInfo"></span>
-        <span class="pad-badge" id="padBadge">controller connected</span>
-      </div>
-    </div>
-    <div id="wallScroll"><div id="grid"></div></div>
-    <div class="empty-state" id="emptyState" style="display:none">
-      <div class="big" id="emptyTitle">No games on the wall yet</div>
-      <p id="emptyText">New games added to the spreadsheet will appear here automatically.</p>
-    </div>
-    <div class="hintbar" id="hintbar">
-      &#127918; <kbd>D-Pad / Stick</kbd> scroll &amp; select &nbsp; <kbd>A</kbd> launch &nbsp; <kbd>LB / RB</kbd> jump &nbsp; <kbd>Start</kbd> auto-scroll &nbsp;&bull;&nbsp; arrows + Enter work too &nbsp; <kbd>/</kbd> search
-    </div>
-  </section>
-
+  <div id="shelf"></div>
+  <div class="empty" id="emptyState">
+    <div class="big" id="emptyTitle">No games yet</div>
+    <p id="emptyText">Games added to the spreadsheet appear here automatically.</p>
+  </div>
 </main>
-
-<div id="player">
-  <iframe id="playerFrame" title="Game player" allow="autoplay" src="about:blank"></iframe>
-</div>
-<div id="playerHint">Hold <kbd>Start</kbd> + <kbd>Back</kbd> together (or press <kbd>Esc</kbd>) to return to the menu</div>
 
 <footer>SPARK Centre &bull; Boneo Primary School &bull; Free Play</footer>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 (function(){
   "use strict";
-  const IDLE_BACK_TO_AUTO = 45000;   // manual -> auto after 45s of no input
-  const AUTO_SCROLL_SPEED = 0.15;    // px per animation frame while auto-scrolling (~9px/sec)
 
-  /* ---------- game data source: published Google Sheet (xlsx) ---------- */
-  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQYOnFCDtaPGF_q7MDIkaXa8Bu8hjXR1rIMR1oZfND8uf8Z8An-VdEXty5WZL8OF7f3VHzLEYG4noED/pub?output=xlsx";
-  const REFRESH_MS = 5 * 60 * 1000; // re-check the sheet every 5 minutes so new entries appear without a page reload
+  /* ---------- data source: published Google Sheet as CSV (no libraries needed) ---------- */
+  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQYOnFCDtaPGF_q7MDIkaXa8Bu8hjXR1rIMR1oZfND8uf8Z8An-VdEXty5WZL8OF7f3VHzLEYG4noED/pub?output=csv";
+  const REFRESH_MS = 3 * 60 * 1000;   // re-check the sheet every 3 minutes
+
+  let games = [];
+  let query = "";
+  let sortOrder = "newest";   // sheet rows are oldest-first
+
+  const shelf = document.getElementById("shelf");
   const loadMsg = document.getElementById("loadMsg");
-  let games = [];   // oldest-first, straight from the sheet
-  let view = [];    // the games currently shown on the wall (after search filter)
-
-  /* ---------- game-name word filter ----------
-     Words in this list are removed from displayed game names (whole words,
-     any capitalisation). Edit freely — one word per entry. */
-  const BLOCKED_WORDS = [
-    "shoot","shoots","shooter","shooters","shooting","shootout",
-    "kill","kills","killer","killers","killing",
-    "gun","guns","gunner","murder","murderer",
-    "blood","bloody","gore","gory",
-    "stab","knife","knives","bomb","bombs","bombing",
-    "die","dies","dead","death","deadly",
-    "terror","terrorist","drug","drugs"
-  ];
-  const BLOCKED_RE = new RegExp("\\b(" + BLOCKED_WORDS.join("|") + ")\\b", "gi");
-  function cleanName(s){
-    const cleaned = String(s)
-      .replace(BLOCKED_RE, "")
-      .replace(/\s{2,}/g, " ")
-      .replace(/\s+([!?.,:;])/g, "$1")
-      .trim();
-    return cleaned || "Untitled";
-  }
-
-  /* ---------- search + sort ---------- */
+  const countEl = document.getElementById("count");
   const searchBox = document.getElementById("searchBox");
   const sortBtn = document.getElementById("sortBtn");
-  let query = "";
-  let sortOrder = "newest";   // "newest" | "oldest" — sheet rows are oldest-first
-  function visibleGames(){
-    let list = games.slice();
-    if (query){
-      const q = query.toLowerCase();
-      list = list.filter(g =>
-        g.game.toLowerCase().includes(q) || g.name.toLowerCase().includes(q));
-    }
-    if (sortOrder === "newest") list.reverse();
-    return list;
-  }
-  function refreshView(){
-    spot = 0;
-    renderWall();
-    wallScroll.scrollTop = 0;
-    if (view.length) highlight();
-  }
-  function applySearch(){
-    query = searchBox.value.trim();
-    refreshView();
-  }
-  searchBox.addEventListener("input", applySearch);
-  sortBtn.addEventListener("click", ()=>{
-    sortOrder = sortOrder === "newest" ? "oldest" : "newest";
-    sortBtn.textContent = sortOrder === "newest" ? "Sort: Newest" : "Sort: Oldest";
-    refreshView();
-  });
+  const emptyState = document.getElementById("emptyState");
+  const emptyTitle = document.getElementById("emptyTitle");
+  const emptyText = document.getElementById("emptyText");
 
-  function findCol(headers, keywords, exclude){
-    for (let i=0;i<headers.length;i++){
-      if (exclude != null && i === exclude) continue;
-      const h = headers[i];
-      if (keywords.some(k => h.includes(k))) return i;
+  /* ---------- makecode share ids ----------
+     Two formats are in the wild:
+       _LmgRUJatoKwY                  (lettered id -> makecode.com/_ID)
+       50734-57996-78092-48491       (numbered id -> arcade.makecode.com/ID)
+     Both open in the editor via arcade.makecode.com/#pub:ID.            */
+  function extractId(input){
+    input = String(input||"").trim();
+    let m = input.match(/_[A-Za-z0-9]{8,}/);
+    if (m) return m[0];
+    m = input.match(/\d{4,6}(?:-\d{4,6}){2,}/);
+    return m ? m[0] : null;
+  }
+  const playUrl = id => id.charAt(0) === "_"
+    ? "https://makecode.com/" + id
+    : "https://arcade.makecode.com/" + id;
+  const editUrl = id => "https://arcade.makecode.com/#pub:" + id;
+
+  /* ---------- tiny CSV parser (handles quoted fields, commas, newlines) ---------- */
+  function parseCSV(text){
+    const rows = [];
+    let row = [], field = "", inQuotes = false;
+    for (let i = 0; i < text.length; i++){
+      const c = text[i];
+      if (inQuotes){
+        if (c === '"'){
+          if (text[i+1] === '"'){ field += '"'; i++; }
+          else inQuotes = false;
+        } else field += c;
+      } else if (c === '"'){
+        inQuotes = true;
+      } else if (c === ","){
+        row.push(field); field = "";
+      } else if (c === "\n" || c === "\r"){
+        if (c === "\r" && text[i+1] === "\n") i++;
+        row.push(field); field = "";
+        rows.push(row); row = [];
+      } else field += c;
+    }
+    if (field.length || row.length){ row.push(field); rows.push(row); }
+    return rows;
+  }
+
+  /* ---------- rows -> games ---------- */
+  function findCol(headers, needles, skipIdx){
+    for (const n of needles){
+      const i = headers.findIndex((h, idx) => idx !== skipIdx && h.includes(n));
+      if (i > -1) return i;
     }
     return -1;
   }
-
-  // Turns the sheet's rows into the {id, name, grade, game} shape the wall renders.
-  // Column headers are matched flexibly (case-insensitive, partial match) so small
-  // wording changes in the spreadsheet don't break the wall.
+  function cleanName(s){ return s.replace(/\s+/g," ").trim(); }
   function rowsToGames(rows){
     if (!rows.length) return [];
     const headers = rows[0].map(h => String(h||"").trim().toLowerCase());
@@ -410,32 +256,27 @@
     const urlIdx   = findCol(headers, ["makecode","share link","link","url"]);
     const gradeIdx = findCol(headers, ["grade","year level","year"]);
     const nameIdx  = findCol(headers, ["first name","student name","name"], gameIdx);
-
     const out = [];
-    for (let r=1;r<rows.length;r++){
+    for (let r = 1; r < rows.length; r++){
       const row = rows[r];
       if (!row || !row.length) continue;
-      const rawUrl = urlIdx  > -1 ? String(row[urlIdx]  ?? "").trim() : "";
+      const rawUrl = urlIdx > -1 ? String(row[urlIdx] ?? "").trim() : "";
       const id = extractId(rawUrl);
-      if (!id) continue; // skip rows without a usable MakeCode link
+      if (!id) continue;
       out.push({
         id,
         name:  nameIdx  > -1 ? String(row[nameIdx]  ?? "").trim() : "",
         grade: gradeIdx > -1 ? String(row[gradeIdx] ?? "").trim() : "",
-        game:  cleanName(gameIdx > -1 ? String(row[gameIdx] ?? "").trim() : "")
+        game:  cleanName(gameIdx > -1 ? String(row[gameIdx] ?? "") : "")
       });
     }
-    return out;   // sheet order: oldest entries first, newest at the bottom
+    return out;   // oldest first
   }
 
   async function fetchGames(){
     const res = await fetch(SHEET_URL, {cache:"no-store"});
     if (!res.ok) throw new Error("HTTP " + res.status);
-    const buf = await res.arrayBuffer();
-    const wb = XLSX.read(buf, {type:"array"});
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false, defval:""});
-    return rowsToGames(rows);
+    return rowsToGames(parseCSV(await res.text()));
   }
 
   async function refreshGames(isFirstLoad){
@@ -443,422 +284,102 @@
       const next = await fetchGames();
       const changed = JSON.stringify(next) !== JSON.stringify(games);
       games = next;
+      loadMsg.textContent = "";
       loadMsg.className = "msg";
-      if (changed){
-        if (wallActive) startWall(); else renderWall();
-      }
+      if (changed || isFirstLoad) render();
     } catch(e){
       if (isFirstLoad){
-        loadMsg.textContent = "Couldn't load games from the spreadsheet. Check the sheet is published and try refreshing.";
+        loadMsg.textContent = "Couldn't load games from the spreadsheet. Check the sheet is published and refresh the page.";
         loadMsg.className = "msg err";
       }
       console.error("SPARK Arcade: failed to load games", e);
     }
   }
 
-  /* ---------- wall state ---------- */
-  let wallActive = true;
-
-  /* ---------- makecode helpers ---------- */
-  function extractId(input){
-    input = (input||"").trim();
-    let m = input.match(/(?:makecode\.com\/(?:#pub:)?|^)(_[A-Za-z0-9]{8,})$/);
-    if (m) return m[1];
-    m = input.match(/_[A-Za-z0-9]{8,}/);
-    return m ? m[0] : null;
-  }
-  const simUrl = id => "https://arcade.makecode.com/---run?id=" + encodeURIComponent(id);
-  // Loads the shared project straight into the MakeCode editor — students can
-  // start changing blocks immediately and MakeCode saves it as their own copy.
-  const editUrl = id => "https://arcade.makecode.com/#pub:" + encodeURIComponent(id);
-  // Candidate URLs for a cabinet's preview image, tried in order until one loads.
-  // MakeCode stores the full-size share image (the animated GIF, when the student
-  // recorded one) separately from the small static thumbnail — so we try the
-  // full-size /screenshot asset first and only fall back to /thumb, with and
-  // without the leading underscore on the share id.
-  function shotSources(id){
-    const api = "https://makecode.com/api/";
-    const ids = [id];
-    const bare = id.replace(/^_/, "");
-    if (bare !== id) ids.push(bare);
-    const urls = [];
-    for (const kind of ["screenshot", "thumb"]){
-      for (const i of ids) urls.push(api + encodeURIComponent(i) + "/" + kind);
-    }
-    return urls;
+  /* ---------- cartridge shell colours (picked per game, stable across reloads) ---------- */
+  const SHELLS = ["#4dc3ff","#ffd60a","#ff6b6b","#7bd88f","#c792ea","#ff9e64"];
+  function shellFor(id){
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return SHELLS[h % SHELLS.length];
   }
 
-  /* rotating arcade machine shown when a cabinet has no usable screenshot */
-  const COIN_HTML =
-    '<div class="coinup" aria-hidden="true">' +
-      '<div class="spin">' +
-        '<svg viewBox="0 0 60 92" xmlns="http://www.w3.org/2000/svg">' +
-          '<rect x="7" y="2" width="46" height="13" rx="2" fill="#1b2531" stroke="#4dc3ff" stroke-width="1.5"/>' +
-          '<polygon points="32,4 25,10 29,10 27,14 35,8 30.5,8" fill="#ffd60a"/>' +
-          '<rect x="10" y="15" width="40" height="34" fill="#141b24" stroke="#2b3a4d" stroke-width="1.5"/>' +
-          '<rect x="15" y="20" width="30" height="21" rx="1" fill="#05080c" stroke="#4dc3ff" stroke-width="1.5"/>' +
-          '<polygon points="30,23 25.5,30 28.5,30 27,36 34.5,28 30.8,28" fill="#ffd60a"/>' +
-          '<polygon points="8,49 52,49 56,60 4,60" fill="#1b2531" stroke="#2b3a4d" stroke-width="1.5"/>' +
-          '<circle cx="21" cy="54.5" r="2.6" fill="#ff6b35"/>' +
-          '<circle cx="30" cy="54.5" r="2.6" fill="#54e38e"/>' +
-          '<circle cx="39" cy="54.5" r="2.6" fill="#4dc3ff"/>' +
-          '<rect x="6" y="60" width="48" height="26" fill="#0e141c" stroke="#2b3a4d" stroke-width="1.5"/>' +
-          '<rect x="25" y="67" width="10" height="4" rx="1" fill="#05080c" stroke="#ffd60a"/>' +
-          '<rect x="4" y="86" width="52" height="5" rx="1" fill="#1b2531" stroke="#2b3a4d" stroke-width="1.5"/>' +
-        '</svg>' +
-      '</div>' +
-      '<div class="coin-text">insert coin</div>' +
-    '</div>';
-
-  /* If a screenshot is a "GAME OVER" screen — a dark screen with a band of
-     pixel-font text (any colour) — hide it so the rotating arcade machine shows
-     instead. Text is recognised by rows with many bright/dark alternations
-     (letters make lots of edges; sprites and stars make very few). Pixel checks
-     need CORS access to the image; if the host doesn't allow it, we quietly
-     keep the screenshot rather than break anything. */
-  function hideIfGameOver(url, shot){
-    const probe = new Image();
-    probe.crossOrigin = "anonymous";
-    probe.onload = ()=>{
-      try {
-        const w = 160, h = 120;
-        const cv = document.createElement("canvas");
-        cv.width = w; cv.height = h;
-        const ctx = cv.getContext("2d");
-        ctx.drawImage(probe, 0, 0, w, h);
-        const px = ctx.getImageData(0, 0, w, h).data;
-        let dark = 0, brightTotal = 0, texty = 0, run = 0, maxRun = 0;
-        for (let y = 0; y < h; y++){
-          let prev = false, trans = 0, rowBright = 0;
-          for (let x = 0; x < w; x++){
-            const i = (y * w + x) * 4;
-            const lum = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
-            const b = lum > 120;
-            if (lum < 80) dark++;
-            if (b){ rowBright++; brightTotal++; }
-            if (b !== prev){ trans++; prev = b; }
-          }
-          // a "text row": many edges, but not a mostly-bright row
-          if (trans >= 14 && rowBright < w * 0.5){ texty++; run++; if (run > maxRun) maxRun = run; }
-          else run = 0;
-        }
-        const n = w * h;
-        const looksGameOver =
-          dark / n > 0.62 &&            // screen is dark / dimmed out
-          brightTotal / n < 0.2 &&      // sparse content, not a busy scene
-          maxRun >= 4 &&                // a solid band of text rows...
-          texty <= h * 0.25;            // ...but text isn't covering the screen
-        if (looksGameOver && shot.isConnected) shot.remove();
-      } catch(e){ /* cross-origin pixels blocked -> keep the screenshot */ }
-    };
-    probe.src = url;
-  }
-
-  /* ---------- game wall state ---------- */
-  const grid = document.getElementById("grid");
-  const wallScroll = document.getElementById("wallScroll");
-  const pageInfo = document.getElementById("pageInfo");
-  const emptyState = document.getElementById("emptyState");
-  const emptyTitle = document.getElementById("emptyTitle");
-  const emptyText = document.getElementById("emptyText");
-  const hintbar = document.getElementById("hintbar");
-  const modeTag = document.getElementById("modeTag");
-  let spot = 0;
-  let mode = "auto";            // "auto" | "manual"
-  let autoScrollFrame = null, lastInput = 0;
-
-  /* ---------- full-window player ---------- */
-  const player = document.getElementById("player");
-  const playerFrame = document.getElementById("playerFrame");
-  const playerHint = document.getElementById("playerHint");
-  let inGame = false;
-
-  function launchGame(g){
-    if (!g) return;
-    stopWall();
-    playerFrame.src = simUrl(g.id);
-    player.classList.add("active");
-    playerHint.style.display = "block";
-    inGame = true;
-    wallActive = false;
-  }
-  function returnToMenu(){
-    if (!inGame) return;
-    playerFrame.src = "about:blank";
-    player.classList.remove("active");
-    playerHint.style.display = "none";
-    inGame = false;
-    wallActive = true;
-    startWall();
-  }
-
-  function startWall(){
-    stopWall();
-    spot = 0;
-    renderWall();
-    wallScroll.scrollTop = 0;
-    if (view.length){ highlight(); setMode("auto"); }
-  }
-  function stopWall(){
-    cancelAnimationFrame(autoScrollFrame); autoScrollFrame = null;
-    grid.querySelectorAll("iframe").forEach(f=> f.remove());
-  }
-
-  function setMode(m){
-    mode = m;
-    modeTag.textContent = m.toUpperCase();
-    cancelAnimationFrame(autoScrollFrame); autoScrollFrame = null;
-    if (m === "auto" && view.length) autoScrollFrame = requestAnimationFrame(autoScrollTick);
-  }
-
-  let syncCounter = 0;
-  function autoScrollTick(){
-    wallScroll.scrollTop += AUTO_SCROLL_SPEED;
-    if (wallScroll.scrollTop + wallScroll.clientHeight >= wallScroll.scrollHeight - 2){
-      wallScroll.scrollTop = 0;
-    }
-    if (++syncCounter % 12 === 0) syncSpotFromViewport();
-    if (mode === "auto") autoScrollFrame = requestAnimationFrame(autoScrollTick);
-  }
-
-  // Only the spotlighted cabinet runs a live sim; every other cabinet shows the
-  // image MakeCode saved when the game was shared — the animated GIF if the
-  // student recorded one, otherwise the static screenshot. The live preview
-  // follows the spotlight as it moves (auto-scroll, controller, or mouse).
-  function renderWall(){
-    view = visibleGames();
-    grid.innerHTML = "";
-    const noneAtAll = !games.length;
-    emptyState.style.display = view.length ? "none" : "block";
-    emptyTitle.textContent = noneAtAll ? "No games on the wall yet" : "No games match your search";
-    emptyText.textContent = noneAtAll
-      ? "New games added to the spreadsheet will appear here automatically."
-      : "Try a different name, or clear the search box to see the whole wall.";
-    wallScroll.style.display = view.length ? "block" : "none";
-    hintbar.style.display = view.length ? "block" : "none";
-    pageInfo.textContent = view.length
-      ? (query ? view.length + " match" + (view.length===1?"":"es") : view.length + " game" + (view.length===1?"":"s"))
-      : "";
-
-    view.forEach((g,i)=>{
-      const cab = document.createElement("div");
-      cab.className = "cab";
-      cab.dataset.idx = i;
-      cab.dataset.id = g.id;
-      cab.dataset.gname = g.game;
-      // Two URLs per game:
-      //  - gPlayUrl: the short shareable link (nice to read/type), but every
-      //    hit makes MakeCode's server do a database lookup + redirect, which
-      //    is what falls over when a whole class clicks at once.
-      //  - gRunUrl: the same CDN-cached player the arcade wall already embeds.
-      //    Clicks go here so a burst of students doesn't hit the server.
-      const gPlayUrl = "https://makecode.com/" + g.id;
-      const gRunUrl  = simUrl(g.id);
-      cab.innerHTML =
-        '<div class="screen">' + COIN_HTML + '</div>' +
-        '<button class="remix-btn" type="button" title="Play this game in a new tab">&#9889; Play in new tab</button>' +
-        '<div class="label"><div class="gname">' + esc(g.game) + '</div>' +
-        '<div class="who">by ' + esc(g.name) + ' &bull; ' + esc(g.grade) + '</div>' +
-        '<a class="edit-link" href="' + esc(gRunUrl) + '" target="_blank" rel="noopener" title="Play this game in a new tab">' + esc(gPlayUrl) + '</a></div>';
-
-      // The text link opens in a new tab on its own; just stop the click from
-      // bubbling up so it doesn't also launch the game full-screen.
-      cab.querySelector(".edit-link").addEventListener("click", (e)=> e.stopPropagation());
-
-      // Remix: open the game in the MakeCode editor in a new tab. Stop the
-      // click from bubbling so it doesn't also launch the game full-screen.
-      cab.querySelector(".remix-btn").addEventListener("click", (e)=>{
-        e.stopPropagation();
-        window.open(gRunUrl, "_blank", "noopener");
-      });
-
-      // Shared image: animated GIF where one was recorded, else the static
-      // screenshot; walks the candidate URLs until one loads. Game-over
-      // screenshots are hidden so the rotating machine shows instead.
-      const sources = shotSources(g.id);
-      let srcIdx = 0;
-      const shot = document.createElement("img");
-      shot.className = "shot";
-      shot.loading = "lazy";
-      shot.alt = "";
-      shot.src = sources[srcIdx];
-      shot.addEventListener("error", ()=>{
-        srcIdx++;
-        if (srcIdx < sources.length) shot.src = sources[srcIdx];
-        else shot.remove();             // nothing saved -> rotating machine shows
-      });
-      shot.addEventListener("load", ()=> hideIfGameOver(shot.src, shot));
-      cab.querySelector(".screen").appendChild(shot);
-
-      cab.addEventListener("click", ()=>{
-        spot = i;
-        highlight();
-        launchGame(g);
-      });
-      grid.appendChild(cab);
-    });
-  }
-
-  /* run the live sim only inside the spotlighted cabinet (debounced so fast
-     scrolling shows screenshots and only boots the sim once you settle) */
-  let spotSimTimer = null;
-  function animateSpot(cab){
-    clearTimeout(spotSimTimer);
-    grid.querySelectorAll(".screen iframe").forEach(f=> f.remove());
-    if (!cab || inGame) return;
-    spotSimTimer = setTimeout(()=>{
-      if (inGame || !cab.classList.contains("spotlight")) return;
-      const screen = cab.querySelector(".screen");
-      const f = document.createElement("iframe");
-      f.src = simUrl(cab.dataset.id);
-      f.setAttribute("allow", "autoplay");
-      f.title = cab.dataset.gname + " preview";
-      screen.appendChild(f);   // sits on top of the screenshot
-    }, 350);
-  }
-
-  function highlight(){
-    const prev = grid.querySelector(".cab.spotlight");
-    if (prev) prev.classList.remove("spotlight");
-    const cab = grid.querySelector('.cab[data-idx="'+spot+'"]');
-    if (cab) cab.classList.add("spotlight");
-    animateSpot(cab);
-  }
-
-  // While auto-scrolling, periodically figure out which cabinet is nearest
-  // the centre of the visible wall area and treat that as the selection.
-  function syncSpotFromViewport(){
-    const cabs = grid.children;
-    if (!cabs.length) return;
-    const box = wallScroll.getBoundingClientRect();
-    const centerY = box.top + box.height / 2;
-    let best = 0, bestDist = Infinity;
-    for (let i=0;i<cabs.length;i++){
-      const r = cabs[i].getBoundingClientRect();
-      const d = Math.abs((r.top + r.bottom)/2 - centerY);
-      if (d < bestDist){ bestDist = d; best = i; }
-    }
-    if (best !== spot){ spot = best; highlight(); }
-  }
-
-  function actualCols(){
-    const cols = getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length;
-    return cols || 1;
-  }
-
-  /* move selection by n cabinets and bring it to the centre of the wall (wraps) */
-  function moveSpot(n){
-    if (!view.length) return;
-    spot = ((spot + n) % view.length + view.length) % view.length;
-    highlight();
-    const cab = grid.querySelector('.cab[data-idx="'+spot+'"]');
-    if (cab) cab.scrollIntoView({behavior:"smooth", block:"center"});
-  }
-
-  /* bigger scroll nudge for LB/RB and Page Up/Down */
-  function jumpScroll(dir){
-    if (!view.length) return;
-    wallScroll.scrollBy({top: dir * wallScroll.clientHeight * 0.85, behavior:"smooth"});
-    setTimeout(syncSpotFromViewport, 450);
-  }
-
-  /* ---------- input: gamepad + keyboard ---------- */
-  const padBadge = document.getElementById("padBadge");
-  const DEADZONE = 0.5;
-  const prevBtns = {};      // per-gamepad previous button state
-  let stickHeld = {x:0, y:0};
-  let comboHeld = {};       // per-gamepad Start+Back combo edge detection
-
-  window.addEventListener("gamepadconnected", ()=> padBadge.classList.add("on"));
-  window.addEventListener("gamepaddisconnected", ()=>{
-    if (![...navigator.getGamepads()].some(Boolean)) padBadge.classList.remove("on");
-  });
-
-  function manualInput(fn){
-    lastInput = Date.now();
-    if (mode !== "manual") setMode("manual");
-    fn();
-  }
-
-  function pollPads(){
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-    for (const pad of pads){
-      if (!pad) continue;
-      const prev = prevBtns[pad.index] || [];
-      const pressed = i => pad.buttons[i] && pad.buttons[i].pressed;
-      const justPressed = i => pressed(i) && !prev[i];
-
-      // Start (9) + Back/Select (8) together -> return to the menu, works while a game is playing
-      const comboNow = pressed(9) && pressed(8);
-      if (comboNow && !comboHeld[pad.index] && inGame) returnToMenu();
-      comboHeld[pad.index] = comboNow;
-
-      if (wallActive && !inGame && view.length){
-        const cols = actualCols();
-        // D-pad: 12 up, 13 down, 14 left, 15 right
-        if (justPressed(15)) manualInput(()=> moveSpot(1));
-        if (justPressed(14)) manualInput(()=> moveSpot(-1));
-        if (justPressed(13)) manualInput(()=> moveSpot(cols));
-        if (justPressed(12)) manualInput(()=> moveSpot(-cols));
-        // Left stick with edge detection
-        const x = pad.axes[0] || 0, y = pad.axes[1] || 0;
-        const sx = Math.abs(x) > DEADZONE ? Math.sign(x) : 0;
-        const sy = Math.abs(y) > DEADZONE ? Math.sign(y) : 0;
-        if (sx !== 0 && sx !== stickHeld.x) manualInput(()=> moveSpot(sx));
-        if (sy !== 0 && sy !== stickHeld.y) manualInput(()=> moveSpot(sy * cols));
-        stickHeld = {x:sx, y:sy};
-        // Bumpers: 4 LB, 5 RB -> jump-scroll by roughly one screen
-        if (justPressed(5)) manualInput(()=> jumpScroll(1));
-        if (justPressed(4)) manualInput(()=> jumpScroll(-1));
-        // A (0): launch the selected game full-window
-        if (justPressed(0)) manualInput(()=> launchGame(view[spot]));
-        // Start (9) alone: hand back to auto-scroll
-        if (justPressed(9) && !pressed(8)) setMode(mode === "auto" ? "manual" : "auto");
-      }
-      prevBtns[pad.index] = pad.buttons.map(b=> b.pressed);
-    }
-    // idle in manual mode -> resume auto
-    if (mode === "manual" && !inGame && Date.now() - lastInput > IDLE_BACK_TO_AUTO) setMode("auto");
-    requestAnimationFrame(pollPads);
-  }
-  requestAnimationFrame(pollPads);
-
-  document.addEventListener("keydown", e=>{
-    // While typing in the search box, keys belong to it (Esc clears & exits).
-    if (e.target === searchBox){
-      if (e.key === "Escape"){
-        e.preventDefault();
-        searchBox.value = "";
-        applySearch();
-        searchBox.blur();
-      }
-      return;
-    }
-    if (e.key === "Escape"){ if (inGame){ e.preventDefault(); returnToMenu(); } return; }
-    if (!wallActive || inGame) return;
-    if (e.key === "/"){ e.preventDefault(); searchBox.focus(); return; }
-    if (!view.length) return;
-    const cols = actualCols();
-    const map = {
-      ArrowRight: ()=> moveSpot(1),   ArrowLeft: ()=> moveSpot(-1),
-      ArrowDown:  ()=> moveSpot(cols), ArrowUp:  ()=> moveSpot(-cols),
-      PageDown:   ()=> jumpScroll(1), PageUp: ()=> jumpScroll(-1),
-      Enter:      ()=> launchGame(view[spot])
-    };
-    if (e.key === " "){ e.preventDefault(); setMode(mode==="auto"?"manual":"auto"); return; }
-    if (map[e.key]){ e.preventDefault(); manualInput(map[e.key]); }
-  });
-
-  /* ---------- utils ---------- */
+  /* ---------- render ---------- */
   function esc(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
-  /* ---------- init ---------- */
-  loadMsg.textContent = "Loading games from the spreadsheet\u2026";
-  loadMsg.className = "msg ok";
-  refreshGames(true).then(()=>{
-    startWall();
-    setInterval(()=> refreshGames(false), REFRESH_MS);
+  function currentView(){
+    let list = games.slice();
+    if (sortOrder === "newest") list.reverse();
+    if (query){
+      const q = query.toLowerCase();
+      list = list.filter(g =>
+        g.game.toLowerCase().includes(q) ||
+        g.name.toLowerCase().includes(q) ||
+        g.grade.toLowerCase().includes(q));
+    }
+    return list;
+  }
+
+  function render(){
+    const view = currentView();
+    countEl.textContent = view.length + (view.length === 1 ? " game" : " games");
+    shelf.innerHTML = "";
+
+    if (!view.length){
+      const noneAtAll = !games.length;
+      emptyTitle.textContent = noneAtAll ? "No games yet" : "No games match your search";
+      emptyText.textContent = noneAtAll
+        ? "Games added to the spreadsheet appear here automatically."
+        : "Try a different name, or clear the search box to see every cartridge.";
+      emptyState.style.display = "block";
+      return;
+    }
+    emptyState.style.display = "none";
+
+    const frag = document.createDocumentFragment();
+    for (const g of view){
+      const gPlayUrl = playUrl(g.id);
+      const cart = document.createElement("div");
+      cart.className = "cart";
+      cart.style.setProperty("--shell", shellFor(g.id));
+      cart.innerHTML =
+        '<div class="grip"></div>' +
+        '<div class="sticker">' +
+          '<div class="gname">' + esc(g.game || "Untitled game") + '</div>' +
+          '<div class="who">by ' + esc(g.name || "?") + (g.grade ? ' &bull; ' + esc(g.grade) : '') + '</div>' +
+        '</div>' +
+        '<div class="actions">' +
+          '<button class="remix-btn" type="button" title="Open this game in the MakeCode editor and make your own version">&#9889; Remix</button>' +
+          '<a class="play-link" href="' + esc(gPlayUrl) + '" target="_blank" rel="noopener" title="Play this game in MakeCode">' + esc(gPlayUrl) + '</a>' +
+        '</div>';
+      cart.querySelector(".remix-btn").addEventListener("click", ()=>{
+        window.open(editUrl(g.id), "_blank", "noopener");
+      });
+      frag.appendChild(cart);
+    }
+    shelf.appendChild(frag);
+  }
+
+  /* ---------- search + sort ---------- */
+  searchBox.addEventListener("input", ()=>{
+    query = searchBox.value.trim();
+    render();
   });
+  sortBtn.addEventListener("click", ()=>{
+    sortOrder = sortOrder === "newest" ? "oldest" : "newest";
+    sortBtn.textContent = sortOrder === "newest" ? "Sort: Newest" : "Sort: Oldest";
+    render();
+  });
+  document.addEventListener("keydown", (e)=>{
+    if (e.key === "/" && document.activeElement !== searchBox){
+      e.preventDefault();
+      searchBox.focus();
+    }
+  });
+
+  /* ---------- go ---------- */
+  refreshGames(true);
+  setInterval(()=>refreshGames(false), REFRESH_MS);
 })();
 </script>
 </body>
