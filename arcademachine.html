@@ -646,14 +646,20 @@
       cab.dataset.idx = i;
       cab.dataset.id = g.id;
       cab.dataset.gname = g.game;
-      // Share link in the standard MakeCode format, e.g. https://makecode.com/_LmgRUJatoKwY
+      // Two URLs per game:
+      //  - gPlayUrl: the short shareable link (nice to read/type), but every
+      //    hit makes MakeCode's server do a database lookup + redirect, which
+      //    is what falls over when a whole class clicks at once.
+      //  - gRunUrl: the same CDN-cached player the arcade wall already embeds.
+      //    Clicks go here so a burst of students doesn't hit the server.
       const gPlayUrl = "https://makecode.com/" + g.id;
+      const gRunUrl  = simUrl(g.id);
       cab.innerHTML =
         '<div class="screen">' + COIN_HTML + '</div>' +
-        '<button class="remix-btn" type="button" title="Open this game in MakeCode">&#9889; Remix</button>' +
+        '<button class="remix-btn" type="button" title="Play this game in a new tab">&#9889; Play in new tab</button>' +
         '<div class="label"><div class="gname">' + esc(g.game) + '</div>' +
         '<div class="who">by ' + esc(g.name) + ' &bull; ' + esc(g.grade) + '</div>' +
-        '<a class="edit-link" href="' + esc(gPlayUrl) + '" target="_blank" rel="noopener" title="Open this game in MakeCode">' + esc(gPlayUrl) + '</a></div>';
+        '<a class="edit-link" href="' + esc(gRunUrl) + '" target="_blank" rel="noopener" title="Play this game in a new tab">' + esc(gPlayUrl) + '</a></div>';
 
       // The text link opens in a new tab on its own; just stop the click from
       // bubbling up so it doesn't also launch the game full-screen.
@@ -663,7 +669,7 @@
       // click from bubbling so it doesn't also launch the game full-screen.
       cab.querySelector(".remix-btn").addEventListener("click", (e)=>{
         e.stopPropagation();
-        window.open(gPlayUrl, "_blank", "noopener");
+        window.open(gRunUrl, "_blank", "noopener");
       });
 
       // Shared image: animated GIF where one was recorded, else the static
