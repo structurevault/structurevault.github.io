@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SPARK Air Hockey — 2 Player</title>
+<style>
+  /* ============================================================
+     SPARK AIR HOCKEY — two players, one giant touchscreen
+     Design: a real air-hockey table. Ice-white perforated deck,
+     deep navy rail, red vs cobalt mallets, glowing puck trail.
+     ============================================================ */
+  :root {
+    --rail: #101b30;        /* navy table rail */
+    --deck: #eef4f8;        /* ice-white playing deck */
+    --line: #b8cdd9;        /* deck markings */
+    --p1:   #e4413c;        /* red mallet (left) */
+    --p2:   #2e63e7;        /* cobalt mallet (right) */
+    --puck: #1c2430;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--rail);
+    overflow: hidden;
+    touch-action: none;                 /* the whole page is the table */
+    -webkit-user-select: none; user-select: none;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  canvas { display: block; touch-action: none; }
+
+  /* overlay: start / winner */
+  #overlay {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3vmin;
+    background: rgba(16, 27, 48, 0.82);
+    color: var(--deck);
+    text-align: center;
+    transition: opacity 0.3s ease;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #overlay h1 {
+    font-size: 9vmin; font-weight: 800; letter-spacing: 0.06em;
+  }
+  #overlay h1 .vs { color: var(--line); font-weight: 300; padding: 0 1.5vmin; }
+  #overlay h1 .red { color: var(--p1); }
+  #overlay h1 .blue { color: #7ba1ff; }
+  #overlay p { font-size: 3.2vmin; color: var(--line); max-width: 70vmin; line-height: 1.5; }
+  #overlay button {
+    font: inherit; font-size: 4vmin; font-weight: 700;
+    color: var(--rail); background: var(--deck);
+    border: none; border-radius: 100vmin;
+    padding: 2.2vmin 7vmin; cursor: pointer;
+  }
+  #overlay button:focus-visible { outline: 0.6vmin solid var(--p2); outline-offset: 0.4vmin; }
+  #fsBtn {
+    position: fixed; top: 1.5vmin; right: 1.5vmin;
+    font-size: 2.2vmin; padding: 1vmin 2vmin;
+    background: transparent; color: var(--line);
+    border: 1px solid var(--line); border-radius: 100vmin;
+    cursor: pointer; opacity: 0.7;
+  }
+  @media (prefers-reduced-motion: reduce) { #overlay { transition: none; } }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="game"></canvas></div>
+
+<div id="overlay">
+  <h1><span class="red">RED</span><span class="vs">vs</span><span class="blue">BLUE</span></h1>
+  <p>Two players, one table. Grab the mallet on your side and defend your goal.<br>First to <strong>7</strong> wins.</p>
+  <button id="startBtn">Start game</button>
+</div>
+<button id="fsBtn">⛶ Fullscreen</button>
+
+<script>
+"use strict";
+// ================= tuning knobs =================
+const WIN_SCORE   = 7;
+const FRICTION    = 0.35;   // per-second decay: lower = icier glide
+const PUCK_MAX    = 2400;   // px/s speed cap (logical units)
+const MALLET_PWR  = 0.75;   // how much mallet swing transfers to the puck
+const SERVE_PAUSE = 900;    // ms freeze after each goal
+// ================================================
+
+// Logical table (physics runs here; canvas scales to fit screen)
+const W = 1600, H = 900;
+const RAIL = 34;                       // rail thickness
+const GOAL_H = 330;                    // goal mouth height
+const GOAL_TOP = (H - GOAL_H) / 2;
+const GOAL_BOT = GOAL_TOP + GOAL_H;
+const MALLET_R = 72, PUCK_R = 42;
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const overlay = document.getElementById("overlay");
+const overlayTitle = overlay.querySelector("h1");
+const overlayText = overlay.querySelector("p");
+const startBtn = document.getElementById("startBtn");
+
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const css = getComputedStyle(document.documentElement);
+const COLORS = {
+  rail: css.getPropertyValue("--rail").trim(),
+  deck: css.getPropertyValue("--deck").trim(),
+  line: css.getPropertyValue("--line").trim(),
+  p1:   css.getPropertyValue("--p1").trim(),
+  p2:   css.getPropertyValue("--p2").trim(),
+  puck: css.getPropertyValue("--puck").trim(),
+};
+
+// ---------- responsive canvas ----------
+let scale = 1, dpr = 1;
+function fit() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+  canvas.style.width = (W * scale) + "px";
+  canvas.style.height = (H * scale) + "px";
+  canvas.width = Math.round(W * scale * dpr);
+  canvas.height = Math.round(H * scale * dpr);
+  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+}
+addEventListener("resize", fit);
+fit();
+
+// ---------- game state ----------
+const state = {
+  running: false,
+  freezeUntil: 0,
+  score: [0, 0],
+  goalFlash: 0,          // 0..1 fade of the goal celebration
+  goalSide: 0,           // which side just scored (for flash colour)
+};
+
+const puck = { x: W/2, y: H/2, vx: 0, vy: 0, trail: [] };
+
+function makeMallet(x, color, minX, maxX) {
+  return { x, y: H/2, px: x, py: H/2, vx: 0, vy: 0,
+           tx: x, ty: H/2, color, minX, maxX, pointerId: null };
+}
+const mallets = [
+  makeMallet(W * 0.18, COLORS.p1, RAIL + MALLET_R, W/2 - MALLET_R),          // red, left
+  makeMallet(W * 0.82, COLORS.p2, W/2 + MALLET_R, W - RAIL - MALLET_R),     // blue, right
+];
+
+function servePuck(towardLeft) {
+  puck.x = W/2; puck.y = H/2;
+  const a = (Math.random() * 0.6 - 0.3);                  // slight random angle
+  const s = 620;
+  puck.vx = (towardLeft ? -1 : 1) * s * Math.cos(a);
+  puck.vy = s * Math.sin(a);
+  puck.trail = [];
+}
+
+function resetGame() {
+  state.score = [0, 0];
+  mallets[0].x = mallets[0].tx = W * 0.18; mallets[0].y = mallets[0].ty = H/2;
+  mallets[1].x = mallets[1].tx = W * 0.82; mallets[1].y = mallets[1].ty = H/2;
+  servePuck(Math.random() < 0.5);
+  state.freezeUntil = performance.now() + 600;
+  state.running = true;
+}
+
+// ---------- multitouch: one pointer per side ----------
+function toTable(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale };
+}
+canvas.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  const p = toTable(e);
+  const side = p.x < W/2 ? 0 : 1;          // your half = your mallet
+  const m = mallets[side];
+  if (m.pointerId === null) {
+    m.pointerId = e.pointerId;
+    m.tx = p.x; m.ty = p.y;
+    canvas.setPointerCapture(e.pointerId);
+  }
+});
+canvas.addEventListener("pointermove", (e) => {
+  for (const m of mallets) {
+    if (m.pointerId === e.pointerId) {
+      const p = toTable(e);
+      m.tx = p.x; m.ty = p.y;
+    }
+  }
+});
+function releasePointer(e) {
+  for (const m of mallets) if (m.pointerId === e.pointerId) m.pointerId = null;
+}
+canvas.addEventListener("pointerup", releasePointer);
+canvas.addEventListener("pointercancel", releasePointer);
+
+// ---------- physics ----------
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function stepMallet(m, dt) {
+  // critically-damped chase of the finger: fast but can't teleport through the puck
+  const k = Math.min(1, 22 * dt);
+  m.px = m.x; m.py = m.y;
+  m.x += (clamp(m.tx, m.minX, m.maxX) - m.x) * k;
+  m.y += (clamp(m.ty, RAIL + MALLET_R, H - RAIL - MALLET_R) - m.y) * k;
+  m.vx = (m.x - m.px) / dt;
+  m.vy = (m.y - m.py) / dt;
+}
+
+function collideMallet(m) {
+  const dx = puck.x - m.x, dy = puck.y - m.y;
+  const d = Math.hypot(dx, dy), min = MALLET_R + PUCK_R;
+  if (d < min && d > 0.001) {
+    const nx = dx / d, ny = dy / d;
+    puck.x = m.x + nx * (min + 1);
+    puck.y = m.y + ny * (min + 1);
+    const speed = Math.max(500, Math.hypot(puck.vx, puck.vy));
+    puck.vx = nx * speed + m.vx * MALLET_PWR;
+    puck.vy = ny * speed + m.vy * MALLET_PWR;
+  }
+}
+
+function goal(scorer) {
+  state.score[scorer]++;
+  state.goalFlash = 1; state.goalSide = scorer;
+  if (navigator.vibrate) navigator.vibrate(60);
+  if (state.score[scorer] >= WIN_SCORE) {
+    endGame(scorer);
+  } else {
+    servePuck(scorer === 1);            // loser receives the serve
+    state.freezeUntil = performance.now() + SERVE_PAUSE;
+  }
+}
+
+function endGame(winner) {
+  state.running = false;
+  const name = winner === 0 ? '<span class="red">RED</span>' : '<span class="blue">BLUE</span>';
+  overlayTitle.innerHTML = name + " wins!";
+  overlayText.innerHTML = "Final score " + state.score[0] + " – " + state.score[1];
+  startBtn.textContent = "Rematch";
+  overlay.classList.remove("hidden");
+}
+
+function physics(dt, now) {
+  for (const m of mallets) stepMallet(m, dt);
+  if (now < state.freezeUntil) return;
+
+  // glide + friction
+  const f = Math.pow(FRICTION, dt);
+  puck.vx *= f; puck.vy *= f;
+  const spd = Math.hypot(puck.vx, puck.vy);
+  if (spd > PUCK_MAX) { puck.vx *= PUCK_MAX / spd; puck.vy *= PUCK_MAX / spd; }
+  puck.x += puck.vx * dt;
+  puck.y += puck.vy * dt;
+
+  // top/bottom rails
+  if (puck.y < RAIL + PUCK_R) { puck.y = RAIL + PUCK_R; puck.vy = -puck.vy; }
+  if (puck.y > H - RAIL - PUCK_R) { puck.y = H - RAIL - PUCK_R; puck.vy = -puck.vy; }
+
+  // end rails bounce, except through the goal mouth
+  const inMouth = puck.y > GOAL_TOP + PUCK_R && puck.y < GOAL_BOT - PUCK_R;
+  if (puck.x < RAIL + PUCK_R && !inMouth) { puck.x = RAIL + PUCK_R; puck.vx = -puck.vx; }
+  if (puck.x > W - RAIL - PUCK_R && !inMouth) { puck.x = W - RAIL - PUCK_R; puck.vx = -puck.vx; }
+
+  // goals (puck fully past the rail line)
+  if (puck.x < -PUCK_R) goal(1);        // blue scores in red's goal
+  if (puck.x > W + PUCK_R) goal(0);     // red scores in blue's goal
+
+  collideMallet(mallets[0]);
+  collideMallet(mallets[1]);
+
+  // puck glow trail
+  if (!reduceMotion) {
+    puck.trail.push({ x: puck.x, y: puck.y });
+    if (puck.trail.length > 14) puck.trail.shift();
+  }
+}
+
+// ---------- drawing ----------
+function drawTable() {
+  ctx.fillStyle = COLORS.rail;
+  ctx.fillRect(0, 0, W, H);
+  // deck
+  ctx.fillStyle = COLORS.deck;
+  roundRect(RAIL, RAIL, W - RAIL*2, H - RAIL*2, 26);
+  ctx.fill();
+  // air holes — the perforated deck of a real table
+  ctx.fillStyle = "rgba(150,175,190,0.35)";
+  for (let x = RAIL + 40; x < W - RAIL; x += 56) {
+    for (let y = RAIL + 40; y < H - RAIL; y += 56) {
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill();
+    }
+  }
+  // centre line + circle
+  ctx.strokeStyle = COLORS.line; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(W/2, RAIL); ctx.lineTo(W/2, H - RAIL); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W/2, H/2, 110, 0, 7); ctx.stroke();
+  // goal creases
+  for (const side of [0, 1]) {
+    const gx = side === 0 ? RAIL : W - RAIL;
+    ctx.strokeStyle = side === 0 ? COLORS.p1 : COLORS.p2;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(gx, H/2, 190, side === 0 ? -Math.PI/2 : Math.PI/2, side === 0 ? Math.PI/2 : Math.PI*1.5);
+    ctx.stroke();
+    // goal mouth cut into the rail
+    ctx.fillStyle = side === 0 ? COLORS.p1 : COLORS.p2;
+    ctx.fillRect(side === 0 ? 0 : W - RAIL, GOAL_TOP, RAIL, GOAL_H);
+  }
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawMallet(m) {
+  ctx.save();
+  ctx.shadowColor = "rgba(20,30,45,0.35)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+  ctx.fillStyle = m.color;
+  ctx.beginPath(); ctx.arc(m.x, m.y, MALLET_R, 0, 7); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,0.28)";
+  ctx.beginPath(); ctx.arc(m.x, m.y, MALLET_R * 0.55, 0, 7); ctx.fill();
+  ctx.fillStyle = m.color;
+  ctx.beginPath(); ctx.arc(m.x, m.y, MALLET_R * 0.32, 0, 7); ctx.fill();
+}
+
+function drawPuck() {
+  // glow trail — the table's signature
+  for (let i = 0; i < puck.trail.length; i++) {
+    const t = puck.trail[i], a = (i / puck.trail.length) * 0.25;
+    ctx.fillStyle = "rgba(46,99,231," + a + ")";
+    ctx.beginPath(); ctx.arc(t.x, t.y, PUCK_R * (0.5 + i / puck.trail.length * 0.5), 0, 7); ctx.fill();
+  }
+  ctx.save();
+  ctx.shadowColor = "rgba(20,30,45,0.4)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 4;
+  ctx.fillStyle = COLORS.puck;
+  ctx.beginPath(); ctx.arc(puck.x, puck.y, PUCK_R, 0, 7); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = "rgba(255,255,255,0.25)"; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(puck.x, puck.y, PUCK_R * 0.6, 0, 7); ctx.stroke();
+}
+
+function drawScore(now) {
+  ctx.font = "800 92px system-ui, sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = COLORS.p1;
+  ctx.fillText(String(state.score[0]), W/2 - 130, 88);
+  ctx.fillStyle = COLORS.p2;
+  ctx.fillText(String(state.score[1]), W/2 + 130, 88);
+  ctx.fillStyle = COLORS.line;
+  ctx.font = "300 60px system-ui, sans-serif";
+  ctx.fillText("·", W/2, 84);
+
+  if (state.goalFlash > 0) {
+    ctx.fillStyle = (state.goalSide === 0 ? "rgba(228,65,60," : "rgba(46,99,231,") +
+                    (state.goalFlash * 0.28) + ")";
+    ctx.fillRect(0, 0, W, H);
+    state.goalFlash = Math.max(0, state.goalFlash - 0.03);
+  }
+  if (now < state.freezeUntil && state.running) {
+    ctx.fillStyle = COLORS.puck;
+    ctx.font = "700 54px system-ui, sans-serif";
+    ctx.fillText("Get ready…", W/2, H/2 - 160);
+  }
+}
+
+// ---------- main loop ----------
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.033, (now - last) / 1000);   // clamp big frame gaps
+  last = now;
+  if (state.running) physics(dt, now);
+  drawTable();
+  drawPuck();
+  drawMallet(mallets[0]);
+  drawMallet(mallets[1]);
+  drawScore(now);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- buttons ----------
+startBtn.addEventListener("click", () => {
+  overlay.classList.add("hidden");
+  resetGame();
+});
+document.getElementById("fsBtn").addEventListener("click", () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+});
+</script>
+</body>
+</html>
