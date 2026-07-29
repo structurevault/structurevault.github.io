@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SPARK Fruit Slicer</title>
+<style>
+  /* ============================================================
+     SPARK FRUIT SLICER — multitouch, for the giant touchscreen
+     Design: a dojo cutting board. Warm timber deck, juicy fruit,
+     splats that stain the wood, a steel blade under every finger.
+     ============================================================ */
+  :root {
+    --timber-a: #8a5a33;
+    --timber-b: #6f4423;
+    --ink: #2b1a0e;
+    --paper: #f6ead6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--timber-b);
+    touch-action: none;
+    -webkit-user-select: none; user-select: none;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  canvas { position: fixed; inset: 0; display: block; touch-action: none; }
+
+  #overlay {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3vmin; text-align: center;
+    background: rgba(43, 26, 14, 0.82);
+    color: var(--paper);
+    transition: opacity 0.3s ease;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #overlay h1 { font-size: 9vmin; font-weight: 800; letter-spacing: 0.04em; }
+  #overlay p { font-size: 3vmin; line-height: 1.6; max-width: 72vmin; opacity: 0.85; }
+  #overlay .big { font-size: 5vmin; font-weight: 700; }
+  #overlay button {
+    font: inherit; font-size: 4vmin; font-weight: 700;
+    color: var(--ink); background: var(--paper);
+    border: none; border-radius: 100vmin;
+    padding: 2.2vmin 7vmin; cursor: pointer;
+  }
+  #overlay button:focus-visible { outline: 0.6vmin solid #ffb43a; outline-offset: 0.4vmin; }
+  #fsBtn {
+    position: fixed; top: 1.5vmin; right: 1.5vmin; z-index: 5;
+    font-size: 2.2vmin; padding: 1vmin 2vmin;
+    background: transparent; color: var(--paper);
+    border: 1px solid rgba(246,234,214,0.5); border-radius: 100vmin;
+    cursor: pointer; opacity: 0.7;
+  }
+  @media (prefers-reduced-motion: reduce) { #overlay { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="overlay">
+  <h1>🍉 Fruit Slicer</h1>
+  <p>Slash the fruit before it falls — every finger is a blade, so bring a friend.<br>
+     Miss three fruit and it's over. And whatever you do… <strong>don't touch the bombs.</strong></p>
+  <button id="startBtn">Start slicing</button>
+</div>
+<button id="fsBtn">⛶ Fullscreen</button>
+
+<script>
+"use strict";
+// ================= tuning knobs =================
+const LIVES        = 3;
+const SPAWN_START  = 1900;   // ms between launches at the start
+const SPAWN_MIN    = 750;    // fastest the spawner gets
+const GRAVITY      = 0.42;   // relative gravity: lower = floatier fruit
+const TRAIL_MS     = 260;    // how long a slash stays live (touch-lag buffer)
+const BLADE_WIDTH  = 26;     // logical px of slack around the blade line
+const BOMB_CHANCE  = 0.14;   // once score > 3
+const COMBO_BONUS  = 3;      // extra points for 3+ fruit in one slash window
+// ================================================
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const overlay = document.getElementById("overlay");
+const overlayTitle = overlay.querySelector("h1");
+const overlayText = overlay.querySelector("p");
+const startBtn = document.getElementById("startBtn");
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Logical space follows the real screen (fruit arcs scale with height)
+let W = 0, H = 0, dpr = 1, UNIT = 1;
+function fit() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  UNIT = Math.min(W, H) / 800;                 // scales sizes to the screen
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  paintTimber();
+}
+addEventListener("resize", fit);
+
+// ---------- the timber deck (pre-rendered once) ----------
+let timber = null;
+function paintTimber() {
+  timber = document.createElement("canvas");
+  timber.width = W; timber.height = H;
+  const t = timber.getContext("2d");
+  const plank = 90;
+  for (let y = 0; y < H; y += plank) {
+    const g = t.createLinearGradient(0, y, 0, y + plank);
+    g.addColorStop(0, "#8a5a33"); g.addColorStop(0.5, "#7a4d2a"); g.addColorStop(1, "#6f4423");
+    t.fillStyle = g;
+    t.fillRect(0, y, W, plank);
+    t.fillStyle = "rgba(43,26,14,0.5)";
+    t.fillRect(0, y + plank - 2, W, 2);
+    // wood grain flecks
+    t.strokeStyle = "rgba(43,26,14,0.12)";
+    t.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      const gx = Math.random() * W, gy = y + Math.random() * plank;
+      t.beginPath(); t.moveTo(gx, gy);
+      t.quadraticCurveTo(gx + 80, gy + 4, gx + 160, gy);
+      t.stroke();
+    }
+  }
+}
+fit();
+
+// ---------- fruit catalogue ----------
+const FRUITS = [
+  { name: "watermelon", r: 46, skin: "#3e8f3e", stripe: "#2c6b2c", flesh: "#e8503a", seed: "#2b1a0e", splat: "rgba(232,80,58," },
+  { name: "orange",     r: 36, skin: "#f2882d", flesh: "#ffb43a", splat: "rgba(255,180,58," },
+  { name: "apple",      r: 34, skin: "#d9302c", flesh: "#f6ead6", splat: "rgba(217,48,44," },
+  { name: "lime",       r: 30, skin: "#7ac143", flesh: "#d4ef9f", splat: "rgba(122,193,67," },
+];
+
+// ---------- game state ----------
+const state = {
+  running: false,
+  score: 0, best: 0, lives: LIVES,
+  spawnTimer: 1000, spawnInterval: SPAWN_START,
+  fruits: [],      // {x,y,vx,vy,r,type,rot,vrot,bomb}
+  halves: [],      // sliced halves flying apart
+  splats: [],      // stains on the timber
+  particles: [],   // juice droplets / bomb sparks
+  blades: new Map(),   // pointerId -> [{x,y,t}]
+  comboText: [],   // floating "+N COMBO" labels
+  shake: 0,
+};
+
+function launchOne() {
+  const bomb = state.score > 3 && Math.random() < BOMB_CHANCE;
+  const type = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+  const x = W * (0.15 + Math.random() * 0.7);
+  // launch so the apex lands in the upper half of the screen
+  const apex = H * (0.12 + Math.random() * 0.25);
+  const vy = -Math.sqrt(2 * GRAVITY * UNIT * 60 * 60 * (H - apex)) / 60;
+  state.fruits.push({
+    x, y: H + 60,
+    vx: (x < W / 2 ? 1 : -1) * (0.5 + Math.random() * 2.2) * UNIT,
+    vy,
+    r: (bomb ? 34 : type.r) * UNIT * 1.4,
+    type, bomb,
+    rot: Math.random() * 6.28,
+    vrot: (Math.random() - 0.5) * 0.06,
+  });
+}
+
+// ---------- blades: one per finger ----------
+function bladePoint(e) {
+  let trail = state.blades.get(e.pointerId);
+  if (!trail) { trail = []; state.blades.set(e.pointerId, trail); }
+  trail.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+}
+canvas.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  canvas.setPointerCapture(e.pointerId);
+  state.blades.set(e.pointerId, []);
+  bladePoint(e);
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (state.blades.has(e.pointerId)) {
+    // use coalesced events when available — smoother arcs on fast swipes
+    const evts = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (const ce of evts) bladePoint(ce);
+  }
+});
+function endBlade(e) { state.blades.delete(e.pointerId); }
+canvas.addEventListener("pointerup", endBlade);
+canvas.addEventListener("pointercancel", endBlade);
+
+// distance from point to segment
+function segDist(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 ? ((px - x1) * dx + (py - y1) * dy) / len2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + dx * t), py - (y1 + dy * t));
+}
+
+function sliceFruit(f, angle) {
+  const T = f.type;
+  state.score++;
+  // two halves fly apart perpendicular to the slash
+  const nx = Math.cos(angle + Math.PI / 2), ny = Math.sin(angle + Math.PI / 2);
+  for (const dir of [-1, 1]) {
+    state.halves.push({
+      x: f.x, y: f.y, r: f.r, type: T, angle,
+      vx: f.vx + nx * dir * 3 * UNIT,
+      vy: f.vy * 0.4 + ny * dir * 3 * UNIT - 2 * UNIT,
+      rot: f.rot, vrot: dir * 0.12, flip: dir,
+      life: 1,
+    });
+  }
+  // juice
+  if (!reduceMotion) {
+    for (let i = 0; i < 14; i++) {
+      const a = Math.random() * 6.28, s = (1 + Math.random() * 5) * UNIT;
+      state.particles.push({ x: f.x, y: f.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2 * UNIT,
+                             r: (3 + Math.random() * 5) * UNIT, color: T.splat, life: 1 });
+    }
+  }
+  state.splats.push({ x: f.x, y: f.y, r: f.r * (1.1 + Math.random() * 0.5),
+                      color: T.splat, alpha: 0.5, rot: Math.random() * 6.28 });
+  if (state.splats.length > 40) state.splats.shift();
+}
+
+function explodeBomb(f) {
+  state.shake = 24;
+  if (navigator.vibrate) navigator.vibrate([80, 40, 120]);
+  for (let i = 0; i < 40; i++) {
+    const a = Math.random() * 6.28, s = (2 + Math.random() * 9) * UNIT;
+    state.particles.push({ x: f.x, y: f.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+                           r: (2 + Math.random() * 6) * UNIT,
+                           color: i % 2 ? "rgba(255,180,58," : "rgba(90,90,90,", life: 1 });
+  }
+  endGame("💥 Boom!", "You sliced a bomb. Final score: " + state.score);
+}
+
+function endGame(title, text) {
+  state.running = false;
+  state.best = Math.max(state.best, state.score);
+  overlayTitle.textContent = title;
+  overlayText.innerHTML = text + "<br><span class='big'>Best this session: " + state.best + "</span>";
+  startBtn.textContent = "Play again";
+  overlay.classList.remove("hidden");
+}
+
+function resetGame() {
+  state.score = 0; state.lives = LIVES;
+  state.fruits = []; state.halves = []; state.particles = [];
+  state.splats = []; state.comboText = [];
+  state.spawnInterval = SPAWN_START;
+  state.spawnTimer = 800;
+  state.running = true;
+}
+
+// ---------- update ----------
+function update(dtMs) {
+  const now = performance.now();
+  const dt = dtMs / 16.667;                      // normalise to 60fps units
+  const g = GRAVITY * UNIT * dt;
+
+  // spawn with ramp
+  state.spawnTimer -= dtMs;
+  if (state.spawnTimer <= 0) {
+    launchOne();
+    if (Math.random() < Math.min(0.4, state.score * 0.02)) launchOne();
+    state.spawnInterval = Math.max(SPAWN_MIN, SPAWN_START - state.score * 14);
+    state.spawnTimer = state.spawnInterval;
+  }
+
+  // trim blade trails to the lag buffer
+  for (const [id, trail] of state.blades) {
+    while (trail.length && now - trail[0].t > TRAIL_MS) trail.shift();
+  }
+
+  // fruit physics + slicing
+  const sliceCounts = new Map();                 // pointerId -> fruit cut this frame
+  for (let i = state.fruits.length - 1; i >= 0; i--) {
+    const f = state.fruits[i];
+    f.vy += g;
+    f.x += f.vx * dt; f.y += f.vy * dt;
+    f.rot += f.vrot * dt;
+
+    if (f.y > H + 80 && f.vy > 0) {              // fell off the bottom
+      state.fruits.splice(i, 1);
+      if (!f.bomb) {
+        state.lives--;
+        if (state.lives <= 0) { endGame("Out of fruit!", "Final score: " + state.score); return; }
+      }
+      continue;
+    }
+
+    // test every live blade trail against this fruit
+    let cut = false, cutAngle = 0, cutBy = null;
+    for (const [id, trail] of state.blades) {
+      for (let s = 0; s < trail.length - 1; s++) {
+        const a = trail[s], b = trail[s + 1];
+        if (Math.hypot(b.x - a.x, b.y - a.y) < 2) continue;      // resting finger ≠ slash
+        if (segDist(f.x, f.y, a.x, a.y, b.x, b.y) < f.r + BLADE_WIDTH * UNIT) {
+          cut = true; cutAngle = Math.atan2(b.y - a.y, b.x - a.x); cutBy = id;
+          break;
+        }
+      }
+      if (cut) break;
+    }
+    if (cut) {
+      state.fruits.splice(i, 1);
+      if (f.bomb) { explodeBomb(f); return; }
+      sliceFruit(f, cutAngle);
+      sliceCounts.set(cutBy, (sliceCounts.get(cutBy) || 0) + 1);
+    }
+  }
+
+  // combo bonus: 3+ fruit cut by one blade in a single frame window
+  for (const [id, n] of sliceCounts) {
+    if (n >= 3) {
+      state.score += COMBO_BONUS;
+      const trail = state.blades.get(id);
+      const p = trail && trail.length ? trail[trail.length - 1] : { x: W / 2, y: H / 2 };
+      state.comboText.push({ x: p.x, y: p.y, text: n + "-HIT COMBO +" + COMBO_BONUS, life: 1 });
+    }
+  }
+
+  // halves, particles, labels
+  for (let i = state.halves.length - 1; i >= 0; i--) {
+    const h = state.halves[i];
+    h.vy += g; h.x += h.vx * dt; h.y += h.vy * dt; h.rot += h.vrot * dt;
+    if (h.y > H + 120) state.halves.splice(i, 1);
+  }
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.vy += g * 0.7; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= 0.025 * dt;
+    if (p.life <= 0) state.particles.splice(i, 1);
+  }
+  for (let i = state.comboText.length - 1; i >= 0; i--) {
+    const c = state.comboText[i];
+    c.y -= 0.8 * UNIT * dt; c.life -= 0.012 * dt;
+    if (c.life <= 0) state.comboText.splice(i, 1);
+  }
+  for (const s of state.splats) s.alpha = Math.max(0.08, s.alpha - 0.0004 * dt);
+  if (state.shake > 0) state.shake = Math.max(0, state.shake - 1.5 * dt);
+}
+
+// ---------- drawing ----------
+function drawFruit(f) {
+  ctx.save();
+  ctx.translate(f.x, f.y); ctx.rotate(f.rot);
+  if (f.bomb) {
+    ctx.fillStyle = "#20242b";
+    ctx.beginPath(); ctx.arc(0, 0, f.r, 0, 7); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.15)";
+    ctx.beginPath(); ctx.arc(-f.r * 0.3, -f.r * 0.3, f.r * 0.45, 0, 7); ctx.fill();
+    ctx.strokeStyle = "#8a5a33"; ctx.lineWidth = 4 * UNIT;
+    ctx.beginPath(); ctx.moveTo(0, -f.r); ctx.quadraticCurveTo(f.r * 0.4, -f.r * 1.4, f.r * 0.6, -f.r * 1.2); ctx.stroke();
+    ctx.fillStyle = "#ffb43a";
+    ctx.beginPath(); ctx.arc(f.r * 0.62, -f.r * 1.2, 5 * UNIT, 0, 7); ctx.fill();
+  } else {
+    const T = f.type;
+    ctx.fillStyle = T.skin;
+    ctx.beginPath(); ctx.arc(0, 0, f.r, 0, 7); ctx.fill();
+    if (T.stripe) {
+      ctx.strokeStyle = T.stripe; ctx.lineWidth = f.r * 0.16;
+      for (let a = 0; a < 6.28; a += 1.05) {
+        ctx.beginPath(); ctx.arc(0, 0, f.r * 0.82, a, a + 0.4); ctx.stroke();
+      }
+    }
+    ctx.fillStyle = "rgba(255,255,255,0.28)";
+    ctx.beginPath(); ctx.arc(-f.r * 0.32, -f.r * 0.32, f.r * 0.32, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawHalf(h) {
+  ctx.save();
+  ctx.translate(h.x, h.y); ctx.rotate(h.angle + h.rot);
+  const T = h.type;
+  // flesh face
+  ctx.fillStyle = T.flesh;
+  ctx.beginPath(); ctx.arc(0, 0, h.r, 0, Math.PI * h.flip, h.flip < 0); ctx.fill();
+  // rind
+  ctx.strokeStyle = T.skin; ctx.lineWidth = h.r * 0.22;
+  ctx.beginPath(); ctx.arc(0, 0, h.r * 0.92, 0, Math.PI * h.flip, h.flip < 0); ctx.stroke();
+  // seeds on watermelon
+  if (T.seed) {
+    ctx.fillStyle = T.seed;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.ellipse(i * h.r * 0.3, h.flip * h.r * 0.4, 3 * UNIT, 5 * UNIT, 0, 0, 7);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function draw() {
+  ctx.save();
+  if (state.shake > 0 && !reduceMotion) {
+    ctx.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
+  }
+  ctx.drawImage(timber, 0, 0);
+
+  // splat stains
+  for (const s of state.splats) {
+    ctx.save();
+    ctx.translate(s.x, s.y); ctx.rotate(s.rot);
+    ctx.fillStyle = s.color + s.alpha + ")";
+    ctx.beginPath();
+    for (let a = 0; a < 6.28; a += 0.8) {
+      const rr = s.r * (0.5 + ((a * 7.13) % 1) * 0.6);
+      ctx.ellipse(Math.cos(a) * rr * 0.4, Math.sin(a) * rr * 0.4, rr * 0.35, rr * 0.25, a, 0, 7);
+    }
+    ctx.fill();
+    ctx.restore();
+  }
+
+  for (const h of state.halves) drawHalf(h);
+  for (const f of state.fruits) drawFruit(f);
+
+  // juice / sparks
+  for (const p of state.particles) {
+    ctx.fillStyle = p.color + p.life + ")";
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.life, 0, 7); ctx.fill();
+  }
+
+  // blades — a steel edge with a white core, one per finger
+  const now = performance.now();
+  for (const [id, trail] of state.blades) {
+    if (trail.length < 2) continue;
+    for (const pass of [[BLADE_WIDTH * 0.5 * UNIT, "rgba(180,200,215,0.35)"],
+                        [BLADE_WIDTH * 0.2 * UNIT, "rgba(255,255,255,0.9)"]]) {
+      ctx.lineWidth = pass[0]; ctx.strokeStyle = pass[1];
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y);
+      for (let i = 1; i < trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
+      ctx.stroke();
+    }
+  }
+
+  // combo labels
+  ctx.textAlign = "center";
+  for (const c of state.comboText) {
+    ctx.font = "800 " + (34 * UNIT) + "px system-ui, sans-serif";
+    ctx.fillStyle = "rgba(255,180,58," + c.life + ")";
+    ctx.fillText(c.text, c.x, c.y);
+  }
+
+  // HUD
+  ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.font = "800 " + (44 * UNIT) + "px system-ui, sans-serif";
+  ctx.fillStyle = "#f6ead6";
+  ctx.fillText(String(state.score), 24 * UNIT, 18 * UNIT);
+  ctx.font = "400 " + (26 * UNIT) + "px system-ui, sans-serif";
+  for (let i = 0; i < LIVES; i++) {
+    ctx.fillStyle = i < state.lives ? "#d9302c" : "rgba(246,234,214,0.25)";
+    ctx.fillText("✕", (24 + i * 34) * UNIT, 72 * UNIT);
+  }
+  ctx.restore();
+}
+
+// ---------- main loop ----------
+let last = performance.now();
+function frame(now) {
+  const dtMs = Math.min(50, now - last);
+  last = now;
+  if (state.running) update(dtMs);
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- buttons ----------
+startBtn.addEventListener("click", () => {
+  overlay.classList.add("hidden");
+  resetGame();
+});
+document.getElementById("fsBtn").addEventListener("click", () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+});
+</script>
+</body>
+</html>
