@@ -73,17 +73,18 @@
 "use strict";
 // ================= tuning knobs =================
 const LIVES        = 5;
-const SPAWN_START  = 1500;   // ms between waves at the start
-const SPAWN_MIN    = 950;    // fastest the spawner gets
-const WAVE_MIN     = 2;      // fruit per wave (min)
-const WAVE_MAX     = 4;      // fruit per wave (max)
-const FRENZY_EVERY = 6;      // every Nth wave is a big fruit frenzy
-const FRENZY_SIZE  = 7;      // fruit in a frenzy wave
-const MAX_FRUIT    = 14;     // cap on fruit in the air at once
-const GRAVITY      = 0.28;   // relative gravity: lower = floatier fruit
-const FRUIT_SCALE  = 1.9;    // fruit size multiplier — big easy targets
-const TOUCH_SLACK  = 48;     // extra hit halo around every fruit (logical px)
-const BOMB_CHANCE  = 0.07;   // once score > 8
+const SPAWN_START  = 1100;   // ms between waves at the start
+const SPAWN_MIN    = 800;    // fastest the spawner gets
+const WAVE_MIN     = 3;      // fruit per wave (min)
+const WAVE_MAX     = 6;      // fruit per wave (max)
+const FRENZY_EVERY = 5;      // every Nth wave is a big fruit frenzy
+const FRENZY_SIZE  = 10;     // fruit in a frenzy wave
+const MAX_FRUIT    = 22;     // cap on fruit in the air at once
+const GRAVITY      = 0.30;   // gravity on the way UP (launch feel)
+const FALL_MAX     = 2.2;    // max fall speed — fruit drifts down like a balloon
+const FRUIT_SCALE  = 2.3;    // fruit size multiplier — huge easy targets
+const TOUCH_SLACK  = 60;     // extra hit halo around every fruit (logical px)
+const BOMB_CHANCE  = 0.05;   // once score > 8
 const COMBO_BONUS  = 3;      // bonus for popping 3+ fruit with one finger quickly
 // ================================================
 
@@ -162,8 +163,9 @@ function launchOne() {
   const bomb = state.score > 8 && Math.random() < BOMB_CHANCE;
   const type = FRUITS[Math.floor(Math.random() * FRUITS.length)];
   const x = W * (0.12 + Math.random() * 0.76);
-  const apex = H * (0.10 + Math.random() * 0.3);
-  const vy = -Math.sqrt(2 * GRAVITY * UNIT * 60 * 60 * (H - apex)) / 60;
+  // fly all the way up: apex in the top 5–18% of the screen
+  const apex = H * (0.05 + Math.random() * 0.13);
+  const vy = -Math.sqrt(2 * GRAVITY * UNIT * (H + 60 - apex));
   state.fruits.push({
     x, y: H + 60,
     vx: (x < W / 2 ? 1 : -1) * (0.4 + Math.random() * 1.8) * UNIT,
@@ -327,6 +329,8 @@ function update(dtMs) {
   for (let i = state.fruits.length - 1; i >= 0; i--) {
     const f = state.fruits[i];
     f.vy += g;
+    // balloon-fall: once heading down, cap the speed so fruit hangs up high
+    if (f.vy > FALL_MAX * UNIT) f.vy = FALL_MAX * UNIT;
     f.x += f.vx * dt; f.y += f.vy * dt;
     f.rot += f.vrot * dt;
     if (f.y > H + 80 && f.vy > 0) {
