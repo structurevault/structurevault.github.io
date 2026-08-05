@@ -186,9 +186,21 @@ function launchOne() {
 // ============================================================
 let usingTouchEvents = false;
 
-function setPoint(key, x, y) {
+// Surface Hub / Windows: press-and-hold fires a right-click "contextmenu"
+// which CANCELS the touch mid-press — that's the classic "my tap did
+// nothing" bug on Hubs. Kill it, along with double-tap zoom & selection.
+for (const ev of ["contextmenu", "dblclick", "selectstart"]) {
+  window.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+}
+
+function setPoint(key, x, y, isDown) {
   points.set(key, { x, y });
-  tryCutAt(x, y, key);            // instant, event-driven slice
+  if (isDown) {
+    state.ripples.push({ x, y, r: 20 * UNIT, life: 0.6 });  // press feedback
+    tapCut(x, y, key);            // instant slice, with nearest-fruit magnet
+  } else {
+    tryCutAt(x, y, key);          // drags slice whatever they cross
+  }
 }
 function dropPoint(key) { points.delete(key); }
 
@@ -197,7 +209,7 @@ canvas.addEventListener("pointerdown", (e) => {
   if (usingTouchEvents) return;
   e.preventDefault();
   try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-  setPoint("p" + e.pointerId, e.clientX, e.clientY);
+  setPoint("p" + e.pointerId, e.clientX, e.clientY, true);
 });
 canvas.addEventListener("pointermove", (e) => {
   if (usingTouchEvents) return;
@@ -213,7 +225,7 @@ for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) {
 canvas.addEventListener("touchstart", (e) => {
   usingTouchEvents = true;
   e.preventDefault();
-  for (const t of e.changedTouches) setPoint("t" + t.identifier, t.clientX, t.clientY);
+  for (const t of e.changedTouches) setPoint("t" + t.identifier, t.clientX, t.clientY, true);
 }, { passive: false });
 canvas.addEventListener("touchmove", (e) => {
   e.preventDefault();
@@ -227,13 +239,15 @@ for (const ev of ["touchend", "touchcancel"]) {
 
 // ---------- slicing ----------
 function tryCutAt(x, y, key) {
-  if (!state.running) return;
+  if (!state.running) return 0;
+  let cuts = 0;
   for (let i = state.fruits.length - 1; i >= 0; i--) {
     const f = state.fruits[i];
     if (Math.hypot(f.x - x, f.y - y) < f.r + TOUCH_SLACK * UNIT) {
       state.fruits.splice(i, 1);
-      if (f.bomb) { explodeBomb(f); return; }
+      if (f.bomb) { explodeBomb(f); return cuts; }
       sliceFruit(f);
+      cuts++;
       state.ripples.push({ x: f.x, y: f.y, r: f.r * 0.6, life: 1 });
       // combo: same finger popping several fruit within 600ms
       const now = performance.now();
@@ -246,6 +260,28 @@ function tryCutAt(x, y, key) {
         state.comboText.push({ x, y: y - 60 * UNIT, text: "COMBO +" + COMBO_BONUS, life: 1 });
       }
     }
+  }
+  return cuts;
+}
+
+// tap magnet: if a fresh tap missed everything, snap to the nearest
+// fruit within reach and pop it anyway (never magnets onto bombs)
+const MAGNET_REACH = 170;   // logical px
+function tapCut(x, y, key) {
+  if (!state.running) return;
+  if (tryCutAt(x, y, key) > 0) return;
+  let best = -1, bestD = MAGNET_REACH * UNIT;
+  for (let i = 0; i < state.fruits.length; i++) {
+    const f = state.fruits[i];
+    if (f.bomb) continue;
+    const d = Math.hypot(f.x - x, f.y - y) - f.r;
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  if (best >= 0) {
+    const f = state.fruits[best];
+    state.fruits.splice(best, 1);
+    sliceFruit(f);
+    state.ripples.push({ x: f.x, y: f.y, r: f.r * 0.6, life: 1 });
   }
 }
 
