@@ -61,7 +61,7 @@
 
 <div id="overlay">
   <h1>🍉 Fruit Slicer</h1>
-  <p>Slash the fruit before it falls — every finger is a blade, so bring a friend.<br>
+  <p>Just touch the fruit to slice it — taps, pokes and swipes all work, and every finger counts.<br>
      You have five lives — big juicy targets, easy slicing. And whatever you do… <strong>don't touch the bombs.</strong></p>
   <button id="startBtn">Start slicing</button>
 </div>
@@ -81,7 +81,8 @@ const MAX_FRUIT    = 14;     // cap on fruit in the air at once
 const GRAVITY      = 0.28;   // relative gravity: lower = floatier fruit
 const FRUIT_SCALE  = 1.9;    // fruit size multiplier — big easy targets
 const TRAIL_MS     = 420;    // how long a slash stays live (touch-lag buffer)
-const BLADE_WIDTH  = 46;     // logical px of slack around the blade line
+const TOUCH_SLACK  = 36;     // extra hit radius around each fruit — tap anywhere near it
+const BLADE_WIDTH  = 46;     // visual thickness of the blade trail
 const BOMB_CHANCE  = 0.07;   // once score > 8
 const COMBO_BONUS  = 3;      // extra points for 3+ fruit in one slash window
 // ================================================
@@ -309,15 +310,27 @@ function update(dtMs) {
       continue;
     }
 
-    // test every live blade trail against this fruit
+    // touch-to-slice: ANY finger contact cuts — a tap, a rest, or a drag
     let cut = false, cutAngle = 0, cutBy = null;
     for (const [id, trail] of state.blades) {
-      for (let s = 0; s < trail.length - 1; s++) {
-        const a = trail[s], b = trail[s + 1];
-        if (Math.hypot(b.x - a.x, b.y - a.y) < 2) continue;      // resting finger ≠ slash
-        if (segDist(f.x, f.y, a.x, a.y, b.x, b.y) < f.r + BLADE_WIDTH * UNIT) {
-          cut = true; cutAngle = Math.atan2(b.y - a.y, b.x - a.x); cutBy = id;
-          break;
+      if (!trail.length) continue;
+      // single-point (tap) test
+      const p = trail[trail.length - 1];
+      if (Math.hypot(f.x - p.x, f.y - p.y) < f.r + TOUCH_SLACK * UNIT) {
+        cut = true; cutBy = id;
+        const q = trail.length > 1 ? trail[trail.length - 2] : null;
+        cutAngle = q && (q.x !== p.x || q.y !== p.y)
+          ? Math.atan2(p.y - q.y, p.x - q.x)
+          : Math.random() * Math.PI;                 // taps slice at a random angle
+      } else {
+        // drag test: the whole recent finger path, so fast swipes can't skip past
+        for (let s = 0; s < trail.length - 1; s++) {
+          const a = trail[s], b = trail[s + 1];
+          if (segDist(f.x, f.y, a.x, a.y, b.x, b.y) < f.r + TOUCH_SLACK * UNIT) {
+            cut = true; cutBy = id;
+            cutAngle = Math.atan2(b.y - a.y, b.x - a.x);
+            break;
+          }
         }
       }
       if (cut) break;
