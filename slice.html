@@ -6,9 +6,10 @@
 <title>SPARK Fruit Slicer</title>
 <style>
   /* ============================================================
-     SPARK FRUIT SLICER — multitouch, for the giant touchscreen
-     Design: a dojo cutting board. Warm timber deck, juicy fruit,
-     splats that stain the wood, a steel blade under every finger.
+     SPARK FRUIT SLICER — pure touch-to-pop, built for big
+     multitouch panels. Touch a fruit anywhere = sliced.
+     Dual input paths (pointer + touch events) so it works even
+     on panels with quirky touch drivers.
      ============================================================ */
   :root {
     --timber-a: #8a5a33;
@@ -23,6 +24,7 @@
     background: var(--timber-b);
     touch-action: none;
     -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   canvas { position: fixed; inset: 0; display: block; touch-action: none; }
@@ -61,8 +63,8 @@
 
 <div id="overlay">
   <h1>🍉 Fruit Slicer</h1>
-  <p>Just touch the fruit to slice it — taps, pokes and swipes all work, and every finger counts.<br>
-     You have five lives — big juicy targets, easy slicing. And whatever you do… <strong>don't touch the bombs.</strong></p>
+  <p>Touch the fruit — that's it. Every finger works, so pile in.<br>
+     You have five lives. And whatever you do… <strong>don't touch the bombs.</strong></p>
   <button id="startBtn">Start slicing</button>
 </div>
 <button id="fsBtn">⛶ Fullscreen</button>
@@ -80,11 +82,9 @@ const FRENZY_SIZE  = 7;      // fruit in a frenzy wave
 const MAX_FRUIT    = 14;     // cap on fruit in the air at once
 const GRAVITY      = 0.28;   // relative gravity: lower = floatier fruit
 const FRUIT_SCALE  = 1.9;    // fruit size multiplier — big easy targets
-const TRAIL_MS     = 420;    // how long a slash stays live (touch-lag buffer)
-const TOUCH_SLACK  = 36;     // extra hit radius around each fruit — tap anywhere near it
-const BLADE_WIDTH  = 46;     // visual thickness of the blade trail
+const TOUCH_SLACK  = 48;     // extra hit halo around every fruit (logical px)
 const BOMB_CHANCE  = 0.07;   // once score > 8
-const COMBO_BONUS  = 3;      // extra points for 3+ fruit in one slash window
+const COMBO_BONUS  = 3;      // bonus for popping 3+ fruit with one finger quickly
 // ================================================
 
 const canvas = document.getElementById("game");
@@ -95,12 +95,11 @@ const overlayText = overlay.querySelector("p");
 const startBtn = document.getElementById("startBtn");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// Logical space follows the real screen (fruit arcs scale with height)
 let W = 0, H = 0, dpr = 1, UNIT = 1;
 function fit() {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth; H = window.innerHeight;
-  UNIT = Math.min(W, H) / 800;                 // scales sizes to the screen
+  UNIT = Math.min(W, H) / 800;
   canvas.width = W * dpr; canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   paintTimber();
@@ -121,7 +120,6 @@ function paintTimber() {
     t.fillRect(0, y, W, plank);
     t.fillStyle = "rgba(43,26,14,0.5)";
     t.fillRect(0, y + plank - 2, W, 2);
-    // wood grain flecks
     t.strokeStyle = "rgba(43,26,14,0.12)";
     t.lineWidth = 1;
     for (let i = 0; i < 6; i++) {
@@ -147,21 +145,23 @@ const state = {
   running: false,
   score: 0, best: 0, lives: LIVES,
   spawnTimer: 1000, spawnInterval: SPAWN_START,
-  fruits: [],      // {x,y,vx,vy,r,type,rot,vrot,bomb}
-  halves: [],      // sliced halves flying apart
-  splats: [],      // stains on the timber
-  particles: [],   // juice droplets / bomb sparks
-  blades: new Map(),   // pointerId -> [{x,y,t}]
-  comboText: [],   // floating "+N COMBO" labels
+  waveCount: 0, missGrace: 0,
+  fruits: [], halves: [], splats: [], particles: [],
+  ripples: [],           // expanding rings where slices happen
+  comboText: [],
   shake: 0,
 };
+
+// active touch points: key -> {x, y}
+const points = new Map();
+// cuts per finger inside a short window, for combo detection
+const recentCuts = new Map();   // key -> {count, until}
 
 function launchOne() {
   if (!state.running || state.fruits.length >= MAX_FRUIT) return;
   const bomb = state.score > 8 && Math.random() < BOMB_CHANCE;
   const type = FRUITS[Math.floor(Math.random() * FRUITS.length)];
   const x = W * (0.12 + Math.random() * 0.76);
-  // launch so the apex lands in the upper half of the screen
   const apex = H * (0.10 + Math.random() * 0.3);
   const vy = -Math.sqrt(2 * GRAVITY * UNIT * 60 * 60 * (H - apex)) / 60;
   state.fruits.push({
@@ -175,42 +175,82 @@ function launchOne() {
   });
 }
 
-// ---------- blades: one per finger ----------
-function bladePoint(e) {
-  let trail = state.blades.get(e.pointerId);
-  if (!trail) { trail = []; state.blades.set(e.pointerId, trail); }
-  trail.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+// ============================================================
+// INPUT — the whole model is: a touch anywhere near a fruit
+// slices it, instantly, on the event itself. No swiping needed.
+// Two parallel input paths for maximum panel compatibility:
+// Pointer Events (modern) and Touch Events (fallback). If touch
+// events fire, pointer handlers step aside to avoid doubles.
+// ============================================================
+let usingTouchEvents = false;
+
+function setPoint(key, x, y) {
+  points.set(key, { x, y });
+  tryCutAt(x, y, key);            // instant, event-driven slice
 }
+function dropPoint(key) { points.delete(key); }
+
+// --- pointer events path ---
 canvas.addEventListener("pointerdown", (e) => {
+  if (usingTouchEvents) return;
   e.preventDefault();
-  canvas.setPointerCapture(e.pointerId);
-  state.blades.set(e.pointerId, []);
-  bladePoint(e);
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+  setPoint("p" + e.pointerId, e.clientX, e.clientY);
 });
 canvas.addEventListener("pointermove", (e) => {
-  if (state.blades.has(e.pointerId)) {
-    // use coalesced events when available — smoother arcs on fast swipes
-    const evts = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-    for (const ce of evts) bladePoint(ce);
-  }
+  if (usingTouchEvents) return;
+  if (!points.has("p" + e.pointerId)) return;
+  const evts = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const ce of evts) setPoint("p" + e.pointerId, ce.clientX, ce.clientY);
 });
-function endBlade(e) { state.blades.delete(e.pointerId); }
-canvas.addEventListener("pointerup", endBlade);
-canvas.addEventListener("pointercancel", endBlade);
-
-// distance from point to segment
-function segDist(px, py, x1, y1, x2, y2) {
-  const dx = x2 - x1, dy = y2 - y1;
-  const len2 = dx * dx + dy * dy;
-  let t = len2 ? ((px - x1) * dx + (py - y1) * dy) / len2 : 0;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(px - (x1 + dx * t), py - (y1 + dy * t));
+for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) {
+  canvas.addEventListener(ev, (e) => dropPoint("p" + e.pointerId));
 }
 
-function sliceFruit(f, angle) {
+// --- touch events path (quirky panels / older drivers) ---
+canvas.addEventListener("touchstart", (e) => {
+  usingTouchEvents = true;
+  e.preventDefault();
+  for (const t of e.changedTouches) setPoint("t" + t.identifier, t.clientX, t.clientY);
+}, { passive: false });
+canvas.addEventListener("touchmove", (e) => {
+  e.preventDefault();
+  for (const t of e.changedTouches) setPoint("t" + t.identifier, t.clientX, t.clientY);
+}, { passive: false });
+for (const ev of ["touchend", "touchcancel"]) {
+  canvas.addEventListener(ev, (e) => {
+    for (const t of e.changedTouches) dropPoint("t" + t.identifier);
+  }, { passive: false });
+}
+
+// ---------- slicing ----------
+function tryCutAt(x, y, key) {
+  if (!state.running) return;
+  for (let i = state.fruits.length - 1; i >= 0; i--) {
+    const f = state.fruits[i];
+    if (Math.hypot(f.x - x, f.y - y) < f.r + TOUCH_SLACK * UNIT) {
+      state.fruits.splice(i, 1);
+      if (f.bomb) { explodeBomb(f); return; }
+      sliceFruit(f);
+      state.ripples.push({ x: f.x, y: f.y, r: f.r * 0.6, life: 1 });
+      // combo: same finger popping several fruit within 600ms
+      const now = performance.now();
+      const rc = recentCuts.get(key);
+      if (rc && now < rc.until) rc.count++, rc.until = now + 600;
+      else recentCuts.set(key, { count: 1, until: now + 600 });
+      const c = recentCuts.get(key);
+      if (c.count === 3) {
+        state.score += COMBO_BONUS;
+        state.comboText.push({ x, y: y - 60 * UNIT, text: "COMBO +" + COMBO_BONUS, life: 1 });
+      }
+    }
+  }
+}
+
+function sliceFruit(f) {
   const T = f.type;
   state.score++;
-  // two halves fly apart perpendicular to the slash
+  const angle = Math.random() * Math.PI;
   const nx = Math.cos(angle + Math.PI / 2), ny = Math.sin(angle + Math.PI / 2);
   for (const dir of [-1, 1]) {
     state.halves.push({
@@ -218,10 +258,8 @@ function sliceFruit(f, angle) {
       vx: f.vx + nx * dir * 3 * UNIT,
       vy: f.vy * 0.4 + ny * dir * 3 * UNIT - 2 * UNIT,
       rot: f.rot, vrot: dir * 0.12, flip: dir,
-      life: 1,
     });
   }
-  // juice
   if (!reduceMotion) {
     for (let i = 0; i < 14; i++) {
       const a = Math.random() * 6.28, s = (1 + Math.random() * 5) * UNIT;
@@ -243,7 +281,7 @@ function explodeBomb(f) {
                            r: (2 + Math.random() * 6) * UNIT,
                            color: i % 2 ? "rgba(255,180,58," : "rgba(90,90,90,", life: 1 });
   }
-  endGame("💥 Boom!", "You sliced a bomb. Final score: " + state.score);
+  endGame("💥 Boom!", "You touched a bomb. Final score: " + state.score);
 }
 
 function endGame(title, text) {
@@ -258,102 +296,54 @@ function endGame(title, text) {
 function resetGame() {
   state.score = 0; state.lives = LIVES;
   state.fruits = []; state.halves = []; state.particles = [];
-  state.splats = []; state.comboText = [];
+  state.splats = []; state.comboText = []; state.ripples = [];
   state.waveCount = 0; state.missGrace = 0;
   state.spawnInterval = SPAWN_START;
   state.spawnTimer = 800;
+  points.clear(); recentCuts.clear();
   state.running = true;
 }
 
 // ---------- update ----------
 function update(dtMs) {
   const now = performance.now();
-  const dt = dtMs / 16.667;                      // normalise to 60fps units
+  const dt = dtMs / 16.667;
   const g = GRAVITY * UNIT * dt;
 
-  // spawn in waves — lots of fruit in the air, with a frenzy every few waves
+  // wave spawning + frenzy
   state.spawnTimer -= dtMs;
   if (state.spawnTimer <= 0) {
-    state.waveCount = (state.waveCount || 0) + 1;
+    state.waveCount++;
     const frenzy = state.waveCount % FRENZY_EVERY === 0;
     const n = frenzy ? FRENZY_SIZE
                      : WAVE_MIN + Math.floor(Math.random() * (WAVE_MAX - WAVE_MIN + 1));
-    for (let k = 0; k < n; k++) {
-      // stagger each launch slightly so the wave fans out
-      setTimeout(launchOne, k * 130);
-    }
+    for (let k = 0; k < n; k++) setTimeout(launchOne, k * 130);
     if (frenzy) state.comboText.push({ x: W / 2, y: H * 0.3, text: "FRUIT FRENZY!", life: 1 });
     state.spawnInterval = Math.max(SPAWN_MIN, SPAWN_START - state.score * 8);
     state.spawnTimer = state.spawnInterval + (frenzy ? 700 : 0);
   }
 
-  // trim blade trails to the lag buffer
-  for (const [id, trail] of state.blades) {
-    while (trail.length && now - trail[0].t > TRAIL_MS) trail.shift();
-  }
-
-  // fruit physics + slicing
-  const sliceCounts = new Map();                 // pointerId -> fruit cut this frame
+  // fruit physics + misses
   for (let i = state.fruits.length - 1; i >= 0; i--) {
     const f = state.fruits[i];
     f.vy += g;
     f.x += f.vx * dt; f.y += f.vy * dt;
     f.rot += f.vrot * dt;
-
-    if (f.y > H + 80 && f.vy > 0) {              // fell off the bottom
+    if (f.y > H + 80 && f.vy > 0) {
       state.fruits.splice(i, 1);
-      if (!f.bomb && now > (state.missGrace || 0)) {
+      if (!f.bomb && now > state.missGrace) {
         state.lives--;
-        state.missGrace = now + 1500;            // grace window: one wave can't wipe you out
+        state.missGrace = now + 1500;
         if (state.lives <= 0) { endGame("Out of fruit!", "Final score: " + state.score); return; }
       }
-      continue;
-    }
-
-    // touch-to-slice: ANY finger contact cuts — a tap, a rest, or a drag
-    let cut = false, cutAngle = 0, cutBy = null;
-    for (const [id, trail] of state.blades) {
-      if (!trail.length) continue;
-      // single-point (tap) test
-      const p = trail[trail.length - 1];
-      if (Math.hypot(f.x - p.x, f.y - p.y) < f.r + TOUCH_SLACK * UNIT) {
-        cut = true; cutBy = id;
-        const q = trail.length > 1 ? trail[trail.length - 2] : null;
-        cutAngle = q && (q.x !== p.x || q.y !== p.y)
-          ? Math.atan2(p.y - q.y, p.x - q.x)
-          : Math.random() * Math.PI;                 // taps slice at a random angle
-      } else {
-        // drag test: the whole recent finger path, so fast swipes can't skip past
-        for (let s = 0; s < trail.length - 1; s++) {
-          const a = trail[s], b = trail[s + 1];
-          if (segDist(f.x, f.y, a.x, a.y, b.x, b.y) < f.r + TOUCH_SLACK * UNIT) {
-            cut = true; cutBy = id;
-            cutAngle = Math.atan2(b.y - a.y, b.x - a.x);
-            break;
-          }
-        }
-      }
-      if (cut) break;
-    }
-    if (cut) {
-      state.fruits.splice(i, 1);
-      if (f.bomb) { explodeBomb(f); return; }
-      sliceFruit(f, cutAngle);
-      sliceCounts.set(cutBy, (sliceCounts.get(cutBy) || 0) + 1);
     }
   }
 
-  // combo bonus: 3+ fruit cut by one blade in a single frame window
-  for (const [id, n] of sliceCounts) {
-    if (n >= 3) {
-      state.score += COMBO_BONUS;
-      const trail = state.blades.get(id);
-      const p = trail && trail.length ? trail[trail.length - 1] : { x: W / 2, y: H / 2 };
-      state.comboText.push({ x: p.x, y: p.y, text: n + "-HIT COMBO +" + COMBO_BONUS, life: 1 });
-    }
-  }
+  // held fingers keep slicing: fruit that drifts INTO a finger pops too
+  for (const [key, p] of points) tryCutAt(p.x, p.y, key);
+  if (!state.running) return;      // a bomb may have ended it just now
 
-  // halves, particles, labels
+  // halves, particles, labels, ripples
   for (let i = state.halves.length - 1; i >= 0; i--) {
     const h = state.halves[i];
     h.vy += g; h.x += h.vx * dt; h.y += h.vy * dt; h.rot += h.vrot * dt;
@@ -368,6 +358,11 @@ function update(dtMs) {
     const c = state.comboText[i];
     c.y -= 0.8 * UNIT * dt; c.life -= 0.012 * dt;
     if (c.life <= 0) state.comboText.splice(i, 1);
+  }
+  for (let i = state.ripples.length - 1; i >= 0; i--) {
+    const r = state.ripples[i];
+    r.r += 4 * UNIT * dt; r.life -= 0.05 * dt;
+    if (r.life <= 0) state.ripples.splice(i, 1);
   }
   for (const s of state.splats) s.alpha = Math.max(0.08, s.alpha - 0.0004 * dt);
   if (state.shake > 0) state.shake = Math.max(0, state.shake - 1.5 * dt);
@@ -406,13 +401,10 @@ function drawHalf(h) {
   ctx.save();
   ctx.translate(h.x, h.y); ctx.rotate(h.angle + h.rot);
   const T = h.type;
-  // flesh face
   ctx.fillStyle = T.flesh;
   ctx.beginPath(); ctx.arc(0, 0, h.r, 0, Math.PI * h.flip, h.flip < 0); ctx.fill();
-  // rind
   ctx.strokeStyle = T.skin; ctx.lineWidth = h.r * 0.22;
   ctx.beginPath(); ctx.arc(0, 0, h.r * 0.92, 0, Math.PI * h.flip, h.flip < 0); ctx.stroke();
-  // seeds on watermelon
   if (T.seed) {
     ctx.fillStyle = T.seed;
     for (let i = -2; i <= 2; i++) {
@@ -431,7 +423,6 @@ function draw() {
   }
   ctx.drawImage(timber, 0, 0);
 
-  // splat stains
   for (const s of state.splats) {
     ctx.save();
     ctx.translate(s.x, s.y); ctx.rotate(s.rot);
@@ -448,28 +439,27 @@ function draw() {
   for (const h of state.halves) drawHalf(h);
   for (const f of state.fruits) drawFruit(f);
 
-  // juice / sparks
   for (const p of state.particles) {
     ctx.fillStyle = p.color + p.life + ")";
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.life, 0, 7); ctx.fill();
   }
 
-  // blades — a steel edge with a white core, one per finger
-  const now = performance.now();
-  for (const [id, trail] of state.blades) {
-    if (trail.length < 2) continue;
-    for (const pass of [[BLADE_WIDTH * 0.5 * UNIT, "rgba(180,200,215,0.35)"],
-                        [BLADE_WIDTH * 0.2 * UNIT, "rgba(255,255,255,0.9)"]]) {
-      ctx.lineWidth = pass[0]; ctx.strokeStyle = pass[1];
-      ctx.lineCap = "round"; ctx.lineJoin = "round";
-      ctx.beginPath();
-      ctx.moveTo(trail[0].x, trail[0].y);
-      for (let i = 1; i < trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
-      ctx.stroke();
-    }
+  // slice ripples
+  for (const r of state.ripples) {
+    ctx.strokeStyle = "rgba(255,255,255," + (r.life * 0.8) + ")";
+    ctx.lineWidth = 4 * UNIT * r.life;
+    ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 7); ctx.stroke();
   }
 
-  // combo labels
+  // finger halos — also your live "is touch working?" indicator
+  for (const [key, p] of points) {
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.beginPath(); ctx.arc(p.x, p.y, 34 * UNIT, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 2 * UNIT;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 34 * UNIT, 0, 7); ctx.stroke();
+  }
+
   ctx.textAlign = "center";
   for (const c of state.comboText) {
     ctx.font = "800 " + (34 * UNIT) + "px system-ui, sans-serif";
@@ -477,7 +467,6 @@ function draw() {
     ctx.fillText(c.text, c.x, c.y);
   }
 
-  // HUD
   ctx.textAlign = "left"; ctx.textBaseline = "top";
   ctx.font = "800 " + (44 * UNIT) + "px system-ui, sans-serif";
   ctx.fillStyle = "#f6ead6";
