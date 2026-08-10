@@ -164,12 +164,7 @@
   }
   #player.open{display:block}
   #playerFrame{
-    /* Rendered at a fixed "virtual" resolution (set from JS), then scaled up
-       with a transform to exactly fill the physical screen. On a 4K panel
-       that means the sim - including its on-screen touch controls - draws
-       big and can never hang off the edge. */
-    position:absolute;top:0;left:0;
-    transform-origin:0 0;
+    display:block;width:100%;height:100%;
     border:0;background:#000;
   }
   /* floating close button: doesn't steal any height from the game */
@@ -261,9 +256,13 @@
     ? "https://makecode.com/" + id
     : "https://arcade.makecode.com/" + id;
   const editUrl = id => "https://arcade.makecode.com/#pub:" + id;
-  // The lightweight CDN-served simulator page; works with both id formats.
-  // On touch devices MakeCode's sim shows its own on-screen D-pad + A/B.
-  const simUrl  = id => "https://arcade.makecode.com/---run?id=" + encodeURIComponent(id);
+  // Same parameter set MakeCode's own big-screen kiosk app uses:
+  //  fullscreen=1 -> sim height-fits the frame instead of width-sizing
+  //                  (without it, the console shell hangs off the bottom)
+  //  no hideSimButtons -> the shell's touchable D-pad + A/B buttons stay visible
+  //  nofooter/single/autofocus -> clean single sim, keyboard focused
+  const simUrl  = id => "https://arcade.makecode.com/---run?id=" + encodeURIComponent(id)
+    + "&fullscreen=1&nofooter=1&single=1&autofocus=1";
 
   /* ---------- tiny CSV parser (handles quoted fields, commas, newlines) ---------- */
   function parseCSV(text){
@@ -481,29 +480,11 @@
   let currentGame = null;
   let lastFocused = null;
 
-  /* Size the sim like a 720p-tall tablet, then stretch it across the real
-     screen. Touch/click positions are remapped automatically by the browser,
-     and everything (game + touch controls) always fits exactly. */
-  const VIRTUAL_H = 720;
-  function fitPlayer(){
-    if (!player.classList.contains("open")) return;
-    const w = player.clientWidth, h = player.clientHeight;
-    if (!w || !h) return;
-    const scale = h / VIRTUAL_H;
-    const virtualW = Math.round(w / scale);
-    playerFrame.style.width = virtualW + "px";
-    playerFrame.style.height = VIRTUAL_H + "px";
-    playerFrame.style.transform = "scale(" + scale + ")";
-  }
-  window.addEventListener("resize", fitPlayer);
-  window.addEventListener("orientationchange", fitPlayer);
-
   function launchGame(g){
     currentGame = g;
     lastFocused = document.activeElement;
     player.classList.add("open");
     document.body.classList.add("playing");
-    fitPlayer();
     playerFrame.src = simUrl(g.id);
     playerClose.focus();
   }
