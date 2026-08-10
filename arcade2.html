@@ -164,7 +164,12 @@
   }
   #player.open{display:block}
   #playerFrame{
-    display:block;width:100%;height:100%;
+    /* Rendered at a fixed "virtual" resolution (set from JS), then scaled up
+       with a transform to exactly fill the physical screen. On a 4K panel
+       that means the sim - including its on-screen touch controls - draws
+       big and can never hang off the edge. */
+    position:absolute;top:0;left:0;
+    transform-origin:0 0;
     border:0;background:#000;
   }
   /* floating close button: doesn't steal any height from the game */
@@ -476,12 +481,30 @@
   let currentGame = null;
   let lastFocused = null;
 
+  /* Size the sim like a 720p-tall tablet, then stretch it across the real
+     screen. Touch/click positions are remapped automatically by the browser,
+     and everything (game + touch controls) always fits exactly. */
+  const VIRTUAL_H = 720;
+  function fitPlayer(){
+    if (!player.classList.contains("open")) return;
+    const w = player.clientWidth, h = player.clientHeight;
+    if (!w || !h) return;
+    const scale = h / VIRTUAL_H;
+    const virtualW = Math.round(w / scale);
+    playerFrame.style.width = virtualW + "px";
+    playerFrame.style.height = VIRTUAL_H + "px";
+    playerFrame.style.transform = "scale(" + scale + ")";
+  }
+  window.addEventListener("resize", fitPlayer);
+  window.addEventListener("orientationchange", fitPlayer);
+
   function launchGame(g){
     currentGame = g;
     lastFocused = document.activeElement;
-    playerFrame.src = simUrl(g.id);
     player.classList.add("open");
     document.body.classList.add("playing");
+    fitPlayer();
+    playerFrame.src = simUrl(g.id);
     playerClose.focus();
   }
   function closePlayer(){
