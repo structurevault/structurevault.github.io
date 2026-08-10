@@ -30,7 +30,7 @@
     border-bottom:1px solid var(--line);
     padding:14px 20px 12px;
   }
-  .head-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;max-width:1280px;margin:0 auto}
+  .head-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:0 auto}
   h1{
     margin:0;font-size:20px;letter-spacing:4px;font-weight:800;
     color:var(--volt);white-space:nowrap;
@@ -54,12 +54,12 @@
   .count{font-size:12px;color:var(--dim);white-space:nowrap}
 
   /* ============ STATUS ============ */
-  .msg{max-width:1280px;margin:10px auto 0;padding:0 20px;font-size:13px;color:var(--dim)}
+  .msg{margin:10px auto 0;padding:0 24px;font-size:13px;color:var(--dim)}
   .msg.err{color:#ff7a7a}
   .msg:empty{display:none}
 
   /* ============ SHELF ============ */
-  main{flex:1;width:100%;max-width:1280px;margin:0 auto;padding:18px 20px 40px}
+  main{flex:1;width:100%;margin:0 auto;padding:18px 24px 40px}
   #shelf{
     display:grid;gap:18px;
     grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
@@ -158,29 +158,26 @@
 
   /* ============ IN-PAGE PLAYER ============ */
   #player{
-    display:none;position:fixed;inset:0;z-index:50;
-    background:#000;
-    flex-direction:column;
+    display:none;position:fixed;top:0;left:0;
+    width:100vw;height:100vh;height:100dvh;
+    z-index:50;background:#000;
   }
-  #player.open{display:flex}
-  .player-bar{
-    display:flex;align-items:center;gap:12px;
-    padding:8px 14px;
-    background:var(--bg);border-bottom:1px solid var(--line);
+  #player.open{display:block}
+  #playerFrame{
+    display:block;width:100%;height:100%;
+    border:0;background:#000;
   }
-  .player-title{
-    flex:1;min-width:0;
-    font-size:14px;font-weight:800;color:var(--volt);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
+  /* floating close button: doesn't steal any height from the game */
   .player-close{
-    font:inherit;font-size:13px;font-weight:800;letter-spacing:1px;
-    background:var(--panel);border:1px solid var(--line);border-radius:4px;
-    color:var(--ink);padding:8px 16px;cursor:pointer;white-space:nowrap;
-    min-height:44px;   /* comfy touch target */
+    position:absolute;top:10px;right:10px;z-index:2;
+    font:inherit;font-size:15px;font-weight:800;letter-spacing:1px;
+    background:rgba(11,15,20,.82);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);padding:12px 20px;cursor:pointer;white-space:nowrap;
+    min-height:52px;   /* big touch target for the Hub */
+    backdrop-filter:blur(3px);
   }
   .player-close:hover{border-color:var(--arc)}
-  #playerFrame{flex:1;width:100%;border:0;background:#000}
+  .player-close:focus-visible{outline:2px solid var(--arc);outline-offset:2px}
   body.playing{overflow:hidden}
 
   @media (prefers-reduced-motion:reduce){
@@ -216,11 +213,8 @@
 </main>
 
 <div id="player" role="dialog" aria-modal="true" aria-label="Game player">
-  <div class="player-bar">
-    <span class="player-title" id="playerTitle"></span>
-    <button class="player-close" id="playerClose" type="button">&#10005; Back to shelf</button>
-  </div>
   <iframe id="playerFrame" title="Game" allow="autoplay; fullscreen" src="about:blank"></iframe>
+  <button class="player-close" id="playerClose" type="button">&#10005; Back to shelf</button>
 </div>
 
 <footer>SPARK Centre &bull; Boneo Primary School &bull; Free Play</footer>
@@ -478,7 +472,6 @@
   /* ---------- in-page player ---------- */
   const player = document.getElementById("player");
   const playerFrame = document.getElementById("playerFrame");
-  const playerTitle = document.getElementById("playerTitle");
   const playerClose = document.getElementById("playerClose");
   let currentGame = null;
   let lastFocused = null;
@@ -486,7 +479,6 @@
   function launchGame(g){
     currentGame = g;
     lastFocused = document.activeElement;
-    playerTitle.textContent = (g.game || "Untitled game") + "  \u2022  by " + (g.name || "?");
     playerFrame.src = simUrl(g.id);
     player.classList.add("open");
     document.body.classList.add("playing");
