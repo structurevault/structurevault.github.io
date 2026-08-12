@@ -65,49 +65,72 @@
     grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
   }
 
-  /* ============ CARTRIDGE (classic grey console cart) ============ */
+  /* ============ CARTRIDGE (NES-style grey cart) ============ */
   .cart{
     --shell:#4dc3ff;                       /* per-game label colour */
-    background:linear-gradient(180deg,#b7bcc3 0%,#9aa0a8 55%,#878d96 100%);
-    border:1px solid #6d737b;
-    border-radius:6px 6px 10px 10px;
-    padding:0 0 12px;
+    background:linear-gradient(180deg,#aaadb3 0%,#96999f 50%,#84878d 100%);
+    border:1px solid #5e6167;
+    border-radius:5px 5px 9px 9px;
+    aspect-ratio:10 / 11;                  /* NES carts are a touch taller than wide */
+    display:flex;flex-direction:column;
+    padding:0 0 16px;
     position:relative;
     cursor:pointer;
-    box-shadow:inset 0 2px 0 rgba(255,255,255,.45), inset 0 -3px 0 rgba(0,0,0,.25), 0 3px 10px rgba(0,0,0,.5);
+    box-shadow:inset 0 2px 0 rgba(255,255,255,.4), inset 2px 0 0 rgba(255,255,255,.14),
+               inset -2px 0 0 rgba(0,0,0,.14), inset 0 -4px 0 rgba(0,0,0,.28),
+               0 3px 10px rgba(0,0,0,.5);
     transition:transform .12s ease, box-shadow .12s ease;
   }
   .cart:hover,.cart:focus-visible{
     transform:translateY(-4px);
-    box-shadow:inset 0 2px 0 rgba(255,255,255,.45), inset 0 -3px 0 rgba(0,0,0,.25),
+    box-shadow:inset 0 2px 0 rgba(255,255,255,.4), inset 0 -4px 0 rgba(0,0,0,.28),
                0 8px 20px rgba(0,0,0,.6), 0 0 0 2px var(--shell);
   }
   .cart:focus-visible{outline:none}
   .cart:active{transform:translateY(-1px)}
-  /* horizontal grip grooves across the top of the shell */
+  /* top row: grip grooves on the left (like the NES shell), embossed logo on the right */
+  .cart .top-row{
+    display:flex;align-items:stretch;gap:12px;
+    margin:11px 15px 10px;height:40px;flex:0 0 auto;
+  }
   .cart .grip{
-    height:34px;margin:10px 14px 8px;
+    flex:0 0 54%;
     background:repeating-linear-gradient(180deg,
-      rgba(0,0,0,.22) 0 2px,
-      rgba(255,255,255,.28) 2px 3px,
-      rgba(0,0,0,0) 3px 7px);
+      rgba(0,0,0,.26) 0 2px,
+      rgba(255,255,255,.3) 2px 3px,
+      rgba(0,0,0,0) 3px 8px);
     border-radius:2px;
   }
-  /* small moulded notch, bottom-left, like the ejector groove */
+  /* moulded-in-the-plastic logo text */
+  .cart .emboss{
+    flex:1;display:flex;align-items:center;justify-content:flex-end;
+    font-size:10px;font-weight:800;letter-spacing:2px;
+    color:rgba(0,0,0,.32);
+    text-shadow:0 1px 0 rgba(255,255,255,.45);
+    user-select:none;white-space:nowrap;overflow:hidden;
+  }
+  /* moulded ejector notch, bottom-left */
   .cart::after{
-    content:"";position:absolute;left:14px;bottom:5px;
-    width:34px;height:5px;border-radius:3px;
+    content:"";position:absolute;left:15px;bottom:6px;
+    width:36px;height:5px;border-radius:3px;
     background:rgba(0,0,0,.28);
-    box-shadow:inset 0 1px 2px rgba(0,0,0,.5);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.3);
+  }
+  /* recessed screw dimple, bottom-right */
+  .cart::before{
+    content:"";position:absolute;right:14px;bottom:5px;
+    width:9px;height:9px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #75787e, #4b4e53);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.35);
   }
   /* recessed label sticker */
   .cart .sticker{
-    margin:0 14px 8px;
-    background:#101418;
+    margin:0 15px 10px;flex:1;min-height:0;
+    background:linear-gradient(165deg,#15191e 0%,#101418 45%,#0b0e12 100%);
     border-radius:3px;
-    box-shadow:inset 0 0 0 1px rgba(0,0,0,.6), inset 0 2px 5px rgba(0,0,0,.7);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.6), inset 0 2px 5px rgba(0,0,0,.7),
+               0 1px 0 rgba(255,255,255,.28);
     overflow:hidden;
-    min-height:96px;
     display:flex;flex-direction:column;
   }
   /* coloured band across the top of the label, like the classic stripe */
@@ -118,33 +141,21 @@
     font-size:8px;font-weight:800;letter-spacing:2px;color:rgba(0,0,0,.72);
     text-transform:uppercase;white-space:nowrap;overflow:hidden;
   }
-  .cart .sticker-body{padding:8px 10px 9px;flex:1;display:flex;gap:10px;align-items:flex-start}
+  .cart .sticker-body{padding:10px 11px 11px;flex:1;min-height:0;display:flex;gap:11px;align-items:flex-start}
   .cart .icon{
-    font-size:34px;line-height:1;flex:0 0 auto;
+    font-size:38px;line-height:1;flex:0 0 auto;
     filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));
   }
-  .cart .sticker-text{flex:1;min-width:0}
+  .cart .sticker-text{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100%}
   .cart .gname{
-    font-size:15px;font-weight:800;line-height:1.25;
+    font-size:16px;font-weight:800;line-height:1.25;
     color:#f2f5f8;
     overflow-wrap:anywhere;
   }
-  .cart .who{margin-top:4px;font-size:11px;color:#8b98a5}
-  /* actions row lives inside the label's lower edge */
-  .cart .actions{
-    display:flex;align-items:center;gap:8px;
-    padding:6px 10px 8px;
-    border-top:1px solid rgba(255,255,255,.08);
-  }
-  .play-link:focus-visible,.search:focus-visible,.sort-btn:focus-visible{
+  .cart .who{margin-top:auto;padding-top:6px;font-size:11px;color:#8b98a5}
+  .search:focus-visible,.sort-btn:focus-visible{
     outline:2px solid var(--arc);outline-offset:2px;
   }
-  .play-link{
-    font-size:10px;color:var(--arc);text-decoration:none;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    flex:1;min-width:0;
-  }
-  .play-link:hover{text-decoration:underline}
 
   /* ============ EMPTY / ERROR ============ */
   .empty{display:none;text-align:center;padding:60px 20px;color:var(--dim)}
@@ -252,9 +263,6 @@
     m = input.match(/\d{4,6}(?:-\d{4,6}){2,}/);
     return m ? m[0] : null;
   }
-  const playUrl = id => id.charAt(0) === "_"
-    ? "https://makecode.com/" + id
-    : "https://arcade.makecode.com/" + id;
   const editUrl = id => "https://arcade.makecode.com/#pub:" + id;
   // Same parameter set MakeCode's own big-screen kiosk app uses:
   //  fullscreen=1 -> sim height-fits the frame instead of width-sizing
@@ -298,6 +306,39 @@
     return -1;
   }
   function cleanName(s){ return s.replace(/\s+/g," ").trim(); }
+
+  /* ---------- keep the shelf classroom-friendly ----------
+     Student-typed names come straight from the sheet, so any word on the
+     naughty list (including l33t-ish disguises like f*ck / sh1t) gets swapped
+     for a fun word instead. Swaps are stable per word, so a game keeps the
+     same replacement every reload. */
+  const RUDE_ANYWHERE = [   // matched inside words too (no innocent collisions)
+    "fuck","fuk","fck","fuq","phuck","shit","shite","cunt","bitch","btch",
+    "wank","bollock","slut","whore","dickhead","penis","vagina","boob","porn",
+    "twat","nigga","nigger","retard","faggot"
+  ];
+  const RUDE_WHOLE_WORD = [ // only when the whole word matches (protects class/pass/assassin/arsenal/cockpit etc.)
+    "ass","arse","crap","damn","dick","cock","piss","sex","sexy","hoe","thot",
+    "hell","bugger","knob","prick","tit","tits","fag","willy","dang","frick","wtf","stfu",
+    "sht","fk","fkc","cnt","dck","bch","pss"   // starred-out vowels: sh*t, f**k, etc.
+  ];
+  const FRIENDLY_SWAPS = ["Super","Mega","Turbo","Epic","Pixel","Banana","Rocket","Wacky","Sparkly","Bouncy"];
+  const LEET = {"0":"o","1":"i","3":"e","4":"a","5":"s","7":"t","@":"a","$":"s","!":"i"};
+  function friendlyWords(s){
+    if (!s) return s;
+    return s.split(/(\s+)/).map(tok => {
+      if (/^\s*$/.test(tok)) return tok;
+      const norm = tok.toLowerCase()
+        .replace(/[013457@$!]/g, c => LEET[c])
+        .replace(/[^a-z]/g, "");            // drops *, punctuation, digits already mapped
+      if (!norm) return tok;
+      const rude = RUDE_ANYWHERE.some(w => norm.includes(w)) || RUDE_WHOLE_WORD.includes(norm);
+      if (!rude) return tok;
+      let h = 0;
+      for (let i = 0; i < tok.length; i++) h = (h * 31 + tok.charCodeAt(i)) >>> 0;
+      return FRIENDLY_SWAPS[h % FRIENDLY_SWAPS.length];
+    }).join("");
+  }
   function rowsToGames(rows){
     if (!rows.length) return [];
     const headers = rows[0].map(h => String(h||"").trim().toLowerCase());
@@ -314,9 +355,9 @@
       if (!id) continue;
       out.push({
         id,
-        name:  nameIdx  > -1 ? String(row[nameIdx]  ?? "").trim() : "",
+        name:  friendlyWords(nameIdx > -1 ? String(row[nameIdx] ?? "").trim() : ""),
         grade: gradeIdx > -1 ? String(row[gradeIdx] ?? "").trim() : "",
-        game:  cleanName(gameIdx > -1 ? String(row[gameIdx] ?? "") : "")
+        game:  friendlyWords(cleanName(gameIdx > -1 ? String(row[gameIdx] ?? "") : ""))
       });
     }
     return out;   // oldest first
@@ -355,38 +396,80 @@
 
   /* ---------- label icons: matched from words in the game's name ---------- */
   const ICON_RULES = [
-    [/zombie/i,"\u{1F9DF}"], [/ghost|haunt|spooky/i,"\u{1F47B}"], [/monster/i,"\u{1F47E}"],
-    [/alien|invader|ufo/i,"\u{1F6F8}"], [/space|galaxy|star|rocket|astro/i,"\u{1F680}"],
-    [/dragon/i,"\u{1F409}"], [/dino|rex|raptor/i,"\u{1F996}"], [/shark/i,"\u{1F988}"],
-    [/fish|ocean|sea|under\s*water/i,"\u{1F41F}"], [/bird|flappy|wing/i,"\u{1F426}"],
-    [/snake/i,"\u{1F40D}"], [/cat|kitten|kitty/i,"\u{1F431}"], [/dog|puppy/i,"\u{1F436}"],
-    [/duck/i,"\u{1F986}"], [/frog/i,"\u{1F438}"], [/bee/i,"\u{1F41D}"],
-    [/horse|unicorn/i,"\u{1F984}"], [/animal|zoo|pet/i,"\u{1F43E}"],
-    [/car|race|racing|drift|speed/i,"\u{1F3CE}\uFE0F"], [/truck/i,"\u{1F69A}"],
-    [/plane|jet|fly/i,"\u2708\uFE0F"], [/boat|ship|pirate/i,"\u{1F3F4}\u200D\u2620\uFE0F"],
-    [/train/i,"\u{1F682}"],
+    /* --- specific things first, generic themes last --- */
+    [/zombie|zomb/i,"\u{1F9DF}"], [/ghost|haunt|spooky/i,"\u{1F47B}"],
+    [/vampire/i,"\u{1F9DB}"], [/witch/i,"\u{1F9D9}"], [/monster/i,"\u{1F47E}"],
+    [/alien|invader|ufo|galaga/i,"\u{1F6F8}"], [/asteroid|meteor|comet/i,"\u2604\uFE0F"],
+    [/moon|lunar/i,"\u{1F319}"], [/space|galaxy|star|rocket|astro|planet/i,"\u{1F680}"],
+    [/dragon/i,"\u{1F409}"], [/dino|rex|raptor|jurassic/i,"\u{1F996}"], [/shark/i,"\u{1F988}"],
+    [/whale/i,"\u{1F433}"], [/dolphin/i,"\u{1F42C}"], [/octopus|squid/i,"\u{1F419}"],
+    [/crab/i,"\u{1F980}"], [/turtle|tortoise/i,"\u{1F422}"],
+    [/fish|ocean|sea|under\s*water|aqua/i,"\u{1F41F}"],
+    [/penguin/i,"\u{1F427}"], [/owl/i,"\u{1F989}"], [/chicken|chook|hen/i,"\u{1F414}"],
+    [/bird|flappy|wing/i,"\u{1F426}"],
+    [/snake/i,"\u{1F40D}"], [/spider|web/i,"\u{1F577}\uFE0F"],
+    [/cat|kitten|kitty/i,"\u{1F431}"], [/dog|puppy|pup/i,"\u{1F436}"],
+    [/fox/i,"\u{1F98A}"], [/wolf/i,"\u{1F43A}"], [/bear/i,"\u{1F43B}"],
+    [/panda/i,"\u{1F43C}"], [/lion/i,"\u{1F981}"], [/tiger/i,"\u{1F42F}"],
+    [/monkey|ape|gorilla/i,"\u{1F435}"], [/banana/i,"\u{1F34C}"],
+    [/bunny|rabbit/i,"\u{1F430}"], [/mouse|rat|hamster/i,"\u{1F439}"],
+    [/pig|hog/i,"\u{1F437}"], [/cow|moo/i,"\u{1F42E}"], [/sheep|lamb/i,"\u{1F411}"],
+    [/duck/i,"\u{1F986}"], [/frog/i,"\u{1F438}"], [/bee|wasp/i,"\u{1F41D}"],
+    [/bug|beetle|insect/i,"\u{1F41E}"], [/butterfly/i,"\u{1F98B}"],
+    [/unicorn/i,"\u{1F984}"], [/horse|pony/i,"\u{1F40E}"], [/animal|zoo|pet/i,"\u{1F43E}"],
+    [/kart/i,"\u{1F3CE}\uFE0F"], [/car|race|racing|drift|speed|drive|drag/i,"\u{1F3CE}\uFE0F"],
+    [/truck|monster\s*truck/i,"\u{1F69A}"], [/tractor/i,"\u{1F69C}"],
+    [/motor|bike\s*race|moto/i,"\u{1F3CD}\uFE0F"], [/bike|bmx|cycle/i,"\u{1F6B2}"],
+    [/skate/i,"\u{1F6F9}"], [/surf/i,"\u{1F3C4}"], [/ski|snowboard/i,"\u26F7\uFE0F"],
+    [/plane|jet|fly/i,"\u2708\uFE0F"], [/helicopter|chopper/i,"\u{1F681}"],
+    [/pirate/i,"\u{1F3F4}\u200D\u2620\uFE0F"], [/boat|ship|sail|submarine/i,"\u{1F6A2}"],
+    [/train|rail/i,"\u{1F682}"],
     [/soccer|football/i,"\u26BD"], [/basket/i,"\u{1F3C0}"], [/tennis/i,"\u{1F3BE}"],
-    [/golf/i,"\u26F3"], [/cricket/i,"\u{1F3CF}"], [/sport|ball/i,"\u{1F3D0}"],
-    [/ninja/i,"\u{1F977}"], [/knight|castle|kingdom/i,"\u{1F3F0}"],
-    [/wizard|magic|spell/i,"\u{1FA84}"], [/sword|battle|war|fight|combat/i,"\u2694\uFE0F"],
-    [/gun|shoot|blast|laser/i,"\u{1F52B}"], [/bomb|boom|explo/i,"\u{1F4A3}"],
-    [/robot|bot|mech/i,"\u{1F916}"],
-    [/maze|labyrinth/i,"\u{1F300}"], [/puzzle/i,"\u{1F9E9}"], [/quiz|trivia|math/i,"\u{1F9E0}"],
-    [/treasure|gold|coin|gem|diamond/i,"\u{1F48E}"],
-    [/run|runner|dash|escape|chase/i,"\u{1F3C3}"], [/jump|hop|bounce/i,"\u{1F998}"],
-    [/climb|mountain/i,"\u26F0\uFE0F"], [/lava|volcano/i,"\u{1F30B}"],
-    [/ice|snow|frozen|winter/i,"\u2744\uFE0F"], [/fire|flame|burn/i,"\u{1F525}"],
-    [/forest|jungle|tree/i,"\u{1F332}"], [/farm/i,"\u{1F69C}"],
-    [/pizza/i,"\u{1F355}"], [/burger/i,"\u{1F354}"], [/candy|sweet|lolly/i,"\u{1F36C}"],
-    [/cake|bake/i,"\u{1F382}"], [/fruit|apple|banana/i,"\u{1F34E}"],
-    [/food|eat|cook|kitchen|chef/i,"\u{1F373}"],
-    [/zomb|scary|horror|night/i,"\u{1F311}"],
-    [/music|dance|beat|song/i,"\u{1F3B5}"],
-    [/mine|craft|dig|block/i,"\u26CF\uFE0F"],
-    [/kart/i,"\u{1F3CE}\uFE0F"], [/hero/i,"\u{1F9B8}"], [/princess/i,"\u{1F451}"],
-    [/egg/i,"\u{1F95A}"], [/slime/i,"\u{1FAE7}"], [/tank/i,"\u{1F69B}"],
+    [/golf/i,"\u26F3"], [/cricket/i,"\u{1F3CF}"], [/baseball/i,"\u26BE"],
+    [/bowl/i,"\u{1F3B3}"], [/hockey/i,"\u{1F3D2}"], [/pool|billiard|8\s*ball/i,"\u{1F3B1}"],
+    [/dodge/i,"\u{1F94F}"], [/sport|ball/i,"\u{1F3D0}"],
+    [/fishing/i,"\u{1F3A3}"], [/archer|arrow|bow/i,"\u{1F3F9}"], [/dart|target|aim/i,"\u{1F3AF}"],
+    [/ninja/i,"\u{1F977}"], [/knight|castle|kingdom|medieval|dungeon/i,"\u{1F3F0}"],
+    [/wizard|magic|spell|potion/i,"\u{1FA84}"],
+    [/sword|battle|war|fight|combat|duel|clash/i,"\u2694\uFE0F"],
+    [/shield|defen[cs]e|guard|protect/i,"\u{1F6E1}\uFE0F"],
+    [/tower/i,"\u{1F5FC}"],
+    [/gun|shoot|blast|laser|zap|pew/i,"\u{1F52B}"], [/bomb|boom|explo|blow/i,"\u{1F4A3}"],
+    [/robot|bot|mech|cyborg/i,"\u{1F916}"],
+    [/maze|labyrinth/i,"\u{1F300}"], [/puzzle/i,"\u{1F9E9}"],
+    [/quiz|trivia|math|brain|memory|think/i,"\u{1F9E0}"],
+    [/type|typing|word|spell(ing)?\b/i,"\u2328\uFE0F"],
+    [/treasure|gold|coin|gem|diamond|loot|rich/i,"\u{1F48E}"],
+    [/key|lock|door/i,"\u{1F5DD}\uFE0F"],
+    [/parkour|obby|obstacle|gymnast|flip/i,"\u{1F938}"],
+    [/run|runner|dash|escape|chase|sprint/i,"\u{1F3C3}"], [/jump|hop|bounce|leap/i,"\u{1F998}"],
+    [/climb|mountain|cliff/i,"\u26F0\uFE0F"], [/lava|volcano/i,"\u{1F30B}"],
+    [/ice|snow|frozen|winter|frost|blizzard/i,"\u2744\uFE0F"],
+    [/fire|flame|burn|inferno/i,"\u{1F525}"],
+    [/desert|sand|cactus/i,"\u{1F335}"], [/beach|island|tropic/i,"\u{1F3DD}\uFE0F"],
+    [/forest|jungle|tree|wood/i,"\u{1F332}"], [/flower|garden|plant/i,"\u{1F33B}"],
+    [/farm|harvest|crop/i,"\u{1F69C}"],
+    [/pizza/i,"\u{1F355}"], [/burger/i,"\u{1F354}"], [/taco/i,"\u{1F32E}"],
+    [/donut|doughnut/i,"\u{1F369}"], [/ice\s*cream|icecream/i,"\u{1F366}"],
+    [/candy|sweet|lolly|choc/i,"\u{1F36C}"], [/cake|bake|cookie|biscuit/i,"\u{1F382}"],
+    [/fruit|apple/i,"\u{1F34E}"], [/watermelon|melon/i,"\u{1F349}"],
+    [/food|eat|snack|cook|kitchen|chef|caf[e\u00e9]|restaurant/i,"\u{1F373}"],
+    [/scary|horror|creepy|nightmare|night|dark|shadow/i,"\u{1F311}"],
+    [/music|dance|beat|song|rhythm|dj|piano|drum/i,"\u{1F3B5}"],
+    [/mine|craft|dig|block|build/i,"\u26CF\uFE0F"],
+    [/tycoon|shop|store|money|cash|bank|business/i,"\u{1F4B0}"],
+    [/click|tap|idle/i,"\u{1F446}"],
+    [/simulat/i,"\u{1F3AE}"], [/surviv/i,"\u{1F3D5}\uFE0F"],
+    [/hero|super/i,"\u{1F9B8}"], [/princess|queen|king|royal|crown/i,"\u{1F451}"],
+    [/boss/i,"\u{1F479}"], [/egg/i,"\u{1F95A}"], [/slime|goo/i,"\u{1FAE7}"],
+    [/tank/i,"\u{1F69B}"], [/army|soldier|troop/i,"\u{1FA96}"],
+    [/detective|mystery|spy|secret/i,"\u{1F575}\uFE0F"],
+    [/doctor|hospital|nurse/i,"\u{1FA7A}"], [/school|class|teacher/i,"\u{1F3EB}"],
     [/city|town/i,"\u{1F3D9}\uFE0F"], [/sky|cloud/i,"\u2601\uFE0F"],
-    [/rain/i,"\u{1F327}\uFE0F"], [/storm|thunder|lightning/i,"\u26A1"]
+    [/rain/i,"\u{1F327}\uFE0F"], [/storm|thunder|lightning|spark|volt|electric/i,"\u26A1"],
+    [/rainbow|colour|color/i,"\u{1F308}"], [/pixel|retro|arcade|8[\s-]?bit/i,"\u{1F47E}"],
+    [/christmas|xmas|santa/i,"\u{1F384}"], [/hallow/i,"\u{1F383}"], [/easter/i,"\u{1F423}"],
+    [/dream|sleep/i,"\u{1F4A4}"], [/time|clock/i,"\u23F0"], [/lucky|luck/i,"\u{1F340}"]
   ];
   const FALLBACK_ICONS = ["\u{1F3AE}","\u{1F579}\uFE0F","\u{1F47E}","\u{1F3B2}","\u{1F3AF}","\u{1F396}\uFE0F"];
   function iconFor(g){
@@ -434,16 +517,15 @@
 
     const frag = document.createDocumentFragment();
     for (const g of view){
-      const gPlayUrl = playUrl(g.id);
       const cart = document.createElement("div");
       cart.className = "cart";
       cart.tabIndex = 0;
       cart.setAttribute("role","link");
-      cart.setAttribute("aria-label","Play " + (g.game || "Untitled game") + " in MakeCode");
-      cart.title = "Click to play in MakeCode";
+      cart.setAttribute("aria-label","Play " + (g.game || "Untitled game"));
+      cart.title = "Click to play";
       cart.style.setProperty("--shell", shellFor(g.id));
       cart.innerHTML =
-        '<div class="grip"></div>' +
+        '<div class="top-row"><div class="grip"></div><div class="emboss">SPARK</div></div>' +
         '<div class="sticker">' +
           '<div class="band">SPARK &bull; ' + esc(g.grade || "Boneo PS") + '</div>' +
           '<div class="sticker-body">' +
@@ -452,9 +534,6 @@
               '<div class="gname">' + esc(g.game || "Untitled game") + '</div>' +
               '<div class="who">by ' + esc(g.name || "?") + '</div>' +
             '</div>' +
-          '</div>' +
-          '<div class="actions">' +
-            '<a class="play-link" href="' + esc(gPlayUrl) + '" target="_blank" rel="noopener" title="Play this game in MakeCode">' + esc(gPlayUrl) + '</a>' +
           '</div>' +
         '</div>';
 
@@ -466,8 +545,6 @@
           launchGame(g);
         }
       });
-      // The URL link shouldn't also trigger the cart click
-      cart.querySelector(".play-link").addEventListener("click", (e)=> e.stopPropagation());
       frag.appendChild(cart);
     }
     shelf.appendChild(frag);
