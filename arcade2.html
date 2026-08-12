@@ -320,7 +320,13 @@
   const RUDE_WHOLE_WORD = [ // only when the whole word matches (protects class/pass/assassin/arsenal/cockpit etc.)
     "ass","arse","crap","damn","dick","cock","piss","sex","sexy","hoe","thot",
     "hell","bugger","knob","prick","tit","tits","fag","willy","dang","frick","wtf","stfu",
-    "sht","fk","fkc","cnt","dck","bch","pss"   // starred-out vowels: sh*t, f**k, etc.
+    "sht","fk","fkc","cnt","dck","bch","pss",  // starred-out vowels: sh*t, f**k, etc.
+    /* violent words — whole-word so Skill/Skills etc. stay untouched */
+    "kill","kills","killer","killers","killing","killa",
+    "murder","murderer","murderers","slay","slayer","slaughter","massacre",
+    "bomb","bombs","bomber","bombers","bombing","nuke","nukes","grenade","grenades",
+    "gun","guns","gunner","shooter","shooters","shoot","shooting",
+    "sniper","snipers","stab","stabbing","terrorist","terrorists","assassin","assassins"
   ];
   const FRIENDLY_SWAPS = ["Super","Mega","Turbo","Epic","Pixel","Banana","Rocket","Wacky","Sparkly","Bouncy"];
   const LEET = {"0":"o","1":"i","3":"e","4":"a","5":"s","7":"t","@":"a","$":"s","!":"i"};
