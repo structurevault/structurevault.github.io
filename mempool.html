@@ -49,12 +49,77 @@
   .stats { display: flex; gap: 18px; font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
   .stats b { color: var(--text); display: block; font-size: 14px; }
   .stats .stat { text-align: right; }
-  .mode-badge {
-    font-size: 10px; font-family: var(--mono); letter-spacing: 1px;
-    padding: 3px 8px; border-radius: 10px; text-transform: uppercase;
-    border: 1px solid var(--spine); color: var(--text-dim);
+  /* ---------- block assembly panel (side) ---------- */
+  .assembly {
+    position: fixed;
+    right: 26px; top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    width: 240px;
+    background: rgba(29, 31, 49, 0.72);
+    border: 1px solid var(--spine);
+    border-radius: 8px;
+    padding: 14px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
   }
-  .mode-badge.live { border-color: #2ee6a8; color: #2ee6a8; }
+  .assembly h3 {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .assembly h3 .pulse {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--tip-glow);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(247,147,26,0.55); }
+    50% { box-shadow: 0 0 0 6px rgba(247,147,26,0); }
+  }
+  #assembly-canvas {
+    width: 210px; height: 210px;
+    display: block;
+    border-radius: 4px;
+    background: #12141f;
+    border: 1px solid var(--spine);
+  }
+  .assembly.flush #assembly-canvas { animation: flushOut 0.7s ease; }
+  @keyframes flushOut {
+    0% { filter: brightness(2.2); }
+    40% { transform: translateY(14px); opacity: 0.2; }
+    41% { transform: translateY(-8px); }
+    100% { transform: translateY(0); opacity: 1; filter: brightness(1); }
+  }
+  .assembly .meter {
+    margin-top: 10px;
+    height: 6px; border-radius: 3px;
+    background: var(--spine);
+    overflow: hidden;
+  }
+  .assembly .meter > div {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #ffd452, var(--tip-glow));
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+  .assembly .a-stats {
+    margin-top: 8px;
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .assembly .a-stats b { color: var(--text); }
+  @media (max-width: 1120px) {
+    .assembly {
+      position: static;
+      transform: none;
+      margin: 0 auto 10px;
+    }
+  }
 
   /* ---------- the vertical chain ---------- */
   .chain-wrap {
@@ -240,9 +305,18 @@
   <div class="stats">
     <div class="stat"><b id="stat-height">—</b>chain tip</div>
     <div class="stat"><b id="stat-mempool">—</b>mempool</div>
-    <div class="stat"><span class="mode-badge" id="mode-badge">connecting…</span></div>
   </div>
 </header>
+
+<aside class="assembly" id="assembly">
+  <h3>assembling block <span id="a-height">—</span> <span class="pulse"></span></h3>
+  <canvas id="assembly-canvas" width="420" height="420"></canvas>
+  <div class="meter"><div id="a-meter"></div></div>
+  <div class="a-stats">
+    <span><b id="a-tx">0</b> txs</span>
+    <span><b id="a-size">0.00</b> / 4.00 MvB</span>
+  </div>
+</aside>
 
 <div class="chain-wrap">
   <div class="section-label">&#9660; upcoming blocks &#9660;</div>
@@ -357,7 +431,91 @@
     document.getElementById('tip-tag').textContent = 'chain tip \u00B7 ' + fmt(height);
   }
 
+  /* ---------- block assembly animation ---------- */
+  const canvas = document.getElementById('assembly-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const GAP = 3;
+
+  let asmTxs = [];          // {x, y, s, hue, born}
+  let shelfX = GAP, shelfY = H - GAP, shelfH = 0;
+  let asmWeight = 0;        // MvB filled, target 4.00
+  let asmCount = 0;
+
+  function feeHue(feeRate) {
+    // low fee = green, mid = yellow/orange, high = red (mempool.space-ish)
+    const t = Math.min(1, feeRate / 30);
+    return 120 - 120 * t;
+  }
+
+  function resetAssembly() {
+    asmTxs = [];
+    shelfX = GAP; shelfY = H - GAP; shelfH = 0;
+    asmWeight = 0; asmCount = 0;
+    updateAssemblyStats();
+  }
+
+  function addTx() {
+    if (asmWeight >= 3.98) return; // block template full, waiting to be mined
+    // tx vsize -> square side; mostly small txs, occasional big consolidation
+    const big = Math.random() < 0.06;
+    const s = big ? rnd(34, 58) : rnd(9, 26);
+    const fee = Math.max(1, rnd(0.8, 4) * (pending[0] ? pending[0].median : 3) * rnd(0.5, 2.5));
+
+    // shelf packing, bottom-up (blocks fill from the bottom like the real thing)
+    if (shelfX + s + GAP > W) {
+      shelfX = GAP;
+      shelfY -= (shelfH + GAP);
+      shelfH = 0;
+    }
+    if (shelfY - s < GAP) { asmWeight = 4; updateAssemblyStats(); return; }
+
+    asmTxs.push({ x: shelfX, y: shelfY - s, s: s, hue: feeHue(fee), born: performance.now() });
+    shelfX += s + GAP;
+    shelfH = Math.max(shelfH, s);
+
+    asmCount += 1;
+    asmWeight = Math.min(4, asmWeight + (s * s) / (W * H * 0.82) * 4);
+    updateAssemblyStats();
+  }
+
+  function updateAssemblyStats() {
+    document.getElementById('a-height').textContent = fmt(height + 1);
+    document.getElementById('a-tx').textContent = fmt(asmCount);
+    document.getElementById('a-size').textContent = asmWeight.toFixed(2);
+    document.getElementById('a-meter').style.width = (asmWeight / 4 * 100) + '%';
+  }
+
+  function drawAssembly(now) {
+    ctx.clearRect(0, 0, W, H);
+    for (const t of asmTxs) {
+      const age = (now - t.born) / 350;
+      const k = Math.min(1, age);                 // pop-in scale
+      const ease = 1 - Math.pow(1 - k, 3);
+      const s = t.s * ease;
+      const off = (t.s - s) / 2;
+      ctx.fillStyle = `hsl(${t.hue}, 78%, ${44 + 8 * Math.sin(t.hue)}%)`;
+      ctx.globalAlpha = 0.55 + 0.45 * ease;
+      ctx.fillRect(t.x + off, t.y + off, s, s);
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(drawAssembly);
+  }
+  requestAnimationFrame(drawAssembly);
+
+  // transactions trickle in; pace tuned so the template roughly fills per block interval
+  setInterval(() => {
+    const burst = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < burst; i++) addTx();
+  }, 350);
+
   function mineBlock() {
+    const asm = document.getElementById('assembly');
+    asm.classList.remove('flush');
+    void asm.offsetWidth;
+    asm.classList.add('flush');
+    setTimeout(resetAssembly, 300);
+
     const next = pending.shift();
     height += 1;
     mined.unshift({
@@ -419,12 +577,8 @@
       mempoolMB = mblocks.reduce((s, m) => s + m.blockSize, 0) / 1e6;
 
       live = true;
-      const badge = document.getElementById('mode-badge');
-      badge.textContent = 'live';
-      badge.classList.add('live');
     } catch (e) {
       live = false;
-      document.getElementById('mode-badge').textContent = 'simulated';
     }
     render();
   }
@@ -433,6 +587,7 @@
   pending = Array.from({ length: PENDING_COUNT }, (_, i) => makePending(i));
   mined = Array.from({ length: MINED_COUNT }, (_, i) => makeMined(height - i, (i + 1) * 10 + Math.floor(rnd(-3, 3))));
   render();
+  updateAssemblyStats();
   tryLive();
 
   // demo cadence: mine a block every SIM_BLOCK_MS; when live, poll for real tip instead
