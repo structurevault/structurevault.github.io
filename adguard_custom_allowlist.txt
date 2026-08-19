@@ -1,0 +1,6 @@
+! Title: My Custom AdGuard Allowlist
+! Description: Custom exception rules compiled from user list.
+!
+
+@@||timechaincalendar.com^
+@@||mempool.space^
