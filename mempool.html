@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vertical Mempool — Bitcoin Block Flow</title>
+<style>
+  :root {
+    --bg: #11131f;
+    --bg-deep: #0b0d16;
+    --panel: #1d1f31;
+    --text: #f5f5ff;
+    --text-dim: #8a8fb5;
+    --spine: #2d3153;
+    --purple-a: #832ed1;
+    --purple-b: #2e39d1;
+    --tip-glow: #f7931a;
+    --mono: 'Courier New', ui-monospace, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: radial-gradient(ellipse at 50% -10%, #1a1d33 0%, var(--bg) 45%, var(--bg-deep) 100%);
+    color: var(--text);
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px;
+    background: rgba(17, 19, 31, 0.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--spine);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: 0.5px; }
+  .btc-dot {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--tip-glow);
+    display: grid; place-items: center;
+    color: #11131f; font-weight: 800; font-size: 16px;
+    box-shadow: 0 0 14px rgba(247, 147, 26, 0.55);
+  }
+  .brand small { display: block; font-weight: 400; font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; }
+  .stats { display: flex; gap: 18px; font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+  .stats b { color: var(--text); display: block; font-size: 14px; }
+  .stats .stat { text-align: right; }
+  .mode-badge {
+    font-size: 10px; font-family: var(--mono); letter-spacing: 1px;
+    padding: 3px 8px; border-radius: 10px; text-transform: uppercase;
+    border: 1px solid var(--spine); color: var(--text-dim);
+  }
+  .mode-badge.live { border-color: #2ee6a8; color: #2ee6a8; }
+
+  /* ---------- the vertical chain ---------- */
+  .chain-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 30px 16px 80px;
+    position: relative;
+  }
+  /* glowing spine running behind the blocks */
+  .chain-wrap::before {
+    content: '';
+    position: absolute; top: 0; bottom: 0; left: 50%;
+    width: 2px; transform: translateX(-50%);
+    background: linear-gradient(180deg,
+      rgba(247,147,26,0.0) 0%,
+      rgba(247,147,26,0.35) 18%,
+      rgba(131,46,209,0.4) 60%,
+      rgba(46,57,209,0.0) 100%);
+    z-index: 0;
+  }
+
+  .section-label {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 8px 0 18px;
+    position: relative; z-index: 2;
+  }
+
+  #pending-col, #mined-col {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 34px;
+    position: relative; z-index: 2;
+  }
+
+  /* ---------- block cube ---------- */
+  .block {
+    width: 250px; height: 250px;
+    position: relative;
+    cursor: default;
+    transition: transform 0.25s ease;
+    animation: settle 0.6s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+  }
+  .block:hover { transform: translateY(-3px) scale(1.02); }
+
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(-28px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes mineIn {
+    0%   { opacity: 0.4; transform: translateY(-90px) scale(0.92); filter: brightness(2); }
+    60%  { filter: brightness(1.35); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
+  }
+  .block.just-mined { animation: mineIn 0.9s cubic-bezier(0.22, 1.1, 0.36, 1) both; }
+
+  /* front face */
+  .face {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    border-radius: 3px;
+    padding: 14px;
+    text-align: center;
+  }
+  /* 3-D top + side faces, mempool.space style */
+  .block::before { /* top face */
+    content: '';
+    position: absolute;
+    left: 10px; right: -10px; top: -10px;
+    height: 10px;
+    transform: skewX(45deg);
+    transform-origin: bottom left;
+    filter: brightness(1.35);
+    border-radius: 2px 2px 0 0;
+  }
+  .block::after { /* right face */
+    content: '';
+    position: absolute;
+    top: -10px; bottom: 10px; right: -10px;
+    width: 10px;
+    transform: skewY(45deg);
+    transform-origin: top left;
+    filter: brightness(0.6);
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* pending (mempool) gradient tiers */
+  .block.pending .face,
+  .block.pending::before,
+  .block.pending::after { background: linear-gradient(180deg, #ffb852 0%, #b35c00 100%); }
+  .block.pending.hot .face,
+  .block.pending.hot::before,
+  .block.pending.hot::after { background: linear-gradient(180deg, #ff8f52 0%, #b33000 100%); }
+  .block.pending.cool .face,
+  .block.pending.cool::before,
+  .block.pending.cool::after { background: linear-gradient(180deg, #ffd452 0%, #b38200 100%); }
+
+  /* mined blocks */
+  .block.mined .face,
+  .block.mined::before,
+  .block.mined::after { background: linear-gradient(180deg, var(--purple-a) 0%, var(--purple-b) 100%); }
+
+  .b-height {
+    font-family: var(--mono);
+    font-size: 20px; font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .b-fee { font-size: 17px; font-weight: 600; }
+  .b-range { font-size: 12px; opacity: 0.85; font-family: var(--mono); }
+  .b-size { font-size: 15px; font-weight: 500; margin-top: 6px; }
+  .b-tx { font-size: 12px; opacity: 0.9; }
+  .b-meta {
+    margin-top: 8px;
+    font-size: 12px;
+    font-style: italic;
+    opacity: 0.95;
+  }
+  .b-pool {
+    margin-top: 6px;
+    font-size: 11px;
+    font-family: var(--mono);
+    background: rgba(0,0,0,0.28);
+    padding: 3px 10px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ---------- the tip divider ---------- */
+  .tip {
+    position: relative; z-index: 3;
+    margin: 40px auto;
+    max-width: 420px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .tip .line { flex: 1; height: 1px; background: repeating-linear-gradient(90deg, var(--tip-glow) 0 6px, transparent 6px 12px); opacity: 0.7; }
+  .tip .tag {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+    color: var(--tip-glow); text-transform: uppercase;
+    padding: 5px 14px;
+    border: 1px solid rgba(247,147,26,0.5);
+    border-radius: 14px;
+    background: rgba(247,147,26,0.08);
+    white-space: nowrap;
+    box-shadow: 0 0 18px rgba(247,147,26,0.15);
+  }
+  .tip.flash .tag { animation: tipFlash 0.9s ease; }
+  @keyframes tipFlash {
+    0% { box-shadow: 0 0 6px rgba(247,147,26,0.3); }
+    35% { box-shadow: 0 0 40px rgba(247,147,26,0.9); background: rgba(247,147,26,0.3); }
+    100% { box-shadow: 0 0 18px rgba(247,147,26,0.15); }
+  }
+
+  footer {
+    text-align: center;
+    font-size: 11px; font-family: var(--mono);
+    color: var(--text-dim);
+    padding: 20px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .block, .block.just-mined { animation: none; }
+    .block:hover { transform: none; }
+  }
+  @media (max-width: 480px) {
+    .block { width: 210px; height: 210px; }
+    .stats .stat:nth-child(2) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="btc-dot">&#8383;</div>
+    <div>
+      Vertical Mempool
+      <small>block flow &middot; top to tip</small>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="stat-height">—</b>chain tip</div>
+    <div class="stat"><b id="stat-mempool">—</b>mempool</div>
+    <div class="stat"><span class="mode-badge" id="mode-badge">connecting…</span></div>
+  </div>
+</header>
+
+<div class="chain-wrap">
+  <div class="section-label">&#9660; upcoming blocks &#9660;</div>
+  <div id="pending-col"></div>
+
+  <div class="tip" id="tip">
+    <div class="line"></div>
+    <div class="tag" id="tip-tag">chain tip</div>
+    <div class="line"></div>
+  </div>
+
+  <div class="section-label">mined blocks</div>
+  <div id="mined-col"></div>
+</div>
+
+<footer>styled after mempool.space &middot; not affiliated &middot; tick = simulated ~10 min block interval</footer>
+
+<script>
+(() => {
+  const POOLS = ['Foundry USA','AntPool','ViaBTC','F2Pool','MARA Pool','Ocean','Braiins Pool','SpiderPool','Luxor','SECPOOL'];
+  const PENDING_COUNT = 4;
+  const MINED_COUNT = 6;
+  const SIM_BLOCK_MS = 25000; // demo speed: one "block" every 25s
+
+  let live = false;
+  let height = 962140 + Math.floor(Math.random() * 40);
+  let pending = [];
+  let mined = [];
+  let mempoolMB = 180 + Math.random() * 220;
+
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const fmt = n => n.toLocaleString('en-AU');
+
+  function makePending(i) {
+    const base = Math.max(1, 6 - i * 1.4 + rnd(-0.5, 0.5));
+    const med = +(base).toFixed(base < 3 ? 2 : 1);
+    return {
+      median: med,
+      lo: +(Math.max(1, med * rnd(0.4, 0.7))).toFixed(1),
+      hi: +((med * rnd(1.8, 6)).toFixed(0)),
+      sizeMB: +(rnd(1.2, 1.9)).toFixed(2),
+      tx: Math.floor(rnd(2400, 4600)),
+      eta: (i + 1) * 10
+    };
+  }
+
+  function makeMined(h, minutesAgo) {
+    const med = +(rnd(1.2, 8)).toFixed(1);
+    return {
+      height: h,
+      median: med,
+      lo: +(Math.max(1, med * rnd(0.4, 0.8))).toFixed(1),
+      hi: +((med * rnd(2, 8)).toFixed(0)),
+      sizeMB: +(rnd(1.3, 2.1)).toFixed(2),
+      tx: Math.floor(rnd(2200, 4800)),
+      minedAt: Date.now() - minutesAgo * 60000,
+      pool: POOLS[Math.floor(Math.random() * POOLS.length)]
+    };
+  }
+
+  function ago(ts) {
+    const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
+    if (m < 1) return 'just now';
+    if (m < 60) return m + ' min ago';
+    const h = Math.floor(m / 60);
+    return h + ' hr ' + (m % 60) + ' min ago';
+  }
+
+  function feeTier(median) {
+    if (median >= 6) return 'hot';
+    if (median <= 2.5) return 'cool';
+    return '';
+  }
+
+  function blockHTML(b, isPending) {
+    if (isPending) {
+      return `
+        <div class="face">
+          <div class="b-fee">~${b.median} sat/vB</div>
+          <div class="b-range">${b.lo} – ${b.hi} sat/vB</div>
+          <div class="b-size">${b.sizeMB} MB</div>
+          <div class="b-tx">${fmt(b.tx)} transactions</div>
+          <div class="b-meta">in ~${b.eta} minutes</div>
+        </div>`;
+    }
+    return `
+      <div class="face">
+        <div class="b-height">${fmt(b.height)}</div>
+        <div class="b-fee">~${b.median} sat/vB</div>
+        <div class="b-range">${b.lo} – ${b.hi} sat/vB</div>
+        <div class="b-size">${b.sizeMB} MB</div>
+        <div class="b-tx">${fmt(b.tx)} transactions</div>
+        <div class="b-meta">${ago(b.minedAt)}</div>
+        <div class="b-pool">${b.pool}</div>
+      </div>`;
+  }
+
+  function render(justMinedHeight) {
+    const pcol = document.getElementById('pending-col');
+    const mcol = document.getElementById('mined-col');
+
+    pcol.innerHTML = pending.map(b =>
+      `<div class="block pending ${feeTier(b.median)}">${blockHTML(b, true)}</div>`
+    ).join('');
+
+    mcol.innerHTML = mined.map(b =>
+      `<div class="block mined ${b.height === justMinedHeight ? 'just-mined' : ''}">${blockHTML(b, false)}</div>`
+    ).join('');
+
+    document.getElementById('stat-height').textContent = fmt(height);
+    document.getElementById('stat-mempool').textContent = mempoolMB.toFixed(0) + ' MB';
+    document.getElementById('tip-tag').textContent = 'chain tip \u00B7 ' + fmt(height);
+  }
+
+  function mineBlock() {
+    const next = pending.shift();
+    height += 1;
+    mined.unshift({
+      height: height,
+      median: next.median,
+      lo: next.lo,
+      hi: next.hi,
+      sizeMB: next.sizeMB,
+      tx: next.tx,
+      minedAt: Date.now(),
+      pool: POOLS[Math.floor(Math.random() * POOLS.length)]
+    });
+    if (mined.length > MINED_COUNT) mined.pop();
+
+    // refill mempool queue + recompute ETAs
+    pending.push(makePending(PENDING_COUNT - 1));
+    pending.forEach((b, i) => b.eta = (i + 1) * 10);
+    mempoolMB = Math.max(40, mempoolMB + rnd(-25, 20));
+
+    const tip = document.getElementById('tip');
+    tip.classList.remove('flash');
+    void tip.offsetWidth;
+    tip.classList.add('flash');
+
+    render(height);
+  }
+
+  // ---- optional live bootstrap from mempool.space (falls back to simulation) ----
+  async function tryLive() {
+    try {
+      const [blocksRes, mempoolRes] = await Promise.all([
+        fetch('https://mempool.space/api/v1/blocks', { mode: 'cors' }),
+        fetch('https://mempool.space/api/v1/fees/mempool-blocks', { mode: 'cors' })
+      ]);
+      if (!blocksRes.ok || !mempoolRes.ok) throw new Error('bad response');
+      const blocks = await blocksRes.json();
+      const mblocks = await mempoolRes.json();
+
+      mined = blocks.slice(0, MINED_COUNT).map(b => ({
+        height: b.height,
+        median: +(b.extras?.medianFee ?? 2).toFixed(1),
+        lo: +(b.extras?.feeRange?.[0] ?? 1).toFixed(1),
+        hi: Math.round(b.extras?.feeRange?.slice(-1)[0] ?? 20),
+        sizeMB: +(b.size / 1e6).toFixed(2),
+        tx: b.tx_count,
+        minedAt: b.timestamp * 1000,
+        pool: b.extras?.pool?.name ?? 'Unknown'
+      }));
+      height = mined[0].height;
+
+      pending = mblocks.slice(0, PENDING_COUNT).map((m, i) => ({
+        median: +m.medianFee.toFixed(1),
+        lo: +m.feeRange[0].toFixed(1),
+        hi: Math.round(m.feeRange[m.feeRange.length - 1]),
+        sizeMB: +(m.blockVSize / 1e6).toFixed(2),
+        tx: m.nTx,
+        eta: (i + 1) * 10
+      }));
+      mempoolMB = mblocks.reduce((s, m) => s + m.blockSize, 0) / 1e6;
+
+      live = true;
+      const badge = document.getElementById('mode-badge');
+      badge.textContent = 'live';
+      badge.classList.add('live');
+    } catch (e) {
+      live = false;
+      document.getElementById('mode-badge').textContent = 'simulated';
+    }
+    render();
+  }
+
+  // ---- boot with simulated data immediately, then try to upgrade to live ----
+  pending = Array.from({ length: PENDING_COUNT }, (_, i) => makePending(i));
+  mined = Array.from({ length: MINED_COUNT }, (_, i) => makeMined(height - i, (i + 1) * 10 + Math.floor(rnd(-3, 3))));
+  render();
+  tryLive();
+
+  // demo cadence: mine a block every SIM_BLOCK_MS; when live, poll for real tip instead
+  setInterval(async () => {
+    if (live) {
+      try {
+        const res = await fetch('https://mempool.space/api/blocks/tip/height');
+        const tip = parseInt(await res.text(), 10);
+        if (tip > height) {
+          await tryLive();
+          const t = document.getElementById('tip');
+          t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash');
+        }
+        return;
+      } catch (e) { /* fall through to sim */ }
+    }
+    mineBlock();
+  }, SIM_BLOCK_MS);
+
+  // keep "x min ago" fresh
+  setInterval(() => render(), 60000);
+})();
+</script>
+</body>
+</html>
