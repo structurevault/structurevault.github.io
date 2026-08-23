@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boneo Primary School — Weather</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     Boneo Primary School Weather Dashboard
+     Landscape / horizontal layout for wall displays & Surface Hub
+     Data: Open-Meteo (no API key required)
+     Font: Lexend — designed to improve reading fluency for
+     young readers, which is exactly this audience.
+     ============================================================ */
+
+  :root{
+    --ink:#0e1626;
+    --ink-soft:rgba(255,255,255,.72);
+    --ink-faint:rgba(255,255,255,.45);
+    --card:rgba(255,255,255,.10);
+    --card-line:rgba(255,255,255,.16);
+    --sand:#f2e3c2;
+    --sun:#ffd166;
+    --hat-red:#e5484d;
+    --hat-green:#46c079;
+    --radius:22px;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  html,body{height:100%}
+  body{
+    font-family:'Lexend',system-ui,sans-serif;
+    color:#fff;
+    background:linear-gradient(160deg,#1b3a5b 0%,#2b6a8f 55%,#3f8fae 100%);
+    overflow:hidden;
+    transition:background 2s ease;
+  }
+
+  /* --- weather-driven sky themes --- */
+  body.sky-clear-day   {background:linear-gradient(160deg,#2f7fc1 0%,#57a8d8 55%,#8ecfe8 100%)}
+  body.sky-clear-night {background:linear-gradient(160deg,#0a1330 0%,#14224a 55%,#1e3358 100%)}
+  body.sky-cloud-day   {background:linear-gradient(160deg,#4a6b85 0%,#6b8ba3 55%,#8fa9bc 100%)}
+  body.sky-cloud-night {background:linear-gradient(160deg,#141c2b 0%,#232f43 55%,#31405a 100%)}
+  body.sky-rain        {background:linear-gradient(160deg,#25344a 0%,#37506b 55%,#476482 100%)}
+  body.sky-storm       {background:linear-gradient(160deg,#181524 0%,#2a2440 55%,#3a3358 100%)}
+  body.sky-fog         {background:linear-gradient(160deg,#5c6a76 0%,#7d8b96 55%,#98a5ae 100%)}
+
+  .stage{
+    height:100vh;
+    display:grid;
+    grid-template-columns:37% 1fr;
+    gap:clamp(14px,1.6vw,28px);
+    padding:clamp(14px,1.8vw,30px);
+  }
+
+  /* ================= LEFT: the sky panel ================= */
+  .hero{
+    position:relative;
+    border-radius:calc(var(--radius) + 8px);
+    background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.05));
+    border:1px solid var(--card-line);
+    backdrop-filter:blur(6px);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:clamp(20px,2.4vw,40px);
+    overflow:hidden;
+  }
+  .hero-sky{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+
+  .school{
+    display:flex;align-items:center;gap:14px;position:relative;z-index:2;
+  }
+  .school-dot{
+    width:14px;height:14px;border-radius:50%;
+    background:var(--sun);
+    box-shadow:0 0 0 5px rgba(255,209,102,.22);
+    flex:0 0 auto;
+  }
+  .school h1{
+    font-size:clamp(18px,1.5vw,26px);
+    font-weight:700;letter-spacing:.01em;line-height:1.2;
+  }
+  .school .place{
+    font-size:clamp(12px,.95vw,16px);
+    color:var(--ink-soft);font-weight:400;
+  }
+
+  .now{position:relative;z-index:2}
+  .now .temp{
+    font-size:clamp(88px,11vw,190px);
+    font-weight:800;line-height:.95;letter-spacing:-.03em;
+    text-shadow:0 6px 30px rgba(0,0,0,.25);
+  }
+  .now .temp sup{font-size:.38em;font-weight:600;vertical-align:super}
+  .now .cond{
+    font-size:clamp(20px,1.9vw,34px);
+    font-weight:600;margin-top:6px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .now .cond .glyph{font-size:1.35em;line-height:1}
+  .now .sub{
+    margin-top:10px;
+    font-size:clamp(13px,1.05vw,19px);
+    color:var(--ink-soft);
+    display:flex;gap:22px;flex-wrap:wrap;
+  }
+  .now .sub b{color:#fff;font-weight:600}
+
+  .clockline{
+    position:relative;z-index:2;
+    display:flex;justify-content:space-between;align-items:flex-end;
+  }
+  .clock{
+    font-size:clamp(30px,2.8vw,52px);
+    font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.01em;
+  }
+  .dateline{
+    font-size:clamp(13px,1vw,18px);
+    color:var(--ink-soft);text-align:right;line-height:1.45;
+  }
+
+  /* floating clouds + sun in the hero */
+  .sun-disc{
+    position:absolute;top:-70px;right:-70px;width:240px;height:240px;
+    border-radius:50%;
+    background:radial-gradient(circle at 40% 40%,#ffe9a8,#ffd166 60%,rgba(255,209,102,0));
+    filter:blur(2px);opacity:0;transition:opacity 1.5s ease;
+    animation:sunbreathe 9s ease-in-out infinite;
+  }
+  .moon-disc{
+    position:absolute;top:26px;right:34px;width:110px;height:110px;border-radius:50%;
+    background:radial-gradient(circle at 62% 38%,#fdfbef,#cdd4e6 70%);
+    box-shadow:0 0 60px 12px rgba(220,230,255,.25);
+    opacity:0;transition:opacity 1.5s ease;
+  }
+  @keyframes sunbreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+
+  .cloud{
+    position:absolute;background:rgba(255,255,255,.55);
+    border-radius:999px;filter:blur(1px);opacity:0;
+    transition:opacity 1.5s ease;
+  }
+  .cloud::before,.cloud::after{
+    content:"";position:absolute;background:inherit;border-radius:50%;
+  }
+  .cloud.c1{width:150px;height:44px;top:16%;left:-160px;animation:drift 60s linear infinite}
+  .cloud.c1::before{width:60px;height:60px;top:-28px;left:24px}
+  .cloud.c1::after{width:44px;height:44px;top:-18px;left:78px}
+  .cloud.c2{width:110px;height:34px;top:34%;left:-120px;animation:drift 85s linear 12s infinite}
+  .cloud.c2::before{width:46px;height:46px;top:-22px;left:18px}
+  .cloud.c2::after{width:34px;height:34px;top:-14px;left:58px}
+  @keyframes drift{from{transform:translateX(0)}to{transform:translateX(140vw)}}
+
+  .rain-layer{position:absolute;inset:0;opacity:0;transition:opacity 1.5s ease}
+  .drop{
+    position:absolute;top:-30px;width:2px;height:22px;border-radius:2px;
+    background:linear-gradient(rgba(255,255,255,0),rgba(210,235,255,.75));
+    animation:fall linear infinite;
+  }
+  @keyframes fall{to{transform:translateY(110vh)}}
+
+  /* ================= RIGHT: data column ================= */
+  .data{
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+    gap:clamp(14px,1.6vw,26px);
+    min-width:0;
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:var(--radius);
+    backdrop-filter:blur(6px);
+  }
+
+  /* --- stat row --- */
+  .stats{
+    display:grid;grid-template-columns:repeat(4,1fr);
+    gap:clamp(12px,1.2vw,22px);
+  }
+  .stat{
+    padding:clamp(14px,1.4vw,24px) clamp(16px,1.5vw,26px);
+    display:flex;flex-direction:column;gap:6px;min-width:0;
+  }
+  .stat .label{
+    font-size:clamp(11px,.85vw,14px);
+    text-transform:uppercase;letter-spacing:.12em;
+    color:var(--ink-faint);font-weight:500;
+  }
+  .stat .value{
+    font-size:clamp(24px,2.2vw,40px);font-weight:700;line-height:1.1;
+    white-space:nowrap;
+  }
+  .stat .value small{font-size:.5em;font-weight:500;color:var(--ink-soft)}
+  .stat .hint{font-size:clamp(11px,.85vw,14px);color:var(--ink-soft)}
+
+  /* SunSmart hat badge — Victorian schools: hats on when UV ≥ 3 */
+  .stat.hat{position:relative;overflow:hidden}
+  .hat-pill{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:clamp(12px,.95vw,16px);font-weight:600;
+    padding:5px 12px;border-radius:999px;width:max-content;
+    background:var(--hat-green);color:#08210f;
+  }
+  .hat-pill.on{background:var(--hat-red);color:#fff}
+
+  /* --- hourly strip --- */
+  .hourly{
+    padding:clamp(16px,1.5vw,26px);
+    display:flex;flex-direction:column;min-height:0;
+  }
+  .panel-title{
+    font-size:clamp(11px,.85vw,14px);
+    text-transform:uppercase;letter-spacing:.14em;
+    color:var(--ink-faint);font-weight:600;margin-bottom:14px;
+  }
+  .hours{
+    flex:1;display:grid;grid-auto-flow:column;
+    grid-auto-columns:1fr;gap:6px;align-items:end;min-height:0;
+  }
+  .hour{
+    display:flex;flex-direction:column;align-items:center;
+    justify-content:flex-end;gap:8px;height:100%;min-width:0;
+  }
+  .hour .htemp{font-size:clamp(13px,1.05vw,18px);font-weight:600;font-variant-numeric:tabular-nums}
+  .hour .bar{
+    width:min(60%,26px);border-radius:8px 8px 4px 4px;
+    background:linear-gradient(180deg,var(--sun),rgba(255,209,102,.35));
+    min-height:8px;
+    transition:height .8s ease;
+  }
+  .hour.rainy .bar{background:linear-gradient(180deg,#8fd0ff,rgba(143,208,255,.3))}
+  .hour .hglyph{font-size:clamp(15px,1.25vw,22px);line-height:1}
+  .hour .hlabel{
+    font-size:clamp(10px,.8vw,13px);color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;
+  }
+  .hour.now-mark .hlabel{color:#fff;font-weight:700}
+  .hour.now-mark::after{
+    content:"now";font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--sun);font-weight:700;
+  }
+
+  /* --- 7-day row --- */
+  .week{
+    display:grid;grid-template-columns:repeat(7,1fr);
+    gap:clamp(10px,1vw,18px);
+  }
+  .day{
+    padding:clamp(12px,1.2vw,20px);
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    text-align:center;min-width:0;
+  }
+  .day.today{background:rgba(255,255,255,.18)}
+  .day .dname{
+    font-size:clamp(12px,.95vw,16px);font-weight:600;
+    text-transform:uppercase;letter-spacing:.08em;
+  }
+  .day .dglyph{font-size:clamp(24px,2vw,38px);line-height:1.15}
+  .day .dtemps{
+    font-size:clamp(13px,1.05vw,18px);font-variant-numeric:tabular-nums;
+    display:flex;gap:8px;
+  }
+  .day .dtemps .lo{color:var(--ink-faint)}
+  .day .drain{font-size:clamp(10px,.8vw,13px);color:#a5d8ff;font-weight:500;min-height:1.2em}
+
+  .footer-note{
+    position:fixed;bottom:8px;right:16px;
+    font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.06em;
+    z-index:5;
+  }
+  .error-banner{
+    position:fixed;top:14px;left:50%;transform:translateX(-50%);
+    background:rgba(229,72,77,.92);padding:8px 18px;border-radius:999px;
+    font-size:13px;font-weight:600;display:none;z-index:10;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .cloud,.sun-disc,.drop{animation:none}
+  }
+  /* fallback stacking for narrow screens */
+  @media (max-aspect-ratio:1/1){
+    body{overflow:auto}
+    .stage{grid-template-columns:1fr;height:auto;min-height:100vh}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .week{grid-template-columns:repeat(4,1fr)}
+  }
+</style>
+</head>
+<body class="sky-clear-day">
+
+<div class="error-banner" id="errBanner">Weather data unavailable — retrying…</div>
+
+<div class="stage">
+
+  <!-- ===================== LEFT ===================== -->
+  <section class="hero" id="hero">
+    <div class="hero-sky" id="heroSky">
+      <div class="sun-disc" id="sunDisc"></div>
+      <div class="moon-disc" id="moonDisc"></div>
+      <div class="cloud c1" id="cloud1"></div>
+      <div class="cloud c2" id="cloud2"></div>
+      <div class="rain-layer" id="rainLayer"></div>
+    </div>
+
+    <div class="school">
+      <div class="school-dot"></div>
+      <div>
+        <h1>Boneo Primary School</h1>
+        <div class="place">SPARK Centre · Mornington Peninsula</div>
+      </div>
+    </div>
+
+    <div class="now">
+      <div class="temp" id="nowTemp">--<sup>°</sup></div>
+      <div class="cond"><span class="glyph" id="nowGlyph">☀️</span><span id="nowCond">Loading…</span></div>
+      <div class="sub">
+        <span>Feels like <b id="nowFeels">--°</b></span>
+        <span>High <b id="nowHi">--°</b></span>
+        <span>Low <b id="nowLo">--°</b></span>
+      </div>
+    </div>
+
+    <div class="clockline">
+      <div class="clock" id="clock">--:--</div>
+      <div class="dateline" id="dateline">—</div>
+    </div>
+  </section>
+
+  <!-- ===================== RIGHT ===================== -->
+  <section class="data">
+
+    <div class="stats">
+      <div class="card stat hat">
+        <div class="label">SunSmart · UV</div>
+        <div class="value" id="uvVal">--</div>
+        <div class="hat-pill" id="hatPill">🧢 Hats optional</div>
+      </div>
+      <div class="card stat">
+        <div class="label">Wind</div>
+        <div class="value" id="windVal">-- <small>km/h</small></div>
+        <div class="hint" id="windDir">—</div>
+      </div>
+      <div class="card stat">
+        <div class="label">Rain chance</div>
+        <div class="value" id="rainVal">--<small>%</small></div>
+        <div class="hint" id="rainHint">today</div>
+      </div>
+      <div class="card stat">
+        <div class="label">Humidity</div>
+        <div class="value" id="humVal">--<small>%</small></div>
+        <div class="hint" id="humHint">—</div>
+      </div>
+    </div>
+
+    <div class="card hourly">
+      <div class="panel-title">Next 12 hours</div>
+      <div class="hours" id="hours"></div>
+    </div>
+
+    <div class="week" id="week"></div>
+
+  </section>
+</div>
+
+<div class="footer-note">Live data: Open-Meteo · updates every 10 min</div>
+
+<script>
+/* ------------------------------------------------------------
+   Boneo Primary School — approx. coordinates
+------------------------------------------------------------ */
+const LAT = -38.412, LON = 144.897;
+const API = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}`
+  + `&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m,wind_direction_10m,uv_index`
+  + `&hourly=temperature_2m,precipitation_probability,weather_code,is_day`
+  + `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max`
+  + `&timezone=Australia%2FMelbourne&forecast_days=7`;
+
+/* WMO weather codes → label, glyph (day/night), sky theme, particle mode */
+const WMO = {
+  0:  ["Clear sky","☀️","🌕","clear"],
+  1:  ["Mostly sunny","🌤️","🌙","clear"],
+  2:  ["Partly cloudy","⛅","☁️","cloud"],
+  3:  ["Overcast","☁️","☁️","cloud"],
+  45: ["Foggy","🌫️","🌫️","fog"],
+  48: ["Icy fog","🌫️","🌫️","fog"],
+  51: ["Light drizzle","🌦️","🌧️","rain"],
+  53: ["Drizzle","🌦️","🌧️","rain"],
+  55: ["Heavy drizzle","🌧️","🌧️","rain"],
+  61: ["Light rain","🌦️","🌧️","rain"],
+  63: ["Rain","🌧️","🌧️","rain"],
+  65: ["Heavy rain","🌧️","🌧️","rain"],
+  71: ["Light snow","🌨️","🌨️","rain"],
+  73: ["Snow","🌨️","🌨️","rain"],
+  75: ["Heavy snow","❄️","❄️","rain"],
+  80: ["Showers","🌦️","🌧️","rain"],
+  81: ["Showers","🌧️","🌧️","rain"],
+  82: ["Heavy showers","🌧️","🌧️","rain"],
+  95: ["Thunderstorm","⛈️","⛈️","storm"],
+  96: ["Storm & hail","⛈️","⛈️","storm"],
+  99: ["Storm & hail","⛈️","⛈️","storm"],
+};
+const wmo = c => WMO[c] || ["Weather","🌡️","🌡️","cloud"];
+
+const $ = id => document.getElementById(id);
+
+/* ---------------- clock ---------------- */
+function tickClock(){
+  const now = new Date();
+  const t = now.toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit",hour12:true,timeZone:"Australia/Melbourne"});
+  $("clock").textContent = t.replace(" ","").toLowerCase();
+  $("dateline").innerHTML = now.toLocaleDateString("en-AU",
+    {weekday:"long",day:"numeric",month:"long",timeZone:"Australia/Melbourne"});
+}
+setInterval(tickClock,1000); tickClock();
+
+/* ---------------- sky theming + particles ---------------- */
+function setSky(mode,isDay){
+  const cls = {
+    clear: isDay ? "sky-clear-day" : "sky-clear-night",
+    cloud: isDay ? "sky-cloud-day" : "sky-cloud-night",
+    rain:"sky-rain", storm:"sky-storm", fog:"sky-fog"
+  }[mode] || "sky-cloud-day";
+  document.body.className = cls;
+
+  $("sunDisc").style.opacity  = (mode==="clear" && isDay) ? 1 : 0;
+  $("moonDisc").style.opacity = (mode==="clear" && !isDay) ? 1 : 0;
+  const clouds = (mode==="cloud"||mode==="rain"||mode==="storm") ? .9 : (mode==="clear"?.35:0);
+  $("cloud1").style.opacity = clouds;
+  $("cloud2").style.opacity = clouds;
+  $("rainLayer").style.opacity = (mode==="rain"||mode==="storm") ? 1 : 0;
+}
+
+(function buildRain(){
+  const layer = $("rainLayer");
+  for(let i=0;i<40;i++){
+    const d = document.createElement("div");
+    d.className = "drop";
+    d.style.left = Math.random()*100 + "%";
+    d.style.animationDuration = (0.8 + Math.random()*0.9) + "s";
+    d.style.animationDelay = (Math.random()*2) + "s";
+    layer.appendChild(d);
+  }
+})();
+
+/* ---------------- helpers ---------------- */
+const compass = deg => ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"][Math.round(deg/22.5)%16];
+const round = v => Math.round(v);
+
+function humidityHint(h){
+  if(h>=85) return "very sticky";
+  if(h>=70) return "humid";
+  if(h>=40) return "comfortable";
+  return "dry air";
+}
+
+/* ---------------- render ---------------- */
+function render(d){
+  const c = d.current;
+  const [label,dayGlyph,nightGlyph,mode] = wmo(c.weather_code);
+  const isDay = c.is_day === 1;
+
+  $("nowTemp").innerHTML = round(c.temperature_2m) + "<sup>°</sup>";
+  $("nowGlyph").textContent = isDay ? dayGlyph : nightGlyph;
+  $("nowCond").textContent = label;
+  $("nowFeels").textContent = round(c.apparent_temperature) + "°";
+  $("nowHi").textContent = round(d.daily.temperature_2m_max[0]) + "°";
+  $("nowLo").textContent = round(d.daily.temperature_2m_min[0]) + "°";
+
+  setSky(mode,isDay);
+
+  /* SunSmart — hats on when UV ≥ 3 (use today's max during the day) */
+  const uvNow = c.uv_index ?? 0;
+  const uvMax = d.daily.uv_index_max[0] ?? uvNow;
+  const uvShow = isDay ? Math.max(uvNow,0) : uvNow;
+  $("uvVal").textContent = (Math.round(uvShow*10)/10).toFixed(1);
+  const hatsOn = (isDay ? Math.max(uvNow, uvMax) : uvNow) >= 3;
+  const pill = $("hatPill");
+  if(hatsOn){ pill.classList.add("on"); pill.textContent = "🧢 No hat, no play!"; }
+  else      { pill.classList.remove("on"); pill.textContent = "🧢 Hats optional"; }
+
+  $("windVal").innerHTML = round(c.wind_speed_10m) + " <small>km/h</small>";
+  $("windDir").textContent = "from the " + compass(c.wind_direction_10m);
+
+  $("humVal").innerHTML = round(c.relative_humidity_2m) + "<small>%</small>";
+  $("humHint").textContent = humidityHint(c.relative_humidity_2m);
+
+  /* today's max rain chance */
+  const rainMax = d.daily.precipitation_probability_max[0] ?? 0;
+  $("rainVal").innerHTML = rainMax + "<small>%</small>";
+  $("rainHint").textContent = rainMax >= 60 ? "wet-day timetable?" : "today";
+
+  /* ---- hourly: next 12 hours from now ---- */
+  const nowIso = new Date().toLocaleString("sv-SE",{timeZone:"Australia/Melbourne"}).slice(0,13);
+  let start = d.hourly.time.findIndex(t => t.slice(0,13) >= nowIso);
+  if(start < 0) start = 0;
+  const hoursEl = $("hours"); hoursEl.innerHTML = "";
+
+  const slice = [];
+  for(let i=start;i<Math.min(start+12,d.hourly.time.length);i++) slice.push(i);
+  const temps = slice.map(i=>d.hourly.temperature_2m[i]);
+  const tMin = Math.min(...temps), tMax = Math.max(...temps);
+
+  slice.forEach((i,idx)=>{
+    const t = d.hourly.temperature_2m[i];
+    const pp = d.hourly.precipitation_probability[i] ?? 0;
+    const [,hg,ng] = wmo(d.hourly.weather_code[i]);
+    const hIsDay = d.hourly.is_day[i]===1;
+    const hr = new Date(d.hourly.time[i]).getHours();
+    const hLabel = hr===0 ? "12am" : hr<12 ? hr+"am" : hr===12 ? "12pm" : (hr-12)+"pm";
+    const pct = tMax===tMin ? 55 : 22 + ((t-tMin)/(tMax-tMin))*60; /* 22–82% height */
+
+    const el = document.createElement("div");
+    el.className = "hour" + (pp>=50 ? " rainy":"") + (idx===0 ? " now-mark":"");
+    el.innerHTML = `
+      <div class="htemp">${round(t)}°</div>
+      <div class="bar" style="height:${pct}%"></div>
+      <div class="hglyph">${hIsDay?hg:ng}</div>
+      <div class="hlabel">${hLabel}</div>`;
+    hoursEl.appendChild(el);
+  });
+
+  /* ---- 7-day ---- */
+  const weekEl = $("week"); weekEl.innerHTML = "";
+  d.daily.time.forEach((ds,i)=>{
+    const [,g] = wmo(d.daily.weather_code[i]);
+    const name = i===0 ? "Today"
+      : new Date(ds+"T12:00").toLocaleDateString("en-AU",{weekday:"short"});
+    const rp = d.daily.precipitation_probability_max[i];
+    const el = document.createElement("div");
+    el.className = "card day" + (i===0?" today":"");
+    el.innerHTML = `
+      <div class="dname">${name}</div>
+      <div class="dglyph">${g}</div>
+      <div class="dtemps"><span class="hi">${round(d.daily.temperature_2m_max[i])}°</span>
+        <span class="lo">${round(d.daily.temperature_2m_min[i])}°</span></div>
+      <div class="drain">${rp>=20 ? "💧 "+rp+"%" : ""}</div>`;
+    weekEl.appendChild(el);
+  });
+
+  $("errBanner").style.display = "none";
+}
+
+/* ---------------- fetch loop (24/7 friendly) ---------------- */
+async function load(){
+  try{
+    const res = await fetch(API);
+    if(!res.ok) throw new Error(res.status);
+    render(await res.json());
+  }catch(e){
+    console.error("Weather fetch failed:",e);
+    $("errBanner").style.display = "block";
+    setTimeout(load, 60_000); /* retry in 1 min on failure */
+    return;
+  }
+}
+load();
+setInterval(load, 10*60_000); /* refresh every 10 minutes */
+</script>
+</body>
+</html>
