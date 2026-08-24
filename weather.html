@@ -9,47 +9,88 @@
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   /* ============================================================
-     Boneo Primary School Weather Dashboard
-     Landscape / horizontal layout for wall displays & Surface Hub
+     Boneo Primary School Weather Dashboard — DARK EDITION
+     Landscape layout for wall displays & Surface Hub, 24/7 safe.
      Data: Open-Meteo (no API key required)
-     Font: Lexend — designed to improve reading fluency for
-     young readers, which is exactly this audience.
      ============================================================ */
 
   :root{
-    --ink:#0e1626;
-    --ink-soft:rgba(255,255,255,.72);
-    --ink-faint:rgba(255,255,255,.45);
-    --card:rgba(255,255,255,.10);
-    --card-line:rgba(255,255,255,.16);
-    --sand:#f2e3c2;
-    --sun:#ffd166;
-    --hat-red:#e5484d;
-    --hat-green:#46c079;
+    --bg:#05070d;
+    --text:#ffffff;
+    --text-soft:rgba(255,255,255,.82);
+    --text-faint:rgba(255,255,255,.55);
+    --card:rgba(255,255,255,.06);
+    --card-line:rgba(255,255,255,.14);
+    --accent:#ffd166;          /* weather accent — retinted per condition */
+    --accent-soft:rgba(255,209,102,.35);
+    --hat-red:#ff4d55;
+    --hat-green:#2ee87e;
+    --rain-blue:#6fc8ff;
     --radius:22px;
   }
 
   *{margin:0;padding:0;box-sizing:border-box}
-
   html,body{height:100%}
   body{
     font-family:'Lexend',system-ui,sans-serif;
-    color:#fff;
-    background:linear-gradient(160deg,#1b3a5b 0%,#2b6a8f 55%,#3f8fae 100%);
+    color:var(--text);
+    background:var(--bg);
     overflow:hidden;
-    transition:background 2s ease;
   }
 
-  /* --- weather-driven sky themes --- */
-  body.sky-clear-day   {background:linear-gradient(160deg,#2f7fc1 0%,#57a8d8 55%,#8ecfe8 100%)}
-  body.sky-clear-night {background:linear-gradient(160deg,#0a1330 0%,#14224a 55%,#1e3358 100%)}
-  body.sky-cloud-day   {background:linear-gradient(160deg,#4a6b85 0%,#6b8ba3 55%,#8fa9bc 100%)}
-  body.sky-cloud-night {background:linear-gradient(160deg,#141c2b 0%,#232f43 55%,#31405a 100%)}
-  body.sky-rain        {background:linear-gradient(160deg,#25344a 0%,#37506b 55%,#476482 100%)}
-  body.sky-storm       {background:linear-gradient(160deg,#181524 0%,#2a2440 55%,#3a3358 100%)}
-  body.sky-fog         {background:linear-gradient(160deg,#5c6a76 0%,#7d8b96 55%,#98a5ae 100%)}
+  /* ---- animated deep-sky backdrop (condition-tinted aurora) ---- */
+  .backdrop{position:fixed;inset:0;z-index:0;overflow:hidden}
+  .aurora{
+    position:absolute;inset:-25%;
+    background:
+      radial-gradient(42% 55% at 22% 28%, var(--tintA,#123a63) 0%, transparent 70%),
+      radial-gradient(48% 60% at 78% 72%, var(--tintB,#0b2a4a) 0%, transparent 70%),
+      radial-gradient(35% 45% at 62% 18%, var(--tintC,#1b2a55) 0%, transparent 70%);
+    filter:blur(50px) saturate(1.25);
+    animation:auroraShift 26s ease-in-out infinite alternate;
+    transition:opacity 2s ease;
+  }
+  @keyframes auroraShift{
+    0%  {transform:translate(0,0) rotate(0deg) scale(1)}
+    50% {transform:translate(3%, -2%) rotate(2deg) scale(1.06)}
+    100%{transform:translate(-3%, 2%) rotate(-2deg) scale(1.02)}
+  }
+  .vignette{
+    position:absolute;inset:0;
+    background:radial-gradient(120% 120% at 50% 45%, transparent 40%, rgba(0,0,0,.55) 100%);
+  }
+
+  /* starfield canvas sits behind everything */
+  #stars{position:absolute;inset:0;opacity:0;transition:opacity 2s ease}
+  body.stars-on #stars{opacity:1}
+
+  /* lightning flash overlay */
+  .flash{
+    position:fixed;inset:0;background:#dbe9ff;opacity:0;
+    pointer-events:none;z-index:3;
+  }
+  body.storm-on .flash{animation:lightning 7s infinite}
+  @keyframes lightning{
+    0%,86%,100%{opacity:0}
+    87%{opacity:.55} 88%{opacity:0}
+    90%{opacity:.8}  91%{opacity:.05}
+    92%{opacity:.4}  94%{opacity:0}
+  }
+
+  /* fog bands */
+  .fogband{
+    position:fixed;left:-60%;width:220%;height:22vh;z-index:2;
+    background:linear-gradient(90deg,transparent,rgba(190,205,220,.14) 30%,rgba(190,205,220,.22) 50%,rgba(190,205,220,.14) 70%,transparent);
+    filter:blur(14px);opacity:0;transition:opacity 2s ease;pointer-events:none;
+  }
+  body.fog-on .fogband{opacity:1}
+  .fogband.f1{top:18%;animation:fogdrift 48s linear infinite}
+  .fogband.f2{top:52%;animation:fogdrift 64s linear infinite reverse}
+  .fogband.f3{top:78%;animation:fogdrift 80s linear 8s infinite}
+  @keyframes fogdrift{from{transform:translateX(-8%)}to{transform:translateX(8%)}}
 
   .stage{
+    position:relative;z-index:4;
     height:100vh;
     display:grid;
     grid-template-columns:37% 1fr;
@@ -57,234 +98,270 @@
     padding:clamp(14px,1.8vw,30px);
   }
 
-  /* ================= LEFT: the sky panel ================= */
+  /* ================= LEFT: hero sky panel ================= */
   .hero{
     position:relative;
     border-radius:calc(var(--radius) + 8px);
-    background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.05));
+    background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.02));
     border:1px solid var(--card-line);
-    backdrop-filter:blur(6px);
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
+    box-shadow:0 20px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+    display:flex;flex-direction:column;justify-content:space-between;
     padding:clamp(20px,2.4vw,40px);
     overflow:hidden;
+    animation:riseIn .9s cubic-bezier(.2,.9,.3,1) both;
   }
-  .hero-sky{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .hero-sky{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit}
 
-  .school{
-    display:flex;align-items:center;gap:14px;position:relative;z-index:2;
-  }
-  .school-dot{
-    width:14px;height:14px;border-radius:50%;
-    background:var(--sun);
-    box-shadow:0 0 0 5px rgba(255,209,102,.22);
-    flex:0 0 auto;
-  }
-  .school h1{
-    font-size:clamp(18px,1.5vw,26px);
-    font-weight:700;letter-spacing:.01em;line-height:1.2;
-  }
-  .school .place{
-    font-size:clamp(12px,.95vw,16px);
-    color:var(--ink-soft);font-weight:400;
-  }
-
-  .now{position:relative;z-index:2}
-  .now .temp{
-    font-size:clamp(88px,11vw,190px);
-    font-weight:800;line-height:.95;letter-spacing:-.03em;
-    text-shadow:0 6px 30px rgba(0,0,0,.25);
-  }
-  .now .temp sup{font-size:.38em;font-weight:600;vertical-align:super}
-  .now .cond{
-    font-size:clamp(20px,1.9vw,34px);
-    font-weight:600;margin-top:6px;
-    display:flex;align-items:center;gap:14px;
-  }
-  .now .cond .glyph{font-size:1.35em;line-height:1}
-  .now .sub{
-    margin-top:10px;
-    font-size:clamp(13px,1.05vw,19px);
-    color:var(--ink-soft);
-    display:flex;gap:22px;flex-wrap:wrap;
-  }
-  .now .sub b{color:#fff;font-weight:600}
-
-  .clockline{
-    position:relative;z-index:2;
-    display:flex;justify-content:space-between;align-items:flex-end;
-  }
-  .clock{
-    font-size:clamp(30px,2.8vw,52px);
-    font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.01em;
-  }
-  .dateline{
-    font-size:clamp(13px,1vw,18px);
-    color:var(--ink-soft);text-align:right;line-height:1.45;
-  }
-
-  /* floating clouds + sun in the hero */
-  .sun-disc{
-    position:absolute;top:-70px;right:-70px;width:240px;height:240px;
-    border-radius:50%;
-    background:radial-gradient(circle at 40% 40%,#ffe9a8,#ffd166 60%,rgba(255,209,102,0));
-    filter:blur(2px);opacity:0;transition:opacity 1.5s ease;
-    animation:sunbreathe 9s ease-in-out infinite;
-  }
-  .moon-disc{
-    position:absolute;top:26px;right:34px;width:110px;height:110px;border-radius:50%;
-    background:radial-gradient(circle at 62% 38%,#fdfbef,#cdd4e6 70%);
-    box-shadow:0 0 60px 12px rgba(220,230,255,.25);
+  /* rotating sun rays + core */
+  .sun-wrap{
+    position:absolute;top:-90px;right:-90px;width:300px;height:300px;
     opacity:0;transition:opacity 1.5s ease;
   }
-  @keyframes sunbreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  .sun-rays{
+    position:absolute;inset:0;
+    background:conic-gradient(
+      var(--accent-soft) 0deg 8deg, transparent 8deg 30deg,
+      var(--accent-soft) 30deg 38deg, transparent 38deg 60deg,
+      var(--accent-soft) 60deg 68deg, transparent 68deg 90deg,
+      var(--accent-soft) 90deg 98deg, transparent 98deg 120deg,
+      var(--accent-soft) 120deg 128deg, transparent 128deg 150deg,
+      var(--accent-soft) 150deg 158deg, transparent 158deg 180deg,
+      var(--accent-soft) 180deg 188deg, transparent 188deg 210deg,
+      var(--accent-soft) 210deg 218deg, transparent 218deg 240deg,
+      var(--accent-soft) 240deg 248deg, transparent 248deg 270deg,
+      var(--accent-soft) 270deg 278deg, transparent 278deg 300deg,
+      var(--accent-soft) 300deg 308deg, transparent 308deg 330deg,
+      var(--accent-soft) 330deg 338deg, transparent 338deg 360deg);
+    border-radius:50%;
+    -webkit-mask:radial-gradient(circle, transparent 34%, #000 36%, #000 68%, transparent 70%);
+            mask:radial-gradient(circle, transparent 34%, #000 36%, #000 68%, transparent 70%);
+    animation:spin 40s linear infinite;
+  }
+  .sun-core{
+    position:absolute;inset:26%;
+    border-radius:50%;
+    background:radial-gradient(circle at 40% 40%, #fff4cf, var(--accent) 65%);
+    box-shadow:0 0 70px 18px var(--accent-soft);
+    animation:sunbreathe 8s ease-in-out infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes sunbreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+
+  .moon-disc{
+    position:absolute;top:26px;right:34px;width:110px;height:110px;border-radius:50%;
+    background:radial-gradient(circle at 62% 38%, #fdfbef, #b9c3dc 70%);
+    box-shadow:0 0 70px 16px rgba(200,215,255,.28);
+    opacity:0;transition:opacity 1.5s ease;
+    animation:moonfloat 12s ease-in-out infinite;
+  }
+  @keyframes moonfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 
   .cloud{
-    position:absolute;background:rgba(255,255,255,.55);
+    position:absolute;background:rgba(190,205,225,.20);
     border-radius:999px;filter:blur(1px);opacity:0;
     transition:opacity 1.5s ease;
   }
-  .cloud::before,.cloud::after{
-    content:"";position:absolute;background:inherit;border-radius:50%;
-  }
-  .cloud.c1{width:150px;height:44px;top:16%;left:-160px;animation:drift 60s linear infinite}
-  .cloud.c1::before{width:60px;height:60px;top:-28px;left:24px}
-  .cloud.c1::after{width:44px;height:44px;top:-18px;left:78px}
-  .cloud.c2{width:110px;height:34px;top:34%;left:-120px;animation:drift 85s linear 12s infinite}
-  .cloud.c2::before{width:46px;height:46px;top:-22px;left:18px}
-  .cloud.c2::after{width:34px;height:34px;top:-14px;left:58px}
-  @keyframes drift{from{transform:translateX(0)}to{transform:translateX(140vw)}}
+  .cloud::before,.cloud::after{content:"";position:absolute;background:inherit;border-radius:50%}
+  .cloud.c1{width:170px;height:48px;top:14%;left:-190px;animation:drift 55s linear infinite}
+  .cloud.c1::before{width:68px;height:68px;top:-32px;left:26px}
+  .cloud.c1::after{width:50px;height:50px;top:-20px;left:88px}
+  .cloud.c2{width:120px;height:36px;top:32%;left:-140px;animation:drift 78s linear 10s infinite}
+  .cloud.c2::before{width:50px;height:50px;top:-24px;left:20px}
+  .cloud.c2::after{width:36px;height:36px;top:-15px;left:62px}
+  .cloud.c3{width:200px;height:54px;top:50%;left:-220px;animation:drift 95s linear 22s infinite}
+  .cloud.c3::before{width:80px;height:80px;top:-38px;left:32px}
+  .cloud.c3::after{width:58px;height:58px;top:-24px;left:104px}
+  @keyframes drift{from{transform:translateX(0)}to{transform:translateX(150vw)}}
 
   .rain-layer{position:absolute;inset:0;opacity:0;transition:opacity 1.5s ease}
   .drop{
-    position:absolute;top:-30px;width:2px;height:22px;border-radius:2px;
-    background:linear-gradient(rgba(255,255,255,0),rgba(210,235,255,.75));
+    position:absolute;top:-30px;width:2px;height:24px;border-radius:2px;
+    background:linear-gradient(rgba(255,255,255,0), var(--rain-blue));
     animation:fall linear infinite;
   }
   @keyframes fall{to{transform:translateY(110vh)}}
 
-  /* ================= RIGHT: data column ================= */
-  .data{
-    display:grid;
-    grid-template-rows:auto 1fr auto;
-    gap:clamp(14px,1.6vw,26px);
-    min-width:0;
+  .school{display:flex;align-items:center;gap:14px;position:relative;z-index:2}
+  .school-dot{
+    width:14px;height:14px;border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 5px var(--accent-soft);
+    flex:0 0 auto;
+    animation:pulse 3s ease-in-out infinite;
   }
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 5px var(--accent-soft)}
+    50%{box-shadow:0 0 0 10px rgba(255,255,255,0)}
+  }
+  .school h1{font-size:clamp(18px,1.5vw,26px);font-weight:700;letter-spacing:.01em;line-height:1.2}
+  .school .place{font-size:clamp(12px,.95vw,16px);color:var(--text-soft);font-weight:400}
+
+  .now{position:relative;z-index:2}
+  .now .temp{
+    position:relative;
+    font-size:clamp(88px,11vw,190px);
+    font-weight:800;line-height:.95;letter-spacing:-.03em;
+    text-shadow:0 0 60px var(--accent-soft), 0 6px 30px rgba(0,0,0,.6);
+  }
+  .now .temp sup{font-size:.38em;font-weight:600;vertical-align:super;color:var(--accent)}
+  .now .cond{
+    font-size:clamp(20px,1.9vw,34px);font-weight:600;margin-top:6px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .now .cond .glyph{font-size:1.35em;line-height:1;animation:glyphbob 5s ease-in-out infinite}
+  @keyframes glyphbob{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-5px) rotate(3deg)}}
+  .now .sub{
+    margin-top:12px;font-size:clamp(13px,1.05vw,19px);
+    color:var(--text-soft);display:flex;gap:22px;flex-wrap:wrap;
+  }
+  .now .sub b{color:#fff;font-weight:700}
+
+  .clockline{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:flex-end}
+  .clock{
+    font-size:clamp(30px,2.8vw,52px);font-weight:700;
+    font-variant-numeric:tabular-nums;letter-spacing:.01em;
+  }
+  .clock .colon{animation:blink 2s steps(1) infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .dateline{font-size:clamp(13px,1vw,18px);color:var(--text-soft);text-align:right;line-height:1.45}
+
+  /* ================= RIGHT: data column ================= */
+  .data{display:grid;grid-template-rows:auto 1fr auto;gap:clamp(14px,1.6vw,26px);min-width:0}
 
   .card{
     background:var(--card);
     border:1px solid var(--card-line);
     border-radius:var(--radius);
-    backdrop-filter:blur(6px);
+    box-shadow:0 10px 34px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
   }
 
-  /* --- stat row --- */
-  .stats{
-    display:grid;grid-template-columns:repeat(4,1fr);
-    gap:clamp(12px,1.2vw,22px);
-  }
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(12px,1.2vw,22px)}
   .stat{
     padding:clamp(14px,1.4vw,24px) clamp(16px,1.5vw,26px);
-    display:flex;flex-direction:column;gap:6px;min-width:0;
+    display:flex;flex-direction:column;gap:7px;min-width:0;
+    animation:riseIn .8s cubic-bezier(.2,.9,.3,1) both;
   }
+  .stat:nth-child(1){animation-delay:.08s}
+  .stat:nth-child(2){animation-delay:.16s}
+  .stat:nth-child(3){animation-delay:.24s}
+  .stat:nth-child(4){animation-delay:.32s}
+  @keyframes riseIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
   .stat .label{
-    font-size:clamp(11px,.85vw,14px);
-    text-transform:uppercase;letter-spacing:.12em;
-    color:var(--ink-faint);font-weight:500;
+    font-size:clamp(11px,.85vw,14px);text-transform:uppercase;
+    letter-spacing:.14em;color:var(--text-faint);font-weight:600;
   }
   .stat .value{
-    font-size:clamp(24px,2.2vw,40px);font-weight:700;line-height:1.1;
-    white-space:nowrap;
+    font-size:clamp(24px,2.2vw,40px);font-weight:800;line-height:1.1;
+    white-space:nowrap;font-variant-numeric:tabular-nums;
   }
-  .stat .value small{font-size:.5em;font-weight:500;color:var(--ink-soft)}
-  .stat .hint{font-size:clamp(11px,.85vw,14px);color:var(--ink-soft)}
+  .stat .value small{font-size:.5em;font-weight:500;color:var(--text-soft)}
+  .stat .hint{font-size:clamp(11px,.85vw,14px);color:var(--text-soft);display:flex;align-items:center;gap:8px}
 
-  /* SunSmart hat badge — Victorian schools: hats on when UV ≥ 3 */
-  .stat.hat{position:relative;overflow:hidden}
+  .wind-arrow{
+    display:inline-block;font-size:1.15em;line-height:1;
+    transition:transform 1.2s cubic-bezier(.3,1.4,.4,1);
+    will-change:transform;
+  }
+
   .hat-pill{
     display:inline-flex;align-items:center;gap:8px;
-    font-size:clamp(12px,.95vw,16px);font-weight:600;
-    padding:5px 12px;border-radius:999px;width:max-content;
-    background:var(--hat-green);color:#08210f;
+    font-size:clamp(12px,.95vw,16px);font-weight:700;
+    padding:6px 13px;border-radius:999px;width:max-content;
+    background:var(--hat-green);color:#03180b;
   }
-  .hat-pill.on{background:var(--hat-red);color:#fff}
+  .hat-pill.on{
+    background:var(--hat-red);color:#fff;
+    animation:hatpulse 2.4s ease-in-out infinite;
+  }
+  @keyframes hatpulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(255,77,85,.55)}
+    50%{box-shadow:0 0 0 10px rgba(255,77,85,0)}
+  }
 
   /* --- hourly strip --- */
   .hourly{
     padding:clamp(16px,1.5vw,26px);
     display:flex;flex-direction:column;min-height:0;
+    animation:riseIn .9s .2s cubic-bezier(.2,.9,.3,1) both;
   }
   .panel-title{
-    font-size:clamp(11px,.85vw,14px);
-    text-transform:uppercase;letter-spacing:.14em;
-    color:var(--ink-faint);font-weight:600;margin-bottom:14px;
+    font-size:clamp(11px,.85vw,14px);text-transform:uppercase;
+    letter-spacing:.16em;color:var(--text-faint);font-weight:700;margin-bottom:14px;
   }
   .hours{
-    flex:1;display:grid;grid-auto-flow:column;
-    grid-auto-columns:1fr;gap:6px;align-items:end;min-height:0;
+    flex:1;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
+    gap:6px;align-items:end;min-height:0;
   }
   .hour{
-    display:flex;flex-direction:column;align-items:center;
-    justify-content:flex-end;gap:8px;height:100%;min-width:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+    gap:8px;height:100%;min-width:0;
   }
-  .hour .htemp{font-size:clamp(13px,1.05vw,18px);font-weight:600;font-variant-numeric:tabular-nums}
+  .hour .htemp{font-size:clamp(13px,1.05vw,18px);font-weight:700;font-variant-numeric:tabular-nums}
   .hour .bar{
     width:min(60%,26px);border-radius:8px 8px 4px 4px;
-    background:linear-gradient(180deg,var(--sun),rgba(255,209,102,.35));
-    min-height:8px;
-    transition:height .8s ease;
+    background:linear-gradient(180deg,var(--accent),var(--accent-soft));
+    box-shadow:0 0 18px var(--accent-soft);
+    min-height:8px;height:8px;
+    transition:height 1.1s cubic-bezier(.2,.9,.3,1);
   }
-  .hour.rainy .bar{background:linear-gradient(180deg,#8fd0ff,rgba(143,208,255,.3))}
+  .hour.rainy .bar{
+    background:linear-gradient(180deg,var(--rain-blue),rgba(111,200,255,.28));
+    box-shadow:0 0 18px rgba(111,200,255,.35);
+  }
   .hour .hglyph{font-size:clamp(15px,1.25vw,22px);line-height:1}
-  .hour .hlabel{
-    font-size:clamp(10px,.8vw,13px);color:var(--ink-soft);
-    font-variant-numeric:tabular-nums;
-  }
+  .hour .hlabel{font-size:clamp(10px,.8vw,13px);color:var(--text-faint);font-variant-numeric:tabular-nums}
   .hour.now-mark .hlabel{color:#fff;font-weight:700}
+  .hour.now-mark .bar{animation:barGlow 3s ease-in-out infinite}
+  @keyframes barGlow{
+    0%,100%{filter:brightness(1)}
+    50%{filter:brightness(1.4)}
+  }
   .hour.now-mark::after{
-    content:"now";font-size:9px;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--sun);font-weight:700;
+    content:"now";font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:800;
   }
 
   /* --- 7-day row --- */
-  .week{
-    display:grid;grid-template-columns:repeat(7,1fr);
-    gap:clamp(10px,1vw,18px);
-  }
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(10px,1vw,18px)}
   .day{
     padding:clamp(12px,1.2vw,20px);
     display:flex;flex-direction:column;align-items:center;gap:8px;
     text-align:center;min-width:0;
+    animation:riseIn .8s cubic-bezier(.2,.9,.3,1) both;
   }
-  .day.today{background:rgba(255,255,255,.18)}
+  .day.today{
+    background:rgba(255,255,255,.12);
+    border-color:var(--accent-soft);
+    box-shadow:0 0 28px var(--accent-soft), inset 0 1px 0 rgba(255,255,255,.1);
+  }
   .day .dname{
-    font-size:clamp(12px,.95vw,16px);font-weight:600;
-    text-transform:uppercase;letter-spacing:.08em;
+    font-size:clamp(12px,.95vw,16px);font-weight:700;
+    text-transform:uppercase;letter-spacing:.1em;
   }
+  .day.today .dname{color:var(--accent)}
   .day .dglyph{font-size:clamp(24px,2vw,38px);line-height:1.15}
   .day .dtemps{
     font-size:clamp(13px,1.05vw,18px);font-variant-numeric:tabular-nums;
-    display:flex;gap:8px;
+    display:flex;gap:8px;font-weight:600;
   }
-  .day .dtemps .lo{color:var(--ink-faint)}
-  .day .drain{font-size:clamp(10px,.8vw,13px);color:#a5d8ff;font-weight:500;min-height:1.2em}
+  .day .dtemps .lo{color:var(--text-faint);font-weight:400}
+  .day .drain{font-size:clamp(10px,.8vw,13px);color:var(--rain-blue);font-weight:600;min-height:1.2em}
 
   .footer-note{
     position:fixed;bottom:8px;right:16px;
-    font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.06em;
-    z-index:5;
+    font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.06em;z-index:5;
   }
   .error-banner{
     position:fixed;top:14px;left:50%;transform:translateX(-50%);
-    background:rgba(229,72,77,.92);padding:8px 18px;border-radius:999px;
-    font-size:13px;font-weight:600;display:none;z-index:10;
+    background:rgba(255,77,85,.95);padding:8px 18px;border-radius:999px;
+    font-size:13px;font-weight:700;display:none;z-index:10;
   }
 
   @media (prefers-reduced-motion:reduce){
-    .cloud,.sun-disc,.drop{animation:none}
+    *{animation:none !important;transition:none !important}
+    .stat,.day,.hero,.hourly{opacity:1;transform:none}
   }
-  /* fallback stacking for narrow screens */
   @media (max-aspect-ratio:1/1){
     body{overflow:auto}
     .stage{grid-template-columns:1fr;height:auto;min-height:100vh}
@@ -293,7 +370,17 @@
   }
 </style>
 </head>
-<body class="sky-clear-day">
+<body>
+
+<div class="backdrop">
+  <div class="aurora" id="aurora"></div>
+  <canvas id="stars"></canvas>
+  <div class="vignette"></div>
+</div>
+<div class="flash"></div>
+<div class="fogband f1"></div>
+<div class="fogband f2"></div>
+<div class="fogband f3"></div>
 
 <div class="error-banner" id="errBanner">Weather data unavailable — retrying…</div>
 
@@ -301,11 +388,15 @@
 
   <!-- ===================== LEFT ===================== -->
   <section class="hero" id="hero">
-    <div class="hero-sky" id="heroSky">
-      <div class="sun-disc" id="sunDisc"></div>
+    <div class="hero-sky">
+      <div class="sun-wrap" id="sunWrap">
+        <div class="sun-rays"></div>
+        <div class="sun-core"></div>
+      </div>
       <div class="moon-disc" id="moonDisc"></div>
       <div class="cloud c1" id="cloud1"></div>
       <div class="cloud c2" id="cloud2"></div>
+      <div class="cloud c3" id="cloud3"></div>
       <div class="rain-layer" id="rainLayer"></div>
     </div>
 
@@ -337,7 +428,7 @@
   <section class="data">
 
     <div class="stats">
-      <div class="card stat hat">
+      <div class="card stat">
         <div class="label">SunSmart · UV</div>
         <div class="value" id="uvVal">--</div>
         <div class="hat-pill" id="hatPill">🧢 Hats optional</div>
@@ -345,7 +436,7 @@
       <div class="card stat">
         <div class="label">Wind</div>
         <div class="value" id="windVal">-- <small>km/h</small></div>
-        <div class="hint" id="windDir">—</div>
+        <div class="hint"><span class="wind-arrow" id="windArrow">➤</span><span id="windDir">—</span></div>
       </div>
       <div class="card stat">
         <div class="label">Rain chance</div>
@@ -382,82 +473,132 @@ const API = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${
   + `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max`
   + `&timezone=Australia%2FMelbourne&forecast_days=7`;
 
-/* WMO weather codes → label, glyph (day/night), sky theme, particle mode */
+/* WMO code → [label, day glyph, night glyph, mode] */
 const WMO = {
-  0:  ["Clear sky","☀️","🌕","clear"],
-  1:  ["Mostly sunny","🌤️","🌙","clear"],
-  2:  ["Partly cloudy","⛅","☁️","cloud"],
-  3:  ["Overcast","☁️","☁️","cloud"],
-  45: ["Foggy","🌫️","🌫️","fog"],
-  48: ["Icy fog","🌫️","🌫️","fog"],
-  51: ["Light drizzle","🌦️","🌧️","rain"],
-  53: ["Drizzle","🌦️","🌧️","rain"],
-  55: ["Heavy drizzle","🌧️","🌧️","rain"],
-  61: ["Light rain","🌦️","🌧️","rain"],
-  63: ["Rain","🌧️","🌧️","rain"],
-  65: ["Heavy rain","🌧️","🌧️","rain"],
-  71: ["Light snow","🌨️","🌨️","rain"],
-  73: ["Snow","🌨️","🌨️","rain"],
-  75: ["Heavy snow","❄️","❄️","rain"],
-  80: ["Showers","🌦️","🌧️","rain"],
-  81: ["Showers","🌧️","🌧️","rain"],
-  82: ["Heavy showers","🌧️","🌧️","rain"],
-  95: ["Thunderstorm","⛈️","⛈️","storm"],
-  96: ["Storm & hail","⛈️","⛈️","storm"],
-  99: ["Storm & hail","⛈️","⛈️","storm"],
+  0:["Clear sky","☀️","🌕","clear"], 1:["Mostly sunny","🌤️","🌙","clear"],
+  2:["Partly cloudy","⛅","☁️","cloud"], 3:["Overcast","☁️","☁️","cloud"],
+  45:["Foggy","🌫️","🌫️","fog"], 48:["Icy fog","🌫️","🌫️","fog"],
+  51:["Light drizzle","🌦️","🌧️","rain"], 53:["Drizzle","🌦️","🌧️","rain"], 55:["Heavy drizzle","🌧️","🌧️","rain"],
+  61:["Light rain","🌦️","🌧️","rain"], 63:["Rain","🌧️","🌧️","rain"], 65:["Heavy rain","🌧️","🌧️","rain"],
+  71:["Light snow","🌨️","🌨️","rain"], 73:["Snow","🌨️","🌨️","rain"], 75:["Heavy snow","❄️","❄️","rain"],
+  80:["Showers","🌦️","🌧️","rain"], 81:["Showers","🌧️","🌧️","rain"], 82:["Heavy showers","🌧️","🌧️","rain"],
+  95:["Thunderstorm","⛈️","⛈️","storm"], 96:["Storm & hail","⛈️","⛈️","storm"], 99:["Storm & hail","⛈️","⛈️","storm"],
 };
 const wmo = c => WMO[c] || ["Weather","🌡️","🌡️","cloud"];
-
 const $ = id => document.getElementById(id);
+
+/* condition-tinted aurora palettes + accent colours (all on dark base) */
+const THEMES = {
+  clearDay:   {tints:["#8a5a10","#153a63","#4a3a08"], accent:"#ffd166", accentSoft:"rgba(255,209,102,.35)"},
+  clearNight: {tints:["#101c45","#1c1440","#0a2a3d"], accent:"#9db4ff", accentSoft:"rgba(157,180,255,.32)"},
+  cloud:      {tints:["#1e2a3c","#26313f","#141c2a"], accent:"#a9c2d8", accentSoft:"rgba(169,194,216,.3)"},
+  rain:       {tints:["#0e2a44","#123a55","#0a1e33"], accent:"#6fc8ff", accentSoft:"rgba(111,200,255,.32)"},
+  storm:      {tints:["#241a4a","#3a1a3d","#141031"], accent:"#c0a8ff", accentSoft:"rgba(192,168,255,.35)"},
+  fog:        {tints:["#26303a","#303a44","#1a222b"], accent:"#c4d2dc", accentSoft:"rgba(196,210,220,.3)"},
+};
 
 /* ---------------- clock ---------------- */
 function tickClock(){
   const now = new Date();
   const t = now.toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit",hour12:true,timeZone:"Australia/Melbourne"});
-  $("clock").textContent = t.replace(" ","").toLowerCase();
+  const parts = t.replace(" ","").toLowerCase().split(":");
+  $("clock").innerHTML = parts[0] + '<span class="colon">:</span>' + parts.slice(1).join(":");
   $("dateline").innerHTML = now.toLocaleDateString("en-AU",
     {weekday:"long",day:"numeric",month:"long",timeZone:"Australia/Melbourne"});
 }
 setInterval(tickClock,1000); tickClock();
 
-/* ---------------- sky theming + particles ---------------- */
-function setSky(mode,isDay){
-  const cls = {
-    clear: isDay ? "sky-clear-day" : "sky-clear-night",
-    cloud: isDay ? "sky-cloud-day" : "sky-cloud-night",
-    rain:"sky-rain", storm:"sky-storm", fog:"sky-fog"
-  }[mode] || "sky-cloud-day";
-  document.body.className = cls;
-
-  $("sunDisc").style.opacity  = (mode==="clear" && isDay) ? 1 : 0;
-  $("moonDisc").style.opacity = (mode==="clear" && !isDay) ? 1 : 0;
-  const clouds = (mode==="cloud"||mode==="rain"||mode==="storm") ? .9 : (mode==="clear"?.35:0);
-  $("cloud1").style.opacity = clouds;
-  $("cloud2").style.opacity = clouds;
-  $("rainLayer").style.opacity = (mode==="rain"||mode==="storm") ? 1 : 0;
+/* ---------------- starfield ---------------- */
+const starCanvas = $("stars");
+const sctx = starCanvas.getContext("2d");
+let starList = [];
+function buildStars(){
+  starCanvas.width = innerWidth; starCanvas.height = innerHeight;
+  starList = Array.from({length:130},()=>({
+    x:Math.random()*starCanvas.width,
+    y:Math.random()*starCanvas.height,
+    r:Math.random()*1.4+.3,
+    p:Math.random()*Math.PI*2,
+    s:.4+Math.random()*1.2
+  }));
 }
+buildStars();
+addEventListener("resize",buildStars);
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+(function twinkle(t){
+  if(document.body.classList.contains("stars-on")){
+    sctx.clearRect(0,0,starCanvas.width,starCanvas.height);
+    for(const st of starList){
+      const a = reduceMotion ? .8 : .35 + .65*Math.abs(Math.sin(t/1000*st.s + st.p));
+      sctx.globalAlpha = a;
+      sctx.fillStyle = "#dfe8ff";
+      sctx.beginPath();
+      sctx.arc(st.x, st.y, st.r, 0, Math.PI*2);
+      sctx.fill();
+    }
+  }
+  requestAnimationFrame(twinkle);
+})(0);
 
+/* ---------------- rain drops ---------------- */
 (function buildRain(){
   const layer = $("rainLayer");
-  for(let i=0;i<40;i++){
+  for(let i=0;i<55;i++){
     const d = document.createElement("div");
     d.className = "drop";
     d.style.left = Math.random()*100 + "%";
-    d.style.animationDuration = (0.8 + Math.random()*0.9) + "s";
+    d.style.animationDuration = (0.7 + Math.random()*0.9) + "s";
     d.style.animationDelay = (Math.random()*2) + "s";
     layer.appendChild(d);
   }
 })();
 
+/* ---------------- theming ---------------- */
+function applyTheme(mode,isDay){
+  const key = mode==="clear" ? (isDay ? "clearDay":"clearNight") : mode;
+  const th = THEMES[key] || THEMES.cloud;
+  const root = document.documentElement.style;
+  root.setProperty("--accent", th.accent);
+  root.setProperty("--accent-soft", th.accentSoft);
+  const a = $("aurora").style;
+  a.setProperty("--tintA", th.tints[0]);
+  a.setProperty("--tintB", th.tints[1]);
+  a.setProperty("--tintC", th.tints[2]);
+
+  document.body.classList.toggle("stars-on", !isDay || mode==="clear" && !isDay);
+  document.body.classList.toggle("storm-on", mode==="storm");
+  document.body.classList.toggle("fog-on", mode==="fog");
+
+  $("sunWrap").style.opacity  = (mode==="clear" && isDay) ? 1 : 0;
+  $("moonDisc").style.opacity = (mode==="clear" && !isDay) ? 1 : 0;
+  const cloudOp = (mode==="cloud") ? .95 : (mode==="rain"||mode==="storm") ? .8 : (mode==="clear" ? .25 : 0);
+  $("cloud1").style.opacity = cloudOp;
+  $("cloud2").style.opacity = cloudOp;
+  $("cloud3").style.opacity = cloudOp*.8;
+  $("rainLayer").style.opacity = (mode==="rain"||mode==="storm") ? 1 : 0;
+
+  /* stars also show on any night mode */
+  if(!isDay) document.body.classList.add("stars-on");
+}
+
 /* ---------------- helpers ---------------- */
 const compass = deg => ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"][Math.round(deg/22.5)%16];
 const round = v => Math.round(v);
+const humidityHint = h => h>=85 ? "very sticky" : h>=70 ? "humid" : h>=40 ? "comfortable" : "dry air";
 
-function humidityHint(h){
-  if(h>=85) return "very sticky";
-  if(h>=70) return "humid";
-  if(h>=40) return "comfortable";
-  return "dry air";
+/* animated number count-up for the hero temp */
+function countUp(el, target){
+  const startVal = parseInt(el.dataset.v || "0", 10);
+  const t0 = performance.now(), dur = reduceMotion ? 0 : 900;
+  function step(t){
+    const p = dur ? Math.min((t-t0)/dur,1) : 1;
+    const eased = 1-Math.pow(1-p,3);
+    const v = Math.round(startVal + (target-startVal)*eased);
+    el.innerHTML = v + "<sup>°</sup>";
+    if(p<1) requestAnimationFrame(step);
+    else el.dataset.v = target;
+  }
+  requestAnimationFrame(step);
 }
 
 /* ---------------- render ---------------- */
@@ -466,20 +607,19 @@ function render(d){
   const [label,dayGlyph,nightGlyph,mode] = wmo(c.weather_code);
   const isDay = c.is_day === 1;
 
-  $("nowTemp").innerHTML = round(c.temperature_2m) + "<sup>°</sup>";
+  countUp($("nowTemp"), round(c.temperature_2m));
   $("nowGlyph").textContent = isDay ? dayGlyph : nightGlyph;
   $("nowCond").textContent = label;
   $("nowFeels").textContent = round(c.apparent_temperature) + "°";
   $("nowHi").textContent = round(d.daily.temperature_2m_max[0]) + "°";
   $("nowLo").textContent = round(d.daily.temperature_2m_min[0]) + "°";
 
-  setSky(mode,isDay);
+  applyTheme(mode,isDay);
 
-  /* SunSmart — hats on when UV ≥ 3 (use today's max during the day) */
+  /* SunSmart — hats on when UV ≥ 3 */
   const uvNow = c.uv_index ?? 0;
   const uvMax = d.daily.uv_index_max[0] ?? uvNow;
-  const uvShow = isDay ? Math.max(uvNow,0) : uvNow;
-  $("uvVal").textContent = (Math.round(uvShow*10)/10).toFixed(1);
+  $("uvVal").textContent = (Math.round(uvNow*10)/10).toFixed(1);
   const hatsOn = (isDay ? Math.max(uvNow, uvMax) : uvNow) >= 3;
   const pill = $("hatPill");
   if(hatsOn){ pill.classList.add("on"); pill.textContent = "🧢 No hat, no play!"; }
@@ -487,16 +627,17 @@ function render(d){
 
   $("windVal").innerHTML = round(c.wind_speed_10m) + " <small>km/h</small>";
   $("windDir").textContent = "from the " + compass(c.wind_direction_10m);
+  /* arrow points where wind is blowing TO; ➤ points right (east) by default */
+  $("windArrow").style.transform = `rotate(${(c.wind_direction_10m + 180 - 90)}deg)`;
 
   $("humVal").innerHTML = round(c.relative_humidity_2m) + "<small>%</small>";
   $("humHint").textContent = humidityHint(c.relative_humidity_2m);
 
-  /* today's max rain chance */
   const rainMax = d.daily.precipitation_probability_max[0] ?? 0;
   $("rainVal").innerHTML = rainMax + "<small>%</small>";
   $("rainHint").textContent = rainMax >= 60 ? "wet-day timetable?" : "today";
 
-  /* ---- hourly: next 12 hours from now ---- */
+  /* ---- hourly: next 12 hours ---- */
   const nowIso = new Date().toLocaleString("sv-SE",{timeZone:"Australia/Melbourne"}).slice(0,13);
   let start = d.hourly.time.findIndex(t => t.slice(0,13) >= nowIso);
   if(start < 0) start = 0;
@@ -507,6 +648,7 @@ function render(d){
   const temps = slice.map(i=>d.hourly.temperature_2m[i]);
   const tMin = Math.min(...temps), tMax = Math.max(...temps);
 
+  const bars = [];
   slice.forEach((i,idx)=>{
     const t = d.hourly.temperature_2m[i];
     const pp = d.hourly.precipitation_probability[i] ?? 0;
@@ -514,19 +656,24 @@ function render(d){
     const hIsDay = d.hourly.is_day[i]===1;
     const hr = new Date(d.hourly.time[i]).getHours();
     const hLabel = hr===0 ? "12am" : hr<12 ? hr+"am" : hr===12 ? "12pm" : (hr-12)+"pm";
-    const pct = tMax===tMin ? 55 : 22 + ((t-tMin)/(tMax-tMin))*60; /* 22–82% height */
+    const pct = tMax===tMin ? 55 : 22 + ((t-tMin)/(tMax-tMin))*60;
 
     const el = document.createElement("div");
     el.className = "hour" + (pp>=50 ? " rainy":"") + (idx===0 ? " now-mark":"");
     el.innerHTML = `
       <div class="htemp">${round(t)}°</div>
-      <div class="bar" style="height:${pct}%"></div>
+      <div class="bar"></div>
       <div class="hglyph">${hIsDay?hg:ng}</div>
       <div class="hlabel">${hLabel}</div>`;
     hoursEl.appendChild(el);
+    bars.push({el:el.querySelector(".bar"), pct, delay:idx*60});
+  });
+  /* staggered bar growth */
+  requestAnimationFrame(()=>{
+    bars.forEach(b=>setTimeout(()=>{ b.el.style.height = b.pct + "%"; }, reduceMotion ? 0 : b.delay));
   });
 
-  /* ---- 7-day ---- */
+  /* ---- 7-day, staggered reveal ---- */
   const weekEl = $("week"); weekEl.innerHTML = "";
   d.daily.time.forEach((ds,i)=>{
     const [,g] = wmo(d.daily.weather_code[i]);
@@ -535,6 +682,7 @@ function render(d){
     const rp = d.daily.precipitation_probability_max[i];
     const el = document.createElement("div");
     el.className = "card day" + (i===0?" today":"");
+    el.style.animationDelay = (0.35 + i*0.07) + "s";
     el.innerHTML = `
       <div class="dname">${name}</div>
       <div class="dglyph">${g}</div>
@@ -556,12 +704,12 @@ async function load(){
   }catch(e){
     console.error("Weather fetch failed:",e);
     $("errBanner").style.display = "block";
-    setTimeout(load, 60_000); /* retry in 1 min on failure */
+    setTimeout(load, 60_000);
     return;
   }
 }
 load();
-setInterval(load, 10*60_000); /* refresh every 10 minutes */
+setInterval(load, 10*60_000);
 </script>
 </body>
 </html>
