@@ -16,13 +16,14 @@
 
   :root{
     --bg:#05070d;
-    --text:#ffffff;
-    --text-soft:rgba(255,255,255,.82);
-    --text-faint:rgba(255,255,255,.55);
-    --card:rgba(255,255,255,.06);
-    --card-line:rgba(255,255,255,.14);
-    --accent:#ffd166;          /* weather accent — retinted per condition */
-    --accent-soft:rgba(255,209,102,.35);
+    --yellow:#ffe14d;
+    --text:var(--yellow);
+    --text-soft:rgba(255,225,77,.92);
+    --text-faint:rgba(255,225,77,.75);
+    --card:rgba(255,225,77,.07);
+    --card-line:rgba(255,225,77,.35);
+    --accent:var(--yellow);          /* everything reads in yellow */
+    --accent-soft:rgba(255,225,77,.35);
     --hat-red:#ff4d55;
     --hat-green:#2ee87e;
     --rain-blue:#6fc8ff;
@@ -214,7 +215,7 @@
     margin-top:12px;font-size:clamp(13px,1.05vw,19px);
     color:var(--text-soft);display:flex;gap:22px;flex-wrap:wrap;
   }
-  .now .sub b{color:#fff;font-weight:700}
+  .now .sub b{color:var(--yellow);font-weight:800;text-shadow:0 0 16px var(--accent-soft)}
 
   .clockline{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:flex-end}
   .clock{
@@ -249,14 +250,15 @@
 
   .stat .label{
     font-size:clamp(11px,.85vw,14px);text-transform:uppercase;
-    letter-spacing:.14em;color:var(--text-faint);font-weight:600;
+    letter-spacing:.14em;color:var(--accent);font-weight:700;
   }
   .stat .value{
     font-size:clamp(24px,2.2vw,40px);font-weight:800;line-height:1.1;
     white-space:nowrap;font-variant-numeric:tabular-nums;
+    color:var(--yellow);text-shadow:0 0 22px var(--accent-soft);
   }
-  .stat .value small{font-size:.5em;font-weight:500;color:var(--text-soft)}
-  .stat .hint{font-size:clamp(11px,.85vw,14px);color:var(--text-soft);display:flex;align-items:center;gap:8px}
+  .stat .value small{font-size:.5em;font-weight:600;color:var(--text-soft)}
+  .stat .hint{font-size:clamp(12px,.9vw,15px);color:var(--text-soft);font-weight:500;display:flex;align-items:center;gap:8px}
 
   .wind-arrow{
     display:inline-block;font-size:1.15em;line-height:1;
@@ -268,10 +270,13 @@
     display:inline-flex;align-items:center;gap:8px;
     font-size:clamp(12px,.95vw,16px);font-weight:700;
     padding:6px 13px;border-radius:999px;width:max-content;
-    background:var(--hat-green);color:#03180b;
+    background:rgba(255,225,77,.10);color:var(--yellow);
+    border:2px solid var(--hat-green);
+    box-shadow:0 0 14px rgba(46,232,126,.35);
   }
   .hat-pill.on{
-    background:var(--hat-red);color:#fff;
+    border-color:var(--hat-red);
+    box-shadow:0 0 14px rgba(255,77,85,.5);
     animation:hatpulse 2.4s ease-in-out infinite;
   }
   @keyframes hatpulse{
@@ -287,7 +292,7 @@
   }
   .panel-title{
     font-size:clamp(11px,.85vw,14px);text-transform:uppercase;
-    letter-spacing:.16em;color:var(--text-faint);font-weight:700;margin-bottom:14px;
+    letter-spacing:.16em;color:var(--accent);font-weight:800;margin-bottom:14px;
   }
   .hours{
     flex:1;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
@@ -297,21 +302,24 @@
     display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
     gap:8px;height:100%;min-width:0;
   }
-  .hour .htemp{font-size:clamp(13px,1.05vw,18px);font-weight:700;font-variant-numeric:tabular-nums}
+  .hour .htemp{
+    font-size:clamp(13px,1.05vw,18px);font-weight:800;font-variant-numeric:tabular-nums;
+    color:var(--yellow);text-shadow:0 0 14px var(--accent-soft);
+  }
   .hour .bar{
     width:min(60%,26px);border-radius:8px 8px 4px 4px;
-    background:linear-gradient(180deg,var(--accent),var(--accent-soft));
-    box-shadow:0 0 18px var(--accent-soft);
+    background:linear-gradient(180deg,#fff8cc, var(--yellow) 30%, var(--accent-soft));
+    box-shadow:0 0 24px var(--accent-soft), 0 0 6px var(--accent);
     min-height:8px;height:8px;
     transition:height 1.1s cubic-bezier(.2,.9,.3,1);
   }
   .hour.rainy .bar{
-    background:linear-gradient(180deg,var(--rain-blue),rgba(111,200,255,.28));
-    box-shadow:0 0 18px rgba(111,200,255,.35);
+    background:linear-gradient(180deg,#fff8cc, var(--yellow) 30%, var(--accent-soft));
+    box-shadow:0 0 24px var(--accent-soft), 0 0 6px var(--yellow);
   }
   .hour .hglyph{font-size:clamp(15px,1.25vw,22px);line-height:1}
-  .hour .hlabel{font-size:clamp(10px,.8vw,13px);color:var(--text-faint);font-variant-numeric:tabular-nums}
-  .hour.now-mark .hlabel{color:#fff;font-weight:700}
+  .hour .hlabel{font-size:clamp(11px,.85vw,14px);color:var(--text-soft);font-weight:500;font-variant-numeric:tabular-nums}
+  .hour.now-mark .hlabel{color:var(--yellow);font-weight:800}
   .hour.now-mark .bar{animation:barGlow 3s ease-in-out infinite}
   @keyframes barGlow{
     0%,100%{filter:brightness(1)}
@@ -331,7 +339,7 @@
     animation:riseIn .8s cubic-bezier(.2,.9,.3,1) both;
   }
   .day.today{
-    background:rgba(255,255,255,.12);
+    background:rgba(255,225,77,.12);
     border-color:var(--accent-soft);
     box-shadow:0 0 28px var(--accent-soft), inset 0 1px 0 rgba(255,255,255,.1);
   }
@@ -343,18 +351,19 @@
   .day .dglyph{font-size:clamp(24px,2vw,38px);line-height:1.15}
   .day .dtemps{
     font-size:clamp(13px,1.05vw,18px);font-variant-numeric:tabular-nums;
-    display:flex;gap:8px;font-weight:600;
+    display:flex;gap:8px;font-weight:700;
   }
-  .day .dtemps .lo{color:var(--text-faint);font-weight:400}
-  .day .drain{font-size:clamp(10px,.8vw,13px);color:var(--rain-blue);font-weight:600;min-height:1.2em}
+  .day .dtemps .hi{color:var(--yellow);text-shadow:0 0 14px var(--accent-soft)}
+  .day .dtemps .lo{color:var(--text-faint);font-weight:500}
+  .day .drain{font-size:clamp(11px,.85vw,14px);color:var(--yellow);font-weight:700;min-height:1.2em;text-shadow:0 0 10px var(--accent-soft)}
 
   .footer-note{
     position:fixed;bottom:8px;right:16px;
-    font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.06em;z-index:5;
+    font-size:10px;color:var(--text-faint);letter-spacing:.06em;z-index:5;
   }
   .error-banner{
     position:fixed;top:14px;left:50%;transform:translateX(-50%);
-    background:rgba(255,77,85,.95);padding:8px 18px;border-radius:999px;
+    background:rgba(120,20,25,.95);color:var(--yellow);padding:8px 18px;border-radius:999px;
     font-size:13px;font-weight:700;display:none;z-index:10;
   }
 
@@ -489,12 +498,12 @@ const $ = id => document.getElementById(id);
 
 /* condition-tinted aurora palettes + accent colours (all on dark base) */
 const THEMES = {
-  clearDay:   {tints:["#8a5a10","#153a63","#4a3a08"], accent:"#ffd166", accentSoft:"rgba(255,209,102,.35)"},
-  clearNight: {tints:["#101c45","#1c1440","#0a2a3d"], accent:"#9db4ff", accentSoft:"rgba(157,180,255,.32)"},
-  cloud:      {tints:["#1e2a3c","#26313f","#141c2a"], accent:"#a9c2d8", accentSoft:"rgba(169,194,216,.3)"},
-  rain:       {tints:["#0e2a44","#123a55","#0a1e33"], accent:"#6fc8ff", accentSoft:"rgba(111,200,255,.32)"},
-  storm:      {tints:["#241a4a","#3a1a3d","#141031"], accent:"#c0a8ff", accentSoft:"rgba(192,168,255,.35)"},
-  fog:        {tints:["#26303a","#303a44","#1a222b"], accent:"#c4d2dc", accentSoft:"rgba(196,210,220,.3)"},
+  clearDay:   {tints:["#8a5a10","#153a63","#4a3a08"], accent:"#ffe14d", accentSoft:"rgba(255,225,77,.35)"},
+  clearNight: {tints:["#101c45","#1c1440","#0a2a3d"], accent:"#ffe14d", accentSoft:"rgba(255,225,77,.35)"},
+  cloud:      {tints:["#1e2a3c","#26313f","#141c2a"], accent:"#ffe14d", accentSoft:"rgba(255,225,77,.35)"},
+  rain:       {tints:["#0e2a44","#123a55","#0a1e33"], accent:"#ffe14d", accentSoft:"rgba(255,225,77,.35)"},
+  storm:      {tints:["#241a4a","#3a1a3d","#141031"], accent:"#ffe14d", accentSoft:"rgba(255,225,77,.35)"},
+  fog:        {tints:["#26303a","#303a44","#1a222b"], accent:"#ffe14d", accentSoft:"rgba(255,225,77,.35)"},
 };
 
 /* ---------------- clock ---------------- */
