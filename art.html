@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SPARK 360 Gallery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  ███ SPARK 360 GALLERY ███
+  Styled after aframe.io's 360-gallery template: you stand inside the template's
+  360° city panorama, and student artwork floats around you in frames, each with
+  the artist's name. The most recent upload floats front-and-centre at the start.
+
+  Desktop: drag to look, WASD to fly.  Headset: VR button (bottom right),
+  thumbstick to fly toward artworks.
+
+  ── ART SOURCE: GITHUB ───────────────────────────────────────────────
+  Artwork loads live from:
+     github.com/structurevault/structurevault.github.io → /artwork
+  Upload images to that folder named:
+       Artist Name - Artwork Title.png     e.g. "Ava N - Sunset over Boneo.png"
+  Listed via GitHub's public API — no tokens, nothing expires. The file touched
+  by the newest commit is featured front-and-centre in a gold frame.
+
+  Fallbacks: an artworks.json manifest next to this file, then generated demo
+  art so the space is never empty.
+-->
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.4.0/dist/aframe-extras.min.js"></script>
+<style>
+  :root{
+    --ink:#eef6fb; --dim:#9db4c2; --panel:rgba(10,18,26,.85);
+    --neon:#37e6c3; --edge:rgba(55,230,195,.35);
+  }
+  html,body{margin:0;height:100%;background:#0a1016;font-family:"Segoe UI",system-ui,sans-serif}
+  .hud{position:fixed;top:12px;left:12px;z-index:10;color:var(--ink);
+       background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+       padding:10px 14px;max-width:320px;backdrop-filter:blur(6px)}
+  .hud h1{margin:0 0 2px;font-size:15px;letter-spacing:.18em;color:var(--neon)}
+  .hud p{margin:2px 0;font-size:12px;color:var(--dim)}
+  .hud .count{color:#ffd27d}
+  .hud button{margin-top:6px;margin-right:6px;background:transparent;color:var(--neon);
+       border:1px solid var(--edge);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
+  .hud button:hover{background:rgba(55,230,195,.12)}
+  #toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:15;
+       background:var(--panel);border:1px solid var(--edge);color:var(--ink);
+       border-radius:8px;padding:8px 16px;font-size:13px;display:none}
+</style>
+</head>
+<body>
+
+<div class="hud" id="hud">
+  <h1>SPARK 360 GALLERY</h1>
+  <p id="status">Loading artwork…</p>
+  <p>Drag to look · <b>WASD</b> to fly<br>Headset: press <b>VR</b>, thumbstick to fly</p>
+  <button id="btnReload">↻ Reload art</button>
+</div>
+
+<div id="toast"></div>
+
+<a-scene renderer="antialias: true; colorManagement: true"
+         loading-screen="dotsColor: #37e6c3; backgroundColor: #0a1016">
+
+  <a-assets timeout="10000">
+    <!-- the exact 360° city panorama from aframe.io's 360-gallery template -->
+    <img id="pano" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/city.jpg" crossorigin="anonymous">
+  </a-assets>
+
+  <a-sky src="#pano" rotation="0 -90 0"></a-sky>
+
+  <a-entity light="type: ambient; color: #ffffff; intensity: 1"></a-entity>
+
+  <a-entity id="artworks"></a-entity>
+
+  <!-- player rig: drag/WASD on desktop, thumbstick flight in VR -->
+  <a-entity id="rig" movement-controls="speed: 0.25; fly: true" position="0 0 0">
+    <a-entity id="head" camera look-controls="pointerLockEnabled: false" position="0 1.6 0"></a-entity>
+  </a-entity>
+</a-scene>
+
+<script>
+/* ═══════════════ CONFIG ═══════════════ */
+const CONFIG = {
+  // ART SOURCE — GitHub: images live in /artwork of this repo
+  GITHUB_REPO: "structurevault/structurevault.github.io",
+  GITHUB_FOLDER: "artwork",
+  GITHUB_BRANCH: "main",
+  // fallback if GitHub is unreachable:
+  MANIFEST_URL: "artworks.json",
+  IMAGE_EXT: /\.(png|jpe?g|gif|webp|bmp)$/i,
+  MAX_ARTWORKS: 120,
+  ART_WIDTH: 3,                 // metres — height follows the image's aspect
+  SEED: 21402140,               // change to re-scatter all the frames
+  FEATURED_FILE: ""             // pin a filename (or part of one) front-and-centre;
+                                // blank = the most recently uploaded file
+};
+
+/* ═══════════════ TINY UTILS ═══════════════ */
+const $ = s => document.querySelector(s);
+function toast(msg, ms=3600){ const t=$("#toast"); t.textContent=msg; t.style.display="block";
+  clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", ms); }
+function status(msg){ $("#status").innerHTML = msg; }
+
+// deterministic PRNG + string hash → each artwork keeps the same spot in the sky
+function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; }
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+function parseName(filename){
+  const base = filename.replace(/\.[^.]+$/,"").replace(/[_]+/g," ").trim();
+  const i = base.indexOf(" - ");
+  if (i > 0) return { artist: base.slice(0,i).trim(), title: base.slice(i+3).trim() || "Untitled" };
+  return { artist: "SPARK Artist", title: base || "Untitled" };
+}
+function demoArt(i){
+  const r = mulberry32(9000+i*77), c = document.createElement("canvas");
+  c.width = 512; c.height = 384;
+  const g = c.getContext("2d");
+  const hues = [165, 28, 205, 330, 48];
+  const h = hues[i % hues.length];
+  const grad = g.createLinearGradient(0,0,512,384);
+  grad.addColorStop(0, `hsl(${h},70%,18%)`); grad.addColorStop(1, `hsl(${(h+60)%360},65%,38%)`);
+  g.fillStyle = grad; g.fillRect(0,0,512,384);
+  for (let k=0;k<26;k++){
+    g.fillStyle = `hsla(${(h + r()*90)|0},80%,${(45+r()*40)|0}%,${.25+r()*.55})`;
+    const w = 20+r()*140, ht = 20+r()*140;
+    g.beginPath();
+    if (r()<.5) g.rect(r()*512, r()*384, w, ht);
+    else g.arc(r()*512, r()*384, w/2, 0, Math.PI*2);
+    g.fill();
+  }
+  return c.toDataURL("image/png");
+}
+
+/* ═══════════════ FLOATING SLOTS ═══════════════ */
+// Rings of positions surrounding the viewer at several radii and heights,
+// every frame turned to face the centre. Deterministic, so each artwork
+// (hashed by filename) floats in the same spot every visit.
+const skySlots = [];
+const FEATURED_SLOT = { x: 0, y: 2.2, z: -7, featured: true };
+
+function buildSlots(){
+  const rand = mulberry32(CONFIG.SEED);
+  const rings = [
+    { r: 9,  n: 12, ys: [1.0, 3.2] },
+    { r: 14, n: 18, ys: [0.2, 2.6, 5.2] },
+    { r: 20, n: 26, ys: [-1.5, 1.8, 4.6, 7.6] },
+    { r: 27, n: 32, ys: [-3.0, 1.2, 5.4, 9.8] },
+    { r: 35, n: 38, ys: [-4.5, 0.6, 4.2, 8.6, 12.5] },
+  ];
+  for (const ring of rings){
+    for (let i=0; i<ring.n; i++){
+      const az = (i/ring.n)*Math.PI*2 + rand()*0.25;
+      const x = Math.sin(az)*ring.r, z = Math.cos(az)*ring.r;
+      // keep the forward window at the nearest ring clear for the featured frame
+      if (ring.r === 9 && Math.abs(Math.atan2(x, -z)) < 0.5) continue;
+      const y = ring.ys[i % ring.ys.length] + (rand()-0.5)*1.2;
+      skySlots.push({ x, y, z });
+    }
+  }
+}
+function faceCentreRy(x, z){                 // yaw so the frame faces the viewer
+  return Math.atan2(-x, -z) * 180/Math.PI;
+}
+function takenSlot(idx, used){
+  let i = idx % skySlots.length;
+  while (used.has(i)) i = (i+1) % skySlots.length;
+  used.add(i); return skySlots[i];
+}
+
+/* ═══════════════ HANG THE ART ═══════════════ */
+AFRAME.registerComponent("fit-aspect", {   // match frame + label to real image aspect
+  init(){
+    this.el.addEventListener("materialtextureloaded", e => {
+      const img = e.detail.texture && e.detail.texture.image;
+      if (!img || !img.width) return;
+      const w = CONFIG.ART_WIDTH, h = w * (img.height / img.width);
+      this.el.setAttribute("height", h);
+      const holder = this.el.parentEl;
+      const frame = holder.querySelector(".frame");
+      const label = holder.querySelector(".label");
+      if (frame){ frame.setAttribute("width", w+0.28); frame.setAttribute("height", h+0.28); }
+      if (label){ label.setAttribute("position", `0 ${-(h/2)-0.4} 0.04`); }
+    });
+  }
+});
+
+function placeArtworks(list){
+  const root = $("#artworks");
+  root.innerHTML = "";
+  const used = new Set();
+  list.sort((a,b)=>a.file.localeCompare(b.file));
+
+  let featured = CONFIG.FEATURED_FILE
+    ? list.find(a => a.file.toLowerCase().includes(CONFIG.FEATURED_FILE.toLowerCase()))
+    : null;
+  if (!featured) featured = list.reduce((m,a) => ((a.ts||0) >= (m.ts||0) ? a : m), list[0]);
+
+  const cap = Math.min(CONFIG.MAX_ARTWORKS, skySlots.length);
+  for (const art of list.slice(0, cap)){
+    const isFeatured = art === featured;
+    const slot = isFeatured ? FEATURED_SLOT : takenSlot(hashStr(art.file), used);
+    const ry = faceCentreRy(slot.x, slot.z);
+    const { artist, title } = parseName(art.file);
+
+    const holder = document.createElement("a-entity");
+    holder.setAttribute("position", `${slot.x} ${slot.y} ${slot.z}`);
+    holder.setAttribute("rotation", `0 ${ry} 0`);
+    // gentle bobbing so the frames feel like they're floating
+    const bob = 0.12 + (hashStr(art.file) % 10)/60;
+    holder.setAttribute("animation",
+      `property: object3D.position.y; dir: alternate; dur: ${3400 + (hashStr(art.file)%1700)}; `+
+      `easing: easeInOutSine; loop: true; from: ${slot.y}; to: ${slot.y + bob}`);
+
+    const frame = document.createElement("a-plane");
+    frame.classList.add("frame");
+    frame.setAttribute("width", CONFIG.ART_WIDTH+0.28);
+    frame.setAttribute("height", CONFIG.ART_WIDTH*0.75+0.28);
+    frame.setAttribute("position","0 0 0");
+    frame.setAttribute("material", `color: ${isFeatured ? "#ffd27d" : "#f3ede0"}; shader: flat; side: double`);
+    holder.appendChild(frame);
+
+    const img = document.createElement("a-image");
+    img.setAttribute("src", art.url);
+    img.setAttribute("crossorigin","anonymous");
+    img.setAttribute("width", CONFIG.ART_WIDTH);
+    img.setAttribute("height", CONFIG.ART_WIDTH*0.75);
+    img.setAttribute("position","0 0 0.02");
+    img.setAttribute("material","shader: flat");
+    img.setAttribute("fit-aspect","");
+    holder.appendChild(img);
+
+    const label = document.createElement("a-text");
+    label.classList.add("label");
+    label.setAttribute("value", (isFeatured ? "★ LATEST UPLOAD ★\n" : "") + `${title}\n${artist}`);
+    label.setAttribute("align","center");
+    label.setAttribute("color","#ffffff");
+    label.setAttribute("width","3.2");
+    label.setAttribute("position", `0 ${-(CONFIG.ART_WIDTH*0.375)-0.4} 0.04`);
+    holder.appendChild(label);
+
+    root.appendChild(holder);
+  }
+  status(`<span class="count">${Math.min(list.length, cap)}</span> artworks floating`);
+}
+
+/* ═══════════════ ART SOURCES ═══════════════ */
+async function fromGitHub(){
+  if (!CONFIG.GITHUB_REPO) return null;
+  const base = `https://api.github.com/repos/${CONFIG.GITHUB_REPO}`;
+  status("Listing GitHub folder…");
+  const res = await fetch(`${base}/contents/${CONFIG.GITHUB_FOLDER}?ref=${CONFIG.GITHUB_BRANCH}`, { cache: "no-store" });
+  if (!res.ok){ console.warn("GitHub listing failed:", res.status); return null; }
+  const items = await res.json();
+  if (!Array.isArray(items)) return null;
+  const list = items
+    .filter(f => f.type === "file" && CONFIG.IMAGE_EXT.test(f.name))
+    .map(f => ({ file: f.name, url: f.download_url, ts: 0 }));
+  if (!list.length) return null;
+  try{  // newest commit touching /art → that file gets the featured spot
+    const commits = await (await fetch(`${base}/commits?path=${CONFIG.GITHUB_FOLDER}&per_page=1&sha=${CONFIG.GITHUB_BRANCH}`)).json();
+    if (commits[0]){
+      const detail = await (await fetch(commits[0].url)).json();
+      const changed = (detail.files || []).map(f => f.filename.split("/").pop());
+      const latest = list.find(a => changed.includes(a.file));
+      if (latest) latest.ts = Date.parse(commits[0].commit.committer.date) || 1;
+    }
+  }catch(e){ /* featured falls back to alphabetical */ }
+  return list;
+}
+
+async function fromManifest(){
+  try{
+    const res = await fetch(CONFIG.MANIFEST_URL, { cache: "no-store" });
+    if (!res.ok) return null;
+    const list = await res.json();
+    return list.filter(a => a.file && a.url);
+  }catch(e){ return null; }
+}
+
+function demoSet(){
+  const names = ["Ava N - Neon Rockpools","Leo T - Starlink Overhead","Mia K - Peninsula Dawn",
+    "Noah B - Circuit Dreams","Isla R - Block Height 21","Sam W - The Long Recess",
+    "Ella F - Satoshi's Garden","Jack D - Mempool Sunset","Zoe P - Boneo After Dark",
+    "Oli M - Packet Storm","Ruby S - Ghost Gum Glow","Tom H - Recess Racer"];
+  return names.map((n,i)=>({ file:`${n}.png`, url: demoArt(i) }));
+}
+
+async function loadArt(){
+  status("Loading artwork…");
+  let list = null;
+  try{ list = await fromGitHub(); }catch(e){ console.warn(e); }
+  if (!list) list = await fromManifest();
+  if (!list){ list = demoSet(); toast("Couldn't reach the GitHub artwork folder — showing demo art. Check the connection and hit ↻.", 6000); }
+  placeArtworks(list);
+}
+
+/* ═══════════════ UI WIRING ═══════════════ */
+$("#btnReload").onclick = () => loadArt();
+
+/* ═══════════════ GO ═══════════════ */
+window.addEventListener("DOMContentLoaded", () => {
+  const scene = document.querySelector("a-scene");
+  const start = () => { buildSlots(); loadArt(); };
+  if (scene.hasLoaded) start(); else scene.addEventListener("loaded", start);
+});
+</script>
+</body>
+</html>
