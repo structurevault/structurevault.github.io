@@ -6,97 +6,170 @@
 <title>Name Our Robots — SPARK Centre</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#141B31;
-    --panel:#1E2745;
-    --panel-hi:#28335A;
-    --line:#33406E;
-    --accent:#FFD23F;
-    --accent-dk:#C79E14;
-    --mint:#5CE8C8;
-    --ink:#F1F4FF;
-    --ink-dim:#9AA6CF;
-    --radius:20px;
+    --bg:#14161B;
+    --bg2:#1A1D24;
+    --steel-hi:#2E343F;
+    --steel:#242932;
+    --steel-lo:#1C2028;
+    --edge:#3B4250;
+    --rivet:#525B6C;
+    --rivet-hi:#7B8598;
+    --led:#35E0FF;
+    --led-dim:#1A5E6E;
+    --hazard:#FF9E00;
+    --ok:#57F287;
+    --danger:#FF5C5C;
+    --ink:#E8ECF2;
+    --ink-dim:#8A94A6;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
-    background:var(--bg);
+    background:
+      radial-gradient(1200px 600px at 50% -200px, #232833 0%, var(--bg) 60%),
+      var(--bg);
     color:var(--ink);
-    font-family:'Fredoka',system-ui,sans-serif;
+    font-family:'Share Tech Mono',monospace;
     -webkit-font-smoothing:antialiased;
     overflow-x:hidden;
   }
-  /* caution stripe strip along the very top */
+  .orb{font-family:'Orbitron',sans-serif}
+
+  /* hazard stripe rail */
   .stripe{
-    height:14px;
-    background:repeating-linear-gradient(-45deg,var(--accent) 0 22px,#101426 22px 44px);
+    height:16px;
+    background:repeating-linear-gradient(-45deg,var(--hazard) 0 24px,#111318 24px 48px);
+    border-bottom:2px solid #000;
+    box-shadow:0 2px 0 var(--edge);
   }
+
+  /* console header */
   header{
     max-width:1500px;margin:0 auto;
-    padding:34px 28px 10px;
-    display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;
+    padding:30px 28px 12px;
+    display:flex;align-items:flex-end;justify-content:space-between;gap:22px;flex-wrap:wrap;
   }
+  .titleblock .sys{
+    display:flex;align-items:center;gap:10px;
+    color:var(--ink-dim);font-size:.95rem;letter-spacing:.08em;margin-bottom:10px;
+  }
+  .lamp{
+    width:12px;height:12px;border-radius:50%;
+    background:var(--ok);
+    box-shadow:0 0 8px var(--ok),0 0 16px rgba(87,242,135,.5);
+    animation:blink 2.4s infinite;
+  }
+  .lamp.err{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+  @keyframes blink{0%,92%{opacity:1}96%{opacity:.35}100%{opacity:1}}
   h1{
-    font-weight:700;font-size:clamp(2rem,4.5vw,4rem);line-height:1.02;letter-spacing:-.01em;
+    font-family:'Orbitron',sans-serif;
+    font-weight:800;font-size:clamp(1.7rem,4vw,3.4rem);
+    letter-spacing:.05em;line-height:1.05;
+    text-transform:uppercase;
+    text-shadow:0 0 22px rgba(53,224,255,.25);
   }
-  h1 .sub{
-    display:block;font-weight:500;font-size:clamp(1rem,1.6vw,1.4rem);
-    color:var(--ink-dim);margin-top:8px;letter-spacing:0;
+  h1 span{color:var(--led)}
+  .titleblock .sub{
+    color:var(--ink-dim);font-size:clamp(.95rem,1.4vw,1.15rem);margin-top:10px;max-width:60ch;
   }
+  .sub b{color:var(--hazard);font-weight:400}
+
   .headstats{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .pill{
-    background:var(--panel);border:2px solid var(--line);border-radius:999px;
-    padding:10px 20px;font-weight:600;font-size:1.05rem;color:var(--ink);
-    display:flex;gap:8px;align-items:center;
+  .counterbox{
+    background:linear-gradient(180deg,var(--steel-hi),var(--steel-lo));
+    border:2px solid var(--edge);border-radius:10px;
+    padding:8px 16px 10px;text-align:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 3px 0 #0b0d11;
   }
-  .pill b{color:var(--accent);font-weight:700}
-  .tabs{display:flex;gap:8px}
+  .counterbox .lbl{font-size:.75rem;letter-spacing:.14em;color:var(--ink-dim)}
+  .counterbox .num{
+    font-size:1.9rem;color:var(--led);line-height:1.1;
+    text-shadow:0 0 10px rgba(53,224,255,.7);
+  }
+  .tabs{display:flex;gap:10px}
   .tab{
-    font:inherit;font-weight:600;font-size:1.05rem;cursor:pointer;
-    background:var(--panel);color:var(--ink-dim);
-    border:2px solid var(--line);border-radius:999px;padding:10px 22px;
-    transition:transform .12s ease;
+    font-family:'Orbitron',sans-serif;font-weight:600;font-size:.95rem;
+    letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
+    background:linear-gradient(180deg,var(--steel-hi),var(--steel-lo));
+    color:var(--ink-dim);
+    border:2px solid var(--edge);border-radius:10px;padding:12px 20px;
+    box-shadow:0 3px 0 #0b0d11;
+    transition:transform .1s ease;
   }
-  .tab:active{transform:scale(.96)}
-  .tab.on{background:var(--accent);border-color:var(--accent);color:#161616}
-  .tab:focus-visible,.card:focus-visible,button:focus-visible{outline:3px solid var(--mint);outline-offset:3px}
+  .tab:active{transform:translateY(2px);box-shadow:0 1px 0 #0b0d11}
+  .tab.on{
+    color:#101318;background:linear-gradient(180deg,#5BE9FF,#19B8D6);
+    border-color:#7FF0FF;box-shadow:0 3px 0 #0d5566,0 0 18px rgba(53,224,255,.35);
+  }
+  .tab:focus-visible,.card:focus-visible,button:focus-visible{outline:3px solid var(--hazard);outline-offset:3px}
 
-  main{max-width:1500px;margin:0 auto;padding:22px 28px 80px}
+  main{max-width:1500px;margin:0 auto;padding:24px 28px 80px}
   .grid{
-    display:grid;gap:18px;
-    grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+    display:grid;gap:20px;
+    grid-template-columns:repeat(auto-fill,minmax(235px,1fr));
   }
 
-  /* nameplate card */
+  /* riveted nameplate */
   .card{
     position:relative;
-    background:var(--panel);
-    border:2px solid var(--line);
-    border-radius:var(--radius);
-    padding:18px 16px 14px;
-    display:flex;flex-direction:column;align-items:center;gap:10px;
+    background:linear-gradient(180deg,var(--steel-hi) 0%,var(--steel) 55%,var(--steel-lo) 100%);
+    border:2px solid var(--edge);
+    border-radius:14px;
+    padding:22px 16px 16px;
+    display:flex;flex-direction:column;align-items:center;gap:12px;
     cursor:pointer;user-select:none;-webkit-user-select:none;
-    transition:transform .12s ease,border-color .12s ease,background .12s ease;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 4px 0 #0b0d11;
+    transition:transform .1s ease,border-color .12s ease,box-shadow .12s ease;
     text-align:center;
   }
-  .card:hover{border-color:var(--accent)}
-  .card.pop{transform:scale(1.06);border-color:var(--accent);background:var(--panel-hi)}
-  .card .face{width:96px;height:96px}
+  .card::before,.card::after,
+  .card .name::before,.card .name::after{
+    content:'';position:absolute;width:9px;height:9px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,var(--rivet-hi),var(--rivet) 60%,#2a2f39);
+    box-shadow:inset 0 -1px 1px rgba(0,0,0,.6);
+  }
+  .card::before{top:8px;left:8px}
+  .card::after{top:8px;right:8px}
+  .card .name::before{bottom:8px;left:8px}
+  .card .name::after{bottom:8px;right:8px}
+  .card .name::before,.card .name::after{position:absolute}
+  .card:hover{border-color:var(--led);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 4px 0 #0b0d11,0 0 20px rgba(53,224,255,.25)}
+  .card.pop{
+    transform:translateY(2px) scale(1.03);
+    border-color:var(--led);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 2px 0 #0b0d11,0 0 26px rgba(53,224,255,.45);
+  }
+  .card .face{
+    width:96px;height:96px;
+    filter:drop-shadow(0 3px 4px rgba(0,0,0,.45));
+  }
   .card .name{
-    font-weight:600;font-size:1.35rem;line-height:1.1;word-break:break-word;
+    position:static;
+    font-family:'Orbitron',sans-serif;font-weight:600;
+    font-size:1.15rem;line-height:1.2;letter-spacing:.03em;
+    word-break:break-word;
   }
+  /* LED vote readout */
   .card .votes{
-    display:flex;align-items:center;gap:7px;
-    color:var(--ink-dim);font-weight:600;font-size:1rem;
-    background:#161D36;border-radius:999px;padding:6px 14px;
+    display:flex;align-items:center;gap:8px;
+    background:#0B0E13;
+    border:2px solid var(--edge);
+    border-radius:8px;padding:5px 14px;
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.7);
+    color:var(--led-dim);font-size:1.05rem;letter-spacing:.1em;
   }
-  .card .votes.some{color:var(--accent)}
+  .card .votes .c{min-width:2ch;text-align:right}
+  .card .votes.some{
+    color:var(--led);
+    text-shadow:0 0 8px rgba(53,224,255,.8);
+  }
   .card .plus{
-    position:absolute;top:10px;right:14px;
-    font-weight:700;color:var(--accent);font-size:1.4rem;
+    position:absolute;top:12px;right:22px;
+    color:var(--led);font-size:1.3rem;letter-spacing:.05em;
+    text-shadow:0 0 10px rgba(53,224,255,.9);
     opacity:0;pointer-events:none;transform:translateY(6px);
   }
   .card.pop .plus{animation:rise .7s ease forwards}
@@ -106,70 +179,96 @@
     100%{opacity:0;transform:translateY(-16px)}
   }
   .hidebtn{
-    position:absolute;top:8px;left:8px;
-    width:34px;height:34px;border-radius:50%;
-    border:2px solid var(--line);background:#161D36;color:var(--ink-dim);
-    font:inherit;font-weight:700;font-size:1rem;cursor:pointer;display:none;
+    position:absolute;top:6px;left:22px;
+    width:34px;height:34px;border-radius:8px;
+    border:2px solid var(--edge);
+    background:linear-gradient(180deg,var(--steel-hi),var(--steel-lo));
+    color:var(--ink-dim);
+    font:inherit;font-size:1rem;cursor:pointer;display:none;
+    box-shadow:0 2px 0 #0b0d11;
   }
   body.admin .hidebtn{display:block}
-  .hidebtn:hover{border-color:#ff7b7b;color:#ff7b7b}
+  .hidebtn:hover{border-color:var(--danger);color:var(--danger)}
 
-  /* leaderboard */
-  .board{display:none;flex-direction:column;gap:14px;max-width:980px;margin:0 auto}
+  /* leaderboard as rack units */
+  .board{display:none;flex-direction:column;gap:14px;max-width:1000px;margin:0 auto}
   .row{
-    display:grid;grid-template-columns:64px 84px 1fr auto;align-items:center;gap:16px;
-    background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
-    padding:12px 20px 12px 12px;
+    display:grid;grid-template-columns:72px 84px 1fr auto;align-items:center;gap:16px;
+    background:linear-gradient(180deg,var(--steel-hi),var(--steel-lo));
+    border:2px solid var(--edge);border-radius:12px;
+    padding:12px 22px 12px 12px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 3px 0 #0b0d11;
   }
-  .row .rank{font-weight:700;font-size:1.7rem;color:var(--ink-dim);text-align:center}
-  .row:nth-child(1) .rank,.row:nth-child(2) .rank{color:var(--accent)}
-  .row:nth-child(1),.row:nth-child(2){border-color:var(--accent)}
-  .row .face{width:72px;height:72px}
+  .row .rank{
+    font-size:1.5rem;color:var(--ink-dim);text-align:center;letter-spacing:.05em;
+  }
+  .row:nth-child(-n+2){border-color:var(--hazard)}
+  .row:nth-child(-n+2) .rank{color:var(--hazard);text-shadow:0 0 10px rgba(255,158,0,.6)}
+  .row .face{width:72px;height:72px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.45))}
   .row .mid{min-width:0}
-  .row .rname{font-weight:600;font-size:1.5rem;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bar{height:12px;border-radius:999px;background:#161D36;margin-top:8px;overflow:hidden}
-  .bar i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .4s ease}
-  .row .rvotes{font-weight:700;font-size:1.5rem;color:var(--accent);min-width:70px;text-align:right}
-  .winnote{
-    max-width:980px;margin:0 auto 18px;color:var(--ink-dim);font-size:1.05rem;font-weight:500;
+  .row .rname{
+    font-family:'Orbitron',sans-serif;font-weight:600;font-size:1.35rem;line-height:1.15;
+    letter-spacing:.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .winnote b{color:var(--mint);font-weight:600}
+  .bar{
+    height:14px;border-radius:4px;background:#0B0E13;margin-top:9px;overflow:hidden;
+    border:1px solid var(--edge);box-shadow:inset 0 2px 5px rgba(0,0,0,.7);
+  }
+  .bar i{
+    display:block;height:100%;
+    background:repeating-linear-gradient(90deg,var(--led) 0 8px,#1FA9C6 8px 12px);
+    box-shadow:0 0 10px rgba(53,224,255,.6);
+    transition:width .4s ease;
+  }
+  .row .rvotes{
+    font-size:1.6rem;color:var(--led);min-width:76px;text-align:right;
+    text-shadow:0 0 10px rgba(53,224,255,.7);
+  }
+  .winnote{
+    max-width:1000px;margin:0 auto 18px;color:var(--ink-dim);font-size:1rem;
+  }
+  .winnote b{color:var(--hazard);font-weight:400}
 
   .status{
-    text-align:center;color:var(--ink-dim);font-size:1.15rem;font-weight:500;padding:70px 20px;
+    text-align:center;color:var(--ink-dim);font-size:1.1rem;padding:70px 20px;letter-spacing:.04em;
   }
   .status button{
-    display:inline-block;margin-top:16px;font:inherit;font-weight:600;
-    background:var(--accent);color:#161616;border:none;border-radius:999px;
-    padding:12px 26px;cursor:pointer;font-size:1.05rem;
+    display:inline-block;margin-top:18px;
+    font-family:'Orbitron',sans-serif;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    background:linear-gradient(180deg,#FFB443,#E68900);color:#161616;
+    border:2px solid #FFC46B;border-radius:10px;
+    padding:12px 26px;cursor:pointer;font-size:.95rem;
+    box-shadow:0 3px 0 #6e4200;
   }
 
   /* admin bar */
   .adminbar{
-    display:none;max-width:1500px;margin:0 auto;padding:0 28px 10px;
-    gap:10px;align-items:center;color:var(--ink-dim);font-size:.95rem;flex-wrap:wrap;
+    display:none;max-width:1500px;margin:0 auto;padding:0 28px 12px;
+    gap:12px;align-items:center;color:var(--ink-dim);font-size:.9rem;flex-wrap:wrap;letter-spacing:.03em;
   }
   body.admin .adminbar{display:flex}
   .adminbar button{
-    font:inherit;font-weight:600;background:var(--panel);color:var(--ink);
-    border:2px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer;font-size:.95rem;
+    font-family:'Orbitron',sans-serif;font-weight:600;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;
+    background:linear-gradient(180deg,var(--steel-hi),var(--steel-lo));color:var(--ink);
+    border:2px solid var(--edge);border-radius:8px;padding:9px 16px;cursor:pointer;
+    box-shadow:0 2px 0 #0b0d11;
   }
-  .adminbar button:hover{border-color:#ff7b7b}
+  .adminbar button:hover{border-color:var(--danger);color:var(--danger)}
 
   footer{
-    text-align:center;color:#5A6690;font-size:.9rem;font-weight:500;padding:0 20px 30px;
+    text-align:center;color:#5A6478;font-size:.85rem;padding:0 20px 30px;letter-spacing:.08em;
   }
   @media (prefers-reduced-motion:reduce){
     *{transition:none!important;animation:none!important}
   }
   @media (max-width:560px){
-    header{padding:24px 16px 8px}
+    header{padding:22px 16px 8px}
     main{padding:16px 16px 60px}
-    .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
-    .card .face{width:70px;height:70px}
-    .card .name{font-size:1.1rem}
-    .row{grid-template-columns:40px 56px 1fr auto;padding:10px 14px 10px 8px}
-    .row .rname{font-size:1.15rem}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px}
+    .card .face{width:68px;height:68px}
+    .card .name{font-size:.95rem}
+    .row{grid-template-columns:44px 54px 1fr auto;padding:10px 14px 10px 8px}
+    .row .rname{font-size:1.05rem}
     .row .rvotes{font-size:1.15rem;min-width:44px}
   }
 </style>
@@ -178,11 +277,16 @@
 <div class="stripe"></div>
 
 <header>
-  <h1>Name our robots!
-    <span class="sub">Tap your favourite name to give it a vote. The top two names win.</span>
-  </h1>
+  <div class="titleblock">
+    <div class="sys"><span class="lamp" id="lamp"></span><span id="sysmsg">SYSTEM ONLINE — NAMING PROTOCOL ACTIVE</span></div>
+    <h1>Name our <span>robots</span></h1>
+    <div class="sub">Tap a nameplate to cast a vote. The <b>top two</b> designations get assigned to our two new units.</div>
+  </div>
   <div class="headstats">
-    <div class="pill">Votes so far <b id="totalVotes">0</b></div>
+    <div class="counterbox">
+      <div class="num" id="totalVotes">0</div>
+      <div class="lbl">VOTES LOGGED</div>
+    </div>
     <div class="tabs" role="tablist">
       <button class="tab on" id="tabAll" role="tab" aria-selected="true">All names</button>
       <button class="tab" id="tabTop" role="tab" aria-selected="false">Leaderboard</button>
@@ -191,19 +295,19 @@
 </header>
 
 <div class="adminbar">
-  <span>Admin mode: tap ✕ on a card to hide a name (saved on this device).</span>
+  <span>ADMIN MODE — tap ✕ on a nameplate to hide it (saved on this device).</span>
   <button id="btnUnhide">Un-hide all</button>
   <button id="btnResetVotes">Reset all votes</button>
 </div>
 
 <main>
-  <div class="status" id="status">Loading name suggestions…</div>
+  <div class="status" id="status">SCANNING FOR NAME SUGGESTIONS…</div>
   <div class="grid" id="grid" hidden></div>
-  <div class="winnote" id="winnote" hidden>The <b>top two</b> names will go to our two new robots.</div>
+  <div class="winnote" id="winnote" hidden>The <b>top two</b> names will be assigned to our two new robots.</div>
   <div class="board" id="board" hidden></div>
 </main>
 
-<footer>SPARK Centre · Boneo Primary School — suggestions load live from the class form</footer>
+<footer>SPARK CENTRE // BONEO PRIMARY SCHOOL — LIVE FEED FROM THE CLASS FORM</footer>
 
 <script>
 /* ================= CONFIG =================
@@ -213,7 +317,7 @@
    BANNED_WORDS:  any suggestion containing one of these substrings is dropped.
 */
 const SHEET_CSV_URL =
-  'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYOnFCDtaPGF_q7MDIkaXa8Bu8hjXR1rIMR1oZfND8uf8Z8An-VdEXty5WZL8OF7f3VHzLEYG4noED/pub?output=csv';
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcKCokfO6Q0Ta7H_AVOLsxst89csF5z6FHgWcJuac2x1G4Q29XboVkwJ6sRapYle9rk9OXUapCMd3X/pub?output=csv';
 
 const BLOCKED_NAMES = [
   // 'Example Bad Name',
@@ -313,15 +417,16 @@ function extractNames(rows){
 }
 
 async function load(){
-  statusEl.textContent = 'Loading name suggestions…';
+  statusEl.textContent = 'SCANNING FOR NAME SUGGESTIONS…';
   statusEl.style.display = '';
+  setLamp(true);
   try{
     const res = await fetch(SHEET_CSV_URL, {cache:'no-store'});
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     names = extractNames(parseCSV(text));
     if (!names.length){
-      statusEl.innerHTML = 'No name suggestions yet. Be the first to fill in the form!<br><button onclick="load()">Check again</button>';
+      statusEl.innerHTML = 'NO SUGGESTIONS DETECTED. Be the first to fill in the form!<br><button onclick="load()">Scan again</button>';
       return;
     }
     shuffle(names);
@@ -329,9 +434,17 @@ async function load(){
     if ($('#tabAll').classList.contains('on')) grid.hidden = false;
     render();
   }catch(err){
-    statusEl.innerHTML = 'Couldn\u2019t load the suggestions right now.<br><button onclick="load()">Try again</button>';
+    setLamp(false);
+    statusEl.innerHTML = 'CONNECTION FAULT — couldn\u2019t load the suggestions.<br><button onclick="load()">Try again</button>';
     console.error(err);
   }
+}
+
+function setLamp(ok){
+  $('#lamp').classList.toggle('err', !ok);
+  $('#sysmsg').textContent = ok
+    ? 'SYSTEM ONLINE — NAMING PROTOCOL ACTIVE'
+    : 'SYSTEM FAULT — FEED OFFLINE';
 }
 
 function shuffle(a){
@@ -350,12 +463,12 @@ function hashName(s){
   }
   return h >>> 0;
 }
-const FACE_COLORS = ['#FFD23F','#5CE8C8','#8FA9FF','#FF9E7B','#D9A5FF','#7BE07B','#FF8FB0','#9BE3FF'];
+const FACE_COLORS = ['#35E0FF','#FF9E00','#7CFF6B','#FFD23F','#FF5C8A','#A88BFF','#C9D4E4','#4FFFC4'];
 
 function robotFace(name){
   const h = hashName(name.toLowerCase());
   const col   = FACE_COLORS[h % FACE_COLORS.length];
-  const headR = 8 + (h >> 3) % 16;              // head corner radius
+  const headR = 6 + (h >> 3) % 12;              // head corner radius
   const eye   = (h >> 5) % 3;                   // 0 circles, 1 squares, 2 visor
   const ant   = (h >> 7) % 3;                   // antenna style
   const mouth = (h >> 9) % 3;                   // grill, smile, line
@@ -367,8 +480,8 @@ function robotFace(name){
   else svg += `<rect x="44" y="8" width="12" height="14" rx="3" fill="${col}"/>`;
   // head
   svg += `<rect x="16" y="20" width="68" height="62" rx="${headR}" fill="${col}"/>`;
-  // face panel
-  svg += `<rect x="24" y="30" width="52" height="42" rx="${Math.max(4,headR-6)}" fill="#141B31"/>`;
+  // face screen
+  svg += `<rect x="24" y="30" width="52" height="42" rx="${Math.max(3,headR-5)}" fill="#0B0E13"/>`;
   // eyes
   if (eye === 0) svg += `<circle cx="39" cy="46" r="6" fill="${col}"/><circle cx="61" cy="46" r="6" fill="${col}"/>`;
   else if (eye === 1) svg += `<rect x="33" y="40" width="11" height="11" rx="2" fill="${col}"/><rect x="56" y="40" width="11" height="11" rx="2" fill="${col}"/>`;
@@ -454,7 +567,7 @@ function renderBoard(){
   const max = Math.max(1, ...ranked.map(r => r.count));
   board.innerHTML = ranked.map((r,i) =>
     `<div class="row">
-       <div class="rank">${i+1}</div>
+       <div class="rank">${String(i+1).padStart(2,'0')}</div>
        ${robotFace(r.label)}
        <div class="mid">
          <div class="rname">${escapeHTML(r.label)}</div>
