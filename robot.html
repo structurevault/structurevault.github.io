@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Name Our Robots — SPARK Centre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#141B31;
+    --panel:#1E2745;
+    --panel-hi:#28335A;
+    --line:#33406E;
+    --accent:#FFD23F;
+    --accent-dk:#C79E14;
+    --mint:#5CE8C8;
+    --ink:#F1F4FF;
+    --ink-dim:#9AA6CF;
+    --radius:20px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Fredoka',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  /* caution stripe strip along the very top */
+  .stripe{
+    height:14px;
+    background:repeating-linear-gradient(-45deg,var(--accent) 0 22px,#101426 22px 44px);
+  }
+  header{
+    max-width:1500px;margin:0 auto;
+    padding:34px 28px 10px;
+    display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  }
+  h1{
+    font-weight:700;font-size:clamp(2rem,4.5vw,4rem);line-height:1.02;letter-spacing:-.01em;
+  }
+  h1 .sub{
+    display:block;font-weight:500;font-size:clamp(1rem,1.6vw,1.4rem);
+    color:var(--ink-dim);margin-top:8px;letter-spacing:0;
+  }
+  .headstats{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .pill{
+    background:var(--panel);border:2px solid var(--line);border-radius:999px;
+    padding:10px 20px;font-weight:600;font-size:1.05rem;color:var(--ink);
+    display:flex;gap:8px;align-items:center;
+  }
+  .pill b{color:var(--accent);font-weight:700}
+  .tabs{display:flex;gap:8px}
+  .tab{
+    font:inherit;font-weight:600;font-size:1.05rem;cursor:pointer;
+    background:var(--panel);color:var(--ink-dim);
+    border:2px solid var(--line);border-radius:999px;padding:10px 22px;
+    transition:transform .12s ease;
+  }
+  .tab:active{transform:scale(.96)}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#161616}
+  .tab:focus-visible,.card:focus-visible,button:focus-visible{outline:3px solid var(--mint);outline-offset:3px}
+
+  main{max-width:1500px;margin:0 auto;padding:22px 28px 80px}
+  .grid{
+    display:grid;gap:18px;
+    grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  }
+
+  /* nameplate card */
+  .card{
+    position:relative;
+    background:var(--panel);
+    border:2px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px 16px 14px;
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+    cursor:pointer;user-select:none;-webkit-user-select:none;
+    transition:transform .12s ease,border-color .12s ease,background .12s ease;
+    text-align:center;
+  }
+  .card:hover{border-color:var(--accent)}
+  .card.pop{transform:scale(1.06);border-color:var(--accent);background:var(--panel-hi)}
+  .card .face{width:96px;height:96px}
+  .card .name{
+    font-weight:600;font-size:1.35rem;line-height:1.1;word-break:break-word;
+  }
+  .card .votes{
+    display:flex;align-items:center;gap:7px;
+    color:var(--ink-dim);font-weight:600;font-size:1rem;
+    background:#161D36;border-radius:999px;padding:6px 14px;
+  }
+  .card .votes.some{color:var(--accent)}
+  .card .plus{
+    position:absolute;top:10px;right:14px;
+    font-weight:700;color:var(--accent);font-size:1.4rem;
+    opacity:0;pointer-events:none;transform:translateY(6px);
+  }
+  .card.pop .plus{animation:rise .7s ease forwards}
+  @keyframes rise{
+    0%{opacity:0;transform:translateY(8px)}
+    25%{opacity:1}
+    100%{opacity:0;transform:translateY(-16px)}
+  }
+  .hidebtn{
+    position:absolute;top:8px;left:8px;
+    width:34px;height:34px;border-radius:50%;
+    border:2px solid var(--line);background:#161D36;color:var(--ink-dim);
+    font:inherit;font-weight:700;font-size:1rem;cursor:pointer;display:none;
+  }
+  body.admin .hidebtn{display:block}
+  .hidebtn:hover{border-color:#ff7b7b;color:#ff7b7b}
+
+  /* leaderboard */
+  .board{display:none;flex-direction:column;gap:14px;max-width:980px;margin:0 auto}
+  .row{
+    display:grid;grid-template-columns:64px 84px 1fr auto;align-items:center;gap:16px;
+    background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:12px 20px 12px 12px;
+  }
+  .row .rank{font-weight:700;font-size:1.7rem;color:var(--ink-dim);text-align:center}
+  .row:nth-child(1) .rank,.row:nth-child(2) .rank{color:var(--accent)}
+  .row:nth-child(1),.row:nth-child(2){border-color:var(--accent)}
+  .row .face{width:72px;height:72px}
+  .row .mid{min-width:0}
+  .row .rname{font-weight:600;font-size:1.5rem;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar{height:12px;border-radius:999px;background:#161D36;margin-top:8px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .4s ease}
+  .row .rvotes{font-weight:700;font-size:1.5rem;color:var(--accent);min-width:70px;text-align:right}
+  .winnote{
+    max-width:980px;margin:0 auto 18px;color:var(--ink-dim);font-size:1.05rem;font-weight:500;
+  }
+  .winnote b{color:var(--mint);font-weight:600}
+
+  .status{
+    text-align:center;color:var(--ink-dim);font-size:1.15rem;font-weight:500;padding:70px 20px;
+  }
+  .status button{
+    display:inline-block;margin-top:16px;font:inherit;font-weight:600;
+    background:var(--accent);color:#161616;border:none;border-radius:999px;
+    padding:12px 26px;cursor:pointer;font-size:1.05rem;
+  }
+
+  /* admin bar */
+  .adminbar{
+    display:none;max-width:1500px;margin:0 auto;padding:0 28px 10px;
+    gap:10px;align-items:center;color:var(--ink-dim);font-size:.95rem;flex-wrap:wrap;
+  }
+  body.admin .adminbar{display:flex}
+  .adminbar button{
+    font:inherit;font-weight:600;background:var(--panel);color:var(--ink);
+    border:2px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer;font-size:.95rem;
+  }
+  .adminbar button:hover{border-color:#ff7b7b}
+
+  footer{
+    text-align:center;color:#5A6690;font-size:.9rem;font-weight:500;padding:0 20px 30px;
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+  @media (max-width:560px){
+    header{padding:24px 16px 8px}
+    main{padding:16px 16px 60px}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+    .card .face{width:70px;height:70px}
+    .card .name{font-size:1.1rem}
+    .row{grid-template-columns:40px 56px 1fr auto;padding:10px 14px 10px 8px}
+    .row .rname{font-size:1.15rem}
+    .row .rvotes{font-size:1.15rem;min-width:44px}
+  }
+</style>
+</head>
+<body>
+<div class="stripe"></div>
+
+<header>
+  <h1>Name our robots!
+    <span class="sub">Tap your favourite name to give it a vote. The top two names win.</span>
+  </h1>
+  <div class="headstats">
+    <div class="pill">Votes so far <b id="totalVotes">0</b></div>
+    <div class="tabs" role="tablist">
+      <button class="tab on" id="tabAll" role="tab" aria-selected="true">All names</button>
+      <button class="tab" id="tabTop" role="tab" aria-selected="false">Leaderboard</button>
+    </div>
+  </div>
+</header>
+
+<div class="adminbar">
+  <span>Admin mode: tap ✕ on a card to hide a name (saved on this device).</span>
+  <button id="btnUnhide">Un-hide all</button>
+  <button id="btnResetVotes">Reset all votes</button>
+</div>
+
+<main>
+  <div class="status" id="status">Loading name suggestions…</div>
+  <div class="grid" id="grid" hidden></div>
+  <div class="winnote" id="winnote" hidden>The <b>top two</b> names will go to our two new robots.</div>
+  <div class="board" id="board" hidden></div>
+</main>
+
+<footer>SPARK Centre · Boneo Primary School — suggestions load live from the class form</footer>
+
+<script>
+/* ================= CONFIG =================
+   SHEET_CSV_URL: the published sheet as CSV. Derived from your pubhtml link.
+   BLOCKED_NAMES: exact names to remove (case-insensitive). Add any rogue
+                  entries here, e.g. 'Fartbot 3000'.
+   BANNED_WORDS:  any suggestion containing one of these substrings is dropped.
+*/
+const SHEET_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYOnFCDtaPGF_q7MDIkaXa8Bu8hjXR1rIMR1oZfND8uf8Z8An-VdEXty5WZL8OF7f3VHzLEYG4noED/pub?output=csv';
+
+const BLOCKED_NAMES = [
+  // 'Example Bad Name',
+];
+
+const BANNED_WORDS = [
+  'fuck','shit','cunt','bitch','dick','cock','pussy','wank','bollock',
+  'fanny','slut','whore','nigg','fag','retard','rape','nazi','hitler',
+  'penis','vagina','boob','porn','sex ','sexy','anal','arsehole','asshole',
+  'bastard','damn','piss','crap','turd','poo ','willy','knob','tosser',
+  'bugger','shag','spastic','molest','kill yourself','kys','69','420'
+];
+
+const MAX_NAME_LEN = 40;
+const TAP_COOLDOWN_MS = 700;
+/* ========================================== */
+
+const $ = s => document.querySelector(s);
+const grid = $('#grid'), board = $('#board'), statusEl = $('#status');
+
+const store = {
+  get(k, fallback){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+let votes  = store.get('sparkRobotVotes', {});   // key -> count
+let hidden = store.get('sparkRobotHidden', []);  // array of keys
+let names  = [];                                 // [{key, label}]
+let lastTap = 0;
+
+const isAdmin = new URLSearchParams(location.search).has('admin');
+if (isAdmin) document.body.classList.add('admin');
+
+/* ---------- CSV loading & parsing ---------- */
+function parseCSV(text){
+  const rows = [];
+  let row = [], cell = '', inQ = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (inQ){
+      if (c === '"'){
+        if (text[i+1] === '"'){ cell += '"'; i++; }
+        else inQ = false;
+      } else cell += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ','){ row.push(cell); cell = ''; }
+      else if (c === '\n'){ row.push(cell); rows.push(row); row = []; cell = ''; }
+      else if (c !== '\r') cell += c;
+    }
+  }
+  if (cell.length || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+
+function looksLikeDate(s){
+  return /^\d{1,4}[\/\-.]\d{1,2}[\/\-.]\d{1,4}/.test(s.trim()) || /^\d{1,2}:\d{2}/.test(s.trim());
+}
+
+function cleanName(raw){
+  let n = raw.replace(/\s+/g,' ').trim();
+  if (!n) return null;
+  if (n.length > MAX_NAME_LEN) n = n.slice(0, MAX_NAME_LEN).trim();
+  const low = ' ' + n.toLowerCase() + ' ';
+  for (const w of BANNED_WORDS){
+    if (low.includes(w)) return null;
+  }
+  for (const b of BLOCKED_NAMES){
+    if (n.toLowerCase() === b.toLowerCase()) return null;
+  }
+  return n;
+}
+
+function extractNames(rows){
+  if (!rows.length) return [];
+  const header = rows[0].map(h => h.toLowerCase());
+  // Columns to skip: anything that's a timestamp, email, or student-name style column
+  const skipCol = header.map(h =>
+    /timestamp|date|time|email|class|grade|room|your name|student/.test(h)
+  );
+  // If skipping first data row as header made sense (any header cell is non-empty text
+  // and first row has no date), start at 1; otherwise treat row 0 as data too.
+  const start = header.some(h => h && !looksLikeDate(h)) ? 1 : 0;
+
+  const seen = new Map(); // key -> label
+  for (let r = start; r < rows.length; r++){
+    for (let c = 0; c < rows[r].length; c++){
+      if (skipCol[c]) continue;
+      const raw = rows[r][c];
+      if (!raw || looksLikeDate(raw)) continue;
+      const n = cleanName(raw);
+      if (!n) continue;
+      const key = n.toLowerCase();
+      if (!seen.has(key)) seen.set(key, n);
+    }
+  }
+  return [...seen.entries()].map(([key,label]) => ({key,label}));
+}
+
+async function load(){
+  statusEl.textContent = 'Loading name suggestions…';
+  statusEl.style.display = '';
+  try{
+    const res = await fetch(SHEET_CSV_URL, {cache:'no-store'});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    names = extractNames(parseCSV(text));
+    if (!names.length){
+      statusEl.innerHTML = 'No name suggestions yet. Be the first to fill in the form!<br><button onclick="load()">Check again</button>';
+      return;
+    }
+    shuffle(names);
+    statusEl.style.display = 'none';
+    if ($('#tabAll').classList.contains('on')) grid.hidden = false;
+    render();
+  }catch(err){
+    statusEl.innerHTML = 'Couldn\u2019t load the suggestions right now.<br><button onclick="load()">Try again</button>';
+    console.error(err);
+  }
+}
+
+function shuffle(a){
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+}
+
+/* ---------- Robot faces (deterministic per name) ---------- */
+function hashName(s){
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++){
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+const FACE_COLORS = ['#FFD23F','#5CE8C8','#8FA9FF','#FF9E7B','#D9A5FF','#7BE07B','#FF8FB0','#9BE3FF'];
+
+function robotFace(name){
+  const h = hashName(name.toLowerCase());
+  const col   = FACE_COLORS[h % FACE_COLORS.length];
+  const headR = 8 + (h >> 3) % 16;              // head corner radius
+  const eye   = (h >> 5) % 3;                   // 0 circles, 1 squares, 2 visor
+  const ant   = (h >> 7) % 3;                   // antenna style
+  const mouth = (h >> 9) % 3;                   // grill, smile, line
+  const cheek = (h >> 11) % 2;                  // side bolts
+  let svg = `<svg class="face" viewBox="0 0 100 100" aria-hidden="true">`;
+  // antenna
+  if (ant === 0) svg += `<line x1="50" y1="6" x2="50" y2="20" stroke="${col}" stroke-width="4"/><circle cx="50" cy="6" r="5" fill="${col}"/>`;
+  else if (ant === 1) svg += `<line x1="34" y1="10" x2="40" y2="22" stroke="${col}" stroke-width="4"/><line x1="66" y1="10" x2="60" y2="22" stroke="${col}" stroke-width="4"/><circle cx="34" cy="10" r="4" fill="${col}"/><circle cx="66" cy="10" r="4" fill="${col}"/>`;
+  else svg += `<rect x="44" y="8" width="12" height="14" rx="3" fill="${col}"/>`;
+  // head
+  svg += `<rect x="16" y="20" width="68" height="62" rx="${headR}" fill="${col}"/>`;
+  // face panel
+  svg += `<rect x="24" y="30" width="52" height="42" rx="${Math.max(4,headR-6)}" fill="#141B31"/>`;
+  // eyes
+  if (eye === 0) svg += `<circle cx="39" cy="46" r="6" fill="${col}"/><circle cx="61" cy="46" r="6" fill="${col}"/>`;
+  else if (eye === 1) svg += `<rect x="33" y="40" width="11" height="11" rx="2" fill="${col}"/><rect x="56" y="40" width="11" height="11" rx="2" fill="${col}"/>`;
+  else svg += `<rect x="31" y="41" width="38" height="9" rx="4.5" fill="${col}"/>`;
+  // mouth
+  if (mouth === 0) svg += `<rect x="38" y="59" width="5" height="7" rx="1.5" fill="${col}"/><rect x="47" y="59" width="5" height="7" rx="1.5" fill="${col}"/><rect x="56" y="59" width="5" height="7" rx="1.5" fill="${col}"/>`;
+  else if (mouth === 1) svg += `<path d="M38 59 Q50 70 62 59" stroke="${col}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+  else svg += `<rect x="38" y="61" width="24" height="4.5" rx="2.25" fill="${col}"/>`;
+  // side bolts / ears
+  if (cheek) svg += `<rect x="8" y="42" width="8" height="18" rx="4" fill="${col}"/><rect x="84" y="42" width="8" height="18" rx="4" fill="${col}"/>`;
+  svg += `</svg>`;
+  return svg;
+}
+
+/* ---------- Rendering ---------- */
+function visibleNames(){
+  return names.filter(n => !hidden.includes(n.key));
+}
+
+function render(){
+  grid.innerHTML = '';
+  for (const n of visibleNames()){
+    const count = votes[n.key] || 0;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.tabIndex = 0;
+    card.setAttribute('role','button');
+    card.setAttribute('aria-label', `Vote for ${n.label}, ${count} votes`);
+    card.innerHTML =
+      robotFace(n.label) +
+      `<div class="name">${escapeHTML(n.label)}</div>` +
+      `<div class="votes ${count?'some':''}"><span>&#9650;</span><span class="c">${count}</span></div>` +
+      `<div class="plus">+1</div>` +
+      `<button class="hidebtn" aria-label="Hide ${escapeHTML(n.label)}">&#10005;</button>`;
+    card.addEventListener('click', e => {
+      if (e.target.classList.contains('hidebtn')){ hideName(n.key); return; }
+      castVote(n.key, card);
+    });
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); castVote(n.key, card); }
+    });
+    grid.appendChild(card);
+  }
+  updateTotals();
+  renderBoard();
+}
+
+function escapeHTML(s){
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function castVote(key, card){
+  const now = Date.now();
+  if (now - lastTap < TAP_COOLDOWN_MS) return;
+  lastTap = now;
+  votes[key] = (votes[key] || 0) + 1;
+  store.set('sparkRobotVotes', votes);
+  const vEl = card.querySelector('.votes');
+  vEl.classList.add('some');
+  card.querySelector('.c').textContent = votes[key];
+  card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop');
+  setTimeout(() => card.classList.remove('pop'), 400);
+  updateTotals();
+  renderBoard();
+}
+
+function hideName(key){
+  if (!hidden.includes(key)) hidden.push(key);
+  store.set('sparkRobotHidden', hidden);
+  render();
+}
+
+function updateTotals(){
+  const total = visibleNames().reduce((s,n) => s + (votes[n.key]||0), 0);
+  $('#totalVotes').textContent = total;
+}
+
+function renderBoard(){
+  const ranked = visibleNames()
+    .map(n => ({...n, count: votes[n.key]||0}))
+    .sort((a,b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, 10);
+  const max = Math.max(1, ...ranked.map(r => r.count));
+  board.innerHTML = ranked.map((r,i) =>
+    `<div class="row">
+       <div class="rank">${i+1}</div>
+       ${robotFace(r.label)}
+       <div class="mid">
+         <div class="rname">${escapeHTML(r.label)}</div>
+         <div class="bar"><i style="width:${(r.count/max)*100}%"></i></div>
+       </div>
+       <div class="rvotes">${r.count}</div>
+     </div>`
+  ).join('');
+}
+
+/* ---------- Tabs ---------- */
+$('#tabAll').addEventListener('click', () => switchTab('all'));
+$('#tabTop').addEventListener('click', () => switchTab('top'));
+function switchTab(which){
+  const top = which === 'top';
+  $('#tabAll').classList.toggle('on', !top);
+  $('#tabTop').classList.toggle('on', top);
+  $('#tabAll').setAttribute('aria-selected', String(!top));
+  $('#tabTop').setAttribute('aria-selected', String(top));
+  grid.hidden = top;
+  board.hidden = !top;
+  $('#winnote').hidden = !top;
+  board.style.display = top ? 'flex' : 'none';
+  if (top) renderBoard();
+}
+
+/* ---------- Admin ---------- */
+$('#btnUnhide').addEventListener('click', () => {
+  hidden = []; store.set('sparkRobotHidden', hidden); render();
+});
+$('#btnResetVotes').addEventListener('click', () => {
+  if (confirm('Reset ALL votes on this device?')){
+    votes = {}; store.set('sparkRobotVotes', votes); render();
+  }
+});
+
+/* ---------- Go ---------- */
+load();
+// Refresh the name list every 2 minutes so new form responses appear
+setInterval(load, 120000);
+</script>
+</body>
+</html>
