@@ -255,6 +255,58 @@
   }
   .adminbar button:hover{border-color:var(--danger);color:var(--danger)}
 
+  /* one vote per session */
+  body.locked .card{cursor:default}
+  body.locked .card:hover{
+    border-color:var(--edge);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 4px 0 #0b0d11;
+  }
+  .sessionbar{
+    display:none;max-width:1500px;margin:0 auto;padding:0 28px 14px;
+    gap:14px;align-items:center;flex-wrap:wrap;
+    color:var(--hazard);font-size:1rem;letter-spacing:.05em;
+  }
+  body.locked .sessionbar{display:flex}
+  .bigbtn{
+    font-family:'Orbitron',sans-serif;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    background:linear-gradient(180deg,#FFB443,#E68900);color:#161616;
+    border:2px solid #FFC46B;border-radius:10px;
+    padding:13px 28px;cursor:pointer;font-size:1rem;
+    box-shadow:0 3px 0 #6e4200;
+    transition:transform .1s ease;
+  }
+  .bigbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #6e4200}
+  .ghostbtn{
+    font-family:'Orbitron',sans-serif;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    background:linear-gradient(180deg,var(--steel-hi),var(--steel-lo));color:var(--ink);
+    border:2px solid var(--edge);border-radius:10px;
+    padding:13px 24px;cursor:pointer;font-size:.95rem;
+    box-shadow:0 3px 0 #0b0d11;
+  }
+  .overlay{
+    position:fixed;inset:0;z-index:50;
+    background:rgba(9,11,15,.88);
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .overlay.show{display:flex}
+  .panel{
+    background:linear-gradient(180deg,var(--steel-hi) 0%,var(--steel) 55%,var(--steel-lo) 100%);
+    border:2px solid var(--led);border-radius:16px;
+    max-width:460px;width:100%;padding:36px 28px 30px;text-align:center;
+    box-shadow:0 0 44px rgba(53,224,255,.3),inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .panel .face{width:112px;height:112px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.45))}
+  .panel h2{
+    font-family:'Orbitron',sans-serif;font-weight:800;font-size:1.5rem;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--led);
+    text-shadow:0 0 14px rgba(53,224,255,.6);margin:14px 0 6px;
+  }
+  .panel .votedname{
+    font-family:'Orbitron',sans-serif;font-weight:600;font-size:1.3rem;margin-bottom:6px;
+  }
+  .panel p{color:var(--ink-dim);font-size:1rem;letter-spacing:.03em}
+  .panel .btns{display:flex;gap:12px;justify-content:center;margin-top:24px;flex-wrap:wrap}
+
   footer{
     text-align:center;color:#5A6478;font-size:.85rem;padding:0 20px 30px;letter-spacing:.08em;
   }
@@ -280,7 +332,7 @@
   <div class="titleblock">
     <div class="sys"><span class="lamp" id="lamp"></span><span id="sysmsg">SYSTEM ONLINE — NAMING PROTOCOL ACTIVE</span></div>
     <h1>Name our <span>robots</span></h1>
-    <div class="sub">Tap a nameplate to cast a vote. The <b>top two</b> designations get assigned to our two new units.</div>
+    <div class="sub">Tap a nameplate to cast your vote — <b>one vote each</b>. The top two designations get assigned to our two new units.</div>
   </div>
   <div class="headstats">
     <div class="counterbox">
@@ -300,12 +352,30 @@
   <button id="btnResetVotes">Reset all votes</button>
 </div>
 
+<div class="sessionbar">
+  <span>VOTE LOGGED FOR THIS SESSION — pass the screen to the next voter.</span>
+  <button class="bigbtn" id="btnNext2">Next voter</button>
+</div>
+
 <main>
   <div class="status" id="status">SCANNING FOR NAME SUGGESTIONS…</div>
   <div class="grid" id="grid" hidden></div>
   <div class="winnote" id="winnote" hidden>The <b>top two</b> names will be assigned to our two new robots.</div>
   <div class="board" id="board" hidden></div>
 </main>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="ovTitle">
+  <div class="panel">
+    <div id="ovFace"></div>
+    <h2 id="ovTitle">Vote logged</h2>
+    <div class="votedname" id="ovName"></div>
+    <p>Thanks! One vote each — pass the screen to the next voter.</p>
+    <div class="btns">
+      <button class="bigbtn" id="btnNext">Next voter</button>
+      <button class="ghostbtn" id="btnBoard">See leaderboard</button>
+    </div>
+  </div>
+</div>
 
 <footer>SPARK CENTRE // BONEO PRIMARY SCHOOL — LIVE FEED FROM THE CLASS FORM</footer>
 
@@ -332,7 +402,6 @@ const BANNED_WORDS = [
 ];
 
 const MAX_NAME_LEN = 40;
-const TAP_COOLDOWN_MS = 700;
 /* ========================================== */
 
 const $ = s => document.querySelector(s);
@@ -342,10 +411,15 @@ const store = {
   get(k, fallback){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } },
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 };
-let votes  = store.get('sparkRobotVotes', {});   // key -> count
+let votes  = store.get('sparkRobotVotes', {});   // key -> count (retained on this device)
 let hidden = store.get('sparkRobotHidden', []);  // array of keys
 let names  = [];                                 // [{key, label}]
-let lastTap = 0;
+
+// one vote per session: sessionStorage clears when the tab/session ends,
+// or when "Next voter" is pressed. Tallies stay in localStorage.
+let votedKey = null;
+try{ votedKey = sessionStorage.getItem('sparkVotedKey'); }catch(e){}
+if (votedKey) document.body.classList.add('locked');
 
 const isAdmin = new URLSearchParams(location.search).has('admin');
 if (isAdmin) document.body.classList.add('admin');
@@ -534,9 +608,14 @@ function escapeHTML(s){
 }
 
 function castVote(key, card){
-  const now = Date.now();
-  if (now - lastTap < TAP_COOLDOWN_MS) return;
-  lastTap = now;
+  if (votedKey){
+    // already voted this session — nudge toward the session bar
+    document.querySelector('.sessionbar').scrollIntoView({behavior:'smooth',block:'nearest'});
+    return;
+  }
+  votedKey = key;
+  try{ sessionStorage.setItem('sparkVotedKey', key); }catch(e){}
+  document.body.classList.add('locked');
   votes[key] = (votes[key] || 0) + 1;
   store.set('sparkRobotVotes', votes);
   const vEl = card.querySelector('.votes');
@@ -546,7 +625,32 @@ function castVote(key, card){
   setTimeout(() => card.classList.remove('pop'), 400);
   updateTotals();
   renderBoard();
+  showOverlay(key);
 }
+
+function showOverlay(key){
+  const n = names.find(x => x.key === key);
+  if (!n) return;
+  $('#ovFace').innerHTML = robotFace(n.label);
+  $('#ovName').textContent = n.label;
+  $('#overlay').classList.add('show');
+  $('#btnNext').focus();
+}
+
+function nextVoter(){
+  votedKey = null;
+  try{ sessionStorage.removeItem('sparkVotedKey'); }catch(e){}
+  document.body.classList.remove('locked');
+  $('#overlay').classList.remove('show');
+  switchTab('all');
+}
+
+$('#btnNext').addEventListener('click', nextVoter);
+$('#btnNext2').addEventListener('click', nextVoter);
+$('#btnBoard').addEventListener('click', () => {
+  $('#overlay').classList.remove('show');
+  switchTab('top');
+});
 
 function hideName(key){
   if (!hidden.includes(key)) hidden.push(key);
@@ -600,7 +704,9 @@ $('#btnUnhide').addEventListener('click', () => {
 });
 $('#btnResetVotes').addEventListener('click', () => {
   if (confirm('Reset ALL votes on this device?')){
-    votes = {}; store.set('sparkRobotVotes', votes); render();
+    votes = {}; store.set('sparkRobotVotes', votes);
+    nextVoter();
+    render();
   }
 });
 
