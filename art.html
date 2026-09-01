@@ -51,7 +51,10 @@
 <div class="hud" id="hud">
   <h1>SPARK 360 GALLERY</h1>
   <p id="status">Loading artwork…</p>
-  <p>Drag to look · <b>WASD</b> to fly<br>Headset: press <b>VR</b>, thumbstick to fly</p>
+  <p>Auto-tour flies you between artworks. Touch anything to take over —
+     drag to look, <b>WASD</b> to fly. Headset: <b>VR</b> button, thumbstick to fly.</p>
+  <p id="tour" style="color:#ffd27d"></p>
+  <button id="btnTour">⏸ Pause tour</button>
   <button id="btnReload">↻ Reload art</button>
 </div>
 
@@ -72,7 +75,7 @@
   <a-entity id="artworks"></a-entity>
 
   <!-- player rig: drag/WASD on desktop, thumbstick flight in VR -->
-  <a-entity id="rig" movement-controls="speed: 0.25; fly: true" position="0 0 0">
+  <a-entity id="rig" movement-controls="speed: 0.25; fly: true" auto-tour position="0 0 0">
     <a-entity id="head" camera look-controls="pointerLockEnabled: false" position="0 1.6 0"></a-entity>
   </a-entity>
 </a-scene>
@@ -89,6 +92,7 @@ const CONFIG = {
   IMAGE_EXT: /\.(png|jpe?g|gif|webp|bmp)$/i,
   MAX_ARTWORKS: 120,
   ART_WIDTH: 3,                 // metres — height follows the image's aspect
+  ART_MAX_HEIGHT: 3.4,          // tall portrait images shrink to fit their row
   SEED: 21402140,               // change to re-scatter all the frames
   FEATURED_FILE: ""             // pin a filename (or part of one) front-and-centre;
                                 // blank = the most recently uploaded file
@@ -140,20 +144,24 @@ const FEATURED_SLOT = { x: 0, y: 2.2, z: -7, featured: true };
 
 function buildSlots(){
   const rand = mulberry32(CONFIG.SEED);
+  // Overlap-proof by construction: neighbours on a ring sit ≥4.4 m apart
+  // (frames max out at ~3.3 m wide) and height layers are 6 m apart
+  // (artwork is capped at 3.4 m tall, so frame + label always clears).
   const rings = [
-    { r: 9,  n: 12, ys: [1.0, 3.2] },
-    { r: 14, n: 18, ys: [0.2, 2.6, 5.2] },
-    { r: 20, n: 26, ys: [-1.5, 1.8, 4.6, 7.6] },
-    { r: 27, n: 32, ys: [-3.0, 1.2, 5.4, 9.8] },
-    { r: 35, n: 38, ys: [-4.5, 0.6, 4.2, 8.6, 12.5] },
+    { r: 10, ys: [1.2, 7.2] },
+    { r: 16, ys: [-2.2, 3.8, 9.8] },
+    { r: 23, ys: [-5.0, 1.0, 7.0, 13.0] },
+    { r: 31, ys: [-6.5, -0.5, 5.5, 11.5, 17.5] },
+    { r: 40, ys: [-6.5, -0.5, 5.5, 11.5, 17.5] },
   ];
   for (const ring of rings){
-    for (let i=0; i<ring.n; i++){
-      const az = (i/ring.n)*Math.PI*2 + rand()*0.25;
+    const n = Math.floor((2*Math.PI*ring.r) / 4.4);
+    for (let i=0; i<n; i++){
+      const az = (i/n)*Math.PI*2;
       const x = Math.sin(az)*ring.r, z = Math.cos(az)*ring.r;
       // keep the forward window at the nearest ring clear for the featured frame
-      if (ring.r === 9 && Math.abs(Math.atan2(x, -z)) < 0.5) continue;
-      const y = ring.ys[i % ring.ys.length] + (rand()-0.5)*1.2;
+      if (ring.r === 10 && Math.abs(Math.atan2(x, -z)) < 0.55) continue;
+      const y = ring.ys[i % ring.ys.length] + (rand()-0.5)*0.6;
       skySlots.push({ x, y, z });
     }
   }
@@ -173,7 +181,11 @@ AFRAME.registerComponent("fit-aspect", {   // match frame + label to real image 
     this.el.addEventListener("materialtextureloaded", e => {
       const img = e.detail.texture && e.detail.texture.image;
       if (!img || !img.width) return;
-      const w = CONFIG.ART_WIDTH, h = w * (img.height / img.width);
+      let w = CONFIG.ART_WIDTH, h = w * (img.height / img.width);
+      if (h > CONFIG.ART_MAX_HEIGHT){          // tall portraits shrink to fit
+        w *= CONFIG.ART_MAX_HEIGHT / h; h = CONFIG.ART_MAX_HEIGHT;
+        this.el.setAttribute("width", w);
+      }
       this.el.setAttribute("height", h);
       const holder = this.el.parentEl;
       const frame = holder.querySelector(".frame");
@@ -187,6 +199,7 @@ AFRAME.registerComponent("fit-aspect", {   // match frame + label to real image 
 function placeArtworks(list){
   const root = $("#artworks");
   root.innerHTML = "";
+  tourStops = [];
   const used = new Set();
   list.sort((a,b)=>a.file.localeCompare(b.file));
 
@@ -239,9 +252,117 @@ function placeArtworks(list){
     holder.appendChild(label);
 
     root.appendChild(holder);
+    tourStops.push({ x:slot.x, y:slot.y, z:slot.z, title, artist, featured:isFeatured });
   }
+
+  // order the tour: start at the featured frame, then always fly to the
+  // nearest not-yet-visited artwork (loops forever)
+  const ordered = [];
+  let cur = tourStops.find(t=>t.featured) || tourStops[0];
+  const rest = tourStops.filter(t=>t!==cur);
+  while (cur){
+    ordered.push(cur);
+    if (!rest.length) break;
+    let bi=0, bd=Infinity;
+    rest.forEach((t,i)=>{ const d=(t.x-cur.x)**2+(t.y-cur.y)**2+(t.z-cur.z)**2; if(d<bd){bd=d;bi=i;} });
+    cur = rest.splice(bi,1)[0];
+  }
+  tourStops = ordered;
+  const tc = document.querySelector("#rig").components["auto-tour"];
+  if (tc){ tc.idx = -1; tc.phase = "idle"; }
+
   status(`<span class="count">${Math.min(list.length, cap)}</span> artworks floating`);
 }
+
+/* ═══════════════ AUTO-TOUR ═══════════════ */
+// Flies the viewer from artwork to artwork forever. Any input (mouse, key,
+// touch, or VR thumbstick/button) hands control to the person; the tour
+// resumes after they've been idle for a while. In VR only the position is
+// flown — the headset always owns where you look.
+const TOUR = { dwellMs: 7000, resumeAfterMs: 18000, viewDist: 4.6 };
+let tourStops = [];
+function shortAngle(a){ while(a>Math.PI)a-=2*Math.PI; while(a<-Math.PI)a+=2*Math.PI; return a; }
+
+AFRAME.registerComponent("auto-tour", {
+  init(){
+    this.idx = -1; this.phase = "idle"; this.t = 0; this.dur = 1;
+    this.p0 = new THREE.Vector3(); this.p1 = new THREE.Vector3();
+    this.pc = new THREE.Vector3(); this.tmp = new THREE.Vector3();
+    this.userOff = false;
+    this.lastInput = -1e9;                       // tour starts immediately
+    const mark = () => { this.lastInput = performance.now(); };
+    ["mousedown","wheel","touchstart","keydown"].forEach(ev =>
+      window.addEventListener(ev, mark, { passive: true }));
+    this.head = document.querySelector("#head");
+  },
+  viewPointFor(t, out){                          // hover spot in front of a frame
+    const len = Math.hypot(t.x, t.z);
+    if (len <= TOUR.viewDist + 0.5) out.set(0, t.y - 1.6, 0);
+    else out.set(t.x - (t.x/len)*TOUR.viewDist, t.y - 1.6, t.z - (t.z/len)*TOUR.viewDist);
+    return out;
+  },
+  tick(time, dt){
+    if (this.userOff){ hudTour("tour paused — press ▶ to resume"); return; }
+    if (!tourStops.length){ hudTour(""); return; }
+
+    // VR thumbstick / button input also counts as taking over
+    const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const gp of gps){
+      if (gp && ((gp.axes||[]).some(a=>Math.abs(a)>0.2) || (gp.buttons||[]).some(b=>b.pressed))){
+        this.lastInput = performance.now(); break;
+      }
+    }
+    const idle = performance.now() - this.lastInput;
+    if (idle < TOUR.resumeAfterMs){
+      this.phase = "idle";
+      hudTour(`you have the controls — tour resumes after ${Math.ceil((TOUR.resumeAfterMs-idle)/1000)}s idle`);
+      return;
+    }
+
+    const rigPos = this.el.object3D.position;
+    if (this.phase === "idle"){
+      this.idx = (this.idx + 1) % tourStops.length;
+      const target = tourStops[this.idx];
+      this.p0.copy(rigPos);
+      this.viewPointFor(target, this.p1);
+      this.pc.lerpVectors(this.p0, this.p1, 0.5).multiplyScalar(0.55); // bow inward,
+      this.pc.y = (this.p0.y + this.p1.y)/2 + 0.5;                     // clear of frames
+      this.dur = Math.min(10000, Math.max(3000, 1500 + this.p0.distanceTo(this.p1)*140));
+      this.t = 0; this.phase = "travel";
+    }
+    const target = tourStops[this.idx];
+    if (this.phase === "travel"){
+      this.t += dt;
+      const s = Math.min(1, this.t / this.dur);
+      const e = s*s*(3-2*s), inv = 1-e;                                // smoothstep
+      rigPos.set(
+        inv*inv*this.p0.x + 2*inv*e*this.pc.x + e*e*this.p1.x,
+        inv*inv*this.p0.y + 2*inv*e*this.pc.y + e*e*this.p1.y,
+        inv*inv*this.p0.z + 2*inv*e*this.pc.z + e*e*this.p1.z
+      );
+      this.centreLook(target, dt, e);
+      hudTour(`▶ flying to “${target.title}”`);
+      if (this.t >= this.dur){ this.phase = "dwell"; this.t = 0; }
+    } else if (this.phase === "dwell"){
+      this.t += dt;
+      this.centreLook(target, dt, 1);
+      hudTour(`▶ “${target.title}” — ${target.artist}`);
+      if (this.t >= TOUR.dwellMs) this.phase = "idle";
+    }
+  },
+  centreLook(target, dt, strength){              // desktop only: ease gaze onto the art
+    if (this.el.sceneEl.is("vr-mode")) return;
+    const lc = this.head.components["look-controls"];
+    if (!lc || !lc.pitchObject) return;
+    const camPos = this.tmp.setFromMatrixPosition(this.head.object3D.matrixWorld);
+    const dx = target.x - camPos.x, dy = target.y - camPos.y, dz = target.z - camPos.z;
+    const wantYaw = Math.atan2(-dx, -dz);
+    const wantPitch = Math.atan2(dy, Math.hypot(dx, dz));
+    const k = Math.min(1, dt/1000 * 2.2) * strength;
+    lc.yawObject.rotation.y += shortAngle(wantYaw - lc.yawObject.rotation.y) * k;
+    lc.pitchObject.rotation.x += (wantPitch - lc.pitchObject.rotation.x) * k;
+  }
+});
 
 /* ═══════════════ ART SOURCES ═══════════════ */
 async function fromGitHub(){
@@ -295,6 +416,14 @@ async function loadArt(){
 }
 
 /* ═══════════════ UI WIRING ═══════════════ */
+function hudTour(msg){ const el=$("#tour"); if (el.textContent !== msg) el.textContent = msg; }
+$("#btnTour").onclick = () => {
+  const c = document.querySelector("#rig").components["auto-tour"];
+  if (!c) return;
+  c.userOff = !c.userOff;
+  if (!c.userOff){ c.lastInput = -1e9; c.phase = "idle"; }   // resume right away
+  $("#btnTour").textContent = c.userOff ? "▶ Resume tour" : "⏸ Pause tour";
+};
 $("#btnReload").onclick = () => loadArt();
 
 /* ═══════════════ GO ═══════════════ */
