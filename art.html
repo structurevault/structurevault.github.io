@@ -232,14 +232,20 @@ function placeArtworks(list){
     frame.setAttribute("material", `color: ${isFeatured ? "#ffd27d" : "#f3ede0"}; shader: flat; side: double`);
     holder.appendChild(frame);
 
-    const img = document.createElement("a-image");
-    img.setAttribute("src", art.url);
-    img.setAttribute("crossorigin","anonymous");
+    const isGif = /\.gif$/i.test(art.file);
+    const img = document.createElement(isGif ? "a-plane" : "a-image");
     img.setAttribute("width", CONFIG.ART_WIDTH);
     img.setAttribute("height", CONFIG.ART_WIDTH*0.75);
     img.setAttribute("position","0 0 0.02");
-    img.setAttribute("material","shader: flat");
-    img.setAttribute("fit-aspect","");
+    if (isGif){
+      img.setAttribute("material", { shader: "flat" });
+      img.setAttribute("gif-player", { src: art.url });
+    } else {
+      img.setAttribute("src", art.url);
+      img.setAttribute("crossorigin","anonymous");
+      img.setAttribute("material","shader: flat");
+      img.setAttribute("fit-aspect","");
+    }
     holder.appendChild(img);
 
     const label = document.createElement("a-text");
@@ -273,6 +279,77 @@ function placeArtworks(list){
 
   status(`<span class="count">${Math.min(list.length, cap)}</span> artworks floating`);
 }
+
+/* ═══════════════ ANIMATED GIFS ═══════════════ */
+// WebGL textures only show a GIF's first frame, so this decodes the frames
+// (ImageDecoder API — Chrome/Edge/Quest browser) and plays them onto a canvas
+// texture. Browsers without ImageDecoder (e.g. Safari) fall back to a static
+// first frame. Frames are capped and downsized to keep headsets happy.
+AFRAME.registerComponent("gif-player", {
+  schema: { src: { type: "string" } },
+  async init(){
+    this.frames = []; this.i = 0; this.acc = 0; this.ready = false;
+    try{
+      if (!("ImageDecoder" in window)) throw new Error("ImageDecoder unsupported");
+      const buf = await (await fetch(this.data.src)).arrayBuffer();
+      const dec = new ImageDecoder({ data: buf, type: "image/gif" });
+      await dec.tracks.ready;
+      const n = Math.min(dec.tracks.selectedTrack.frameCount, 180);
+      const c = document.createElement("canvas");
+      for (let k=0; k<n; k++){
+        const { image } = await dec.decode({ frameIndex: k });
+        const durMs = Math.max(20, (image.duration || 100000)/1000);
+        const scale = Math.min(1, 1024 / image.displayWidth);
+        const bmp = await createImageBitmap(image, {
+          resizeWidth:  Math.max(1, Math.round(image.displayWidth  * scale)),
+          resizeHeight: Math.max(1, Math.round(image.displayHeight * scale))
+        });
+        image.close();
+        if (k===0){ c.width = bmp.width; c.height = bmp.height;
+                    this.canvas = c; this.ctx = c.getContext("2d"); }
+        this.frames.push({ bmp, dur: durMs });
+      }
+      dec.close();
+      this.ctx.drawImage(this.frames[0].bmp, 0, 0);
+      this.tex = new THREE.CanvasTexture(this.canvas);
+      this.tex.colorSpace = THREE.SRGBColorSpace;
+      const apply = () => {
+        const m = this.el.getObject3D("mesh");
+        if (!m) return false;
+        m.material.map = this.tex; m.material.needsUpdate = true; return true;
+      };
+      if (!apply()) this.el.addEventListener("object3dset", () => apply(), { once: true });
+      this.sizeTo(this.canvas.width, this.canvas.height);
+      this.ready = true;
+    }catch(e){
+      console.warn("GIF animation unavailable, showing first frame:", e);
+      this.el.setAttribute("fit-aspect","");
+      this.el.setAttribute("material", { shader: "flat", src: this.data.src });
+    }
+  },
+  sizeTo(pw, ph){                              // same fit rules as still images
+    let w = CONFIG.ART_WIDTH, h = w * (ph / pw);
+    if (h > CONFIG.ART_MAX_HEIGHT){ w *= CONFIG.ART_MAX_HEIGHT / h; h = CONFIG.ART_MAX_HEIGHT; }
+    this.el.setAttribute("width", w); this.el.setAttribute("height", h);
+    const holder = this.el.parentEl;
+    const frame = holder.querySelector(".frame");
+    const label = holder.querySelector(".label");
+    if (frame){ frame.setAttribute("width", w+0.28); frame.setAttribute("height", h+0.28); }
+    if (label){ label.setAttribute("position", `0 ${-(h/2)-0.4} 0.04`); }
+  },
+  tick(t, dt){
+    if (!this.ready || this.frames.length < 2) return;
+    this.acc += dt;
+    let f = this.frames[this.i], guard = 0;
+    while (this.acc >= f.dur && guard++ < this.frames.length){
+      this.acc -= f.dur;
+      this.i = (this.i + 1) % this.frames.length;
+      f = this.frames[this.i];
+    }
+    if (guard){ this.ctx.drawImage(f.bmp, 0, 0); this.tex.needsUpdate = true; }
+  },
+  remove(){ this.frames.forEach(f => f.bmp.close && f.bmp.close()); this.frames = []; }
+});
 
 /* ═══════════════ AUTO-TOUR ═══════════════ */
 // Flies the viewer from artwork to artwork forever. Any input (mouse, key,
