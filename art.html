@@ -76,7 +76,7 @@
 
   <!-- player rig: drag/WASD on desktop, thumbstick flight in VR -->
   <a-entity id="rig" movement-controls="speed: 0.25; fly: true" auto-tour position="0 0 0">
-    <a-entity id="head" camera look-controls="pointerLockEnabled: false" position="0 1.6 0"></a-entity>
+    <a-entity id="head" camera="near: 0.1; far: 550" look-controls="pointerLockEnabled: false" position="0 1.6 0"></a-entity>
   </a-entity>
 </a-scene>
 
@@ -109,10 +109,20 @@ function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCod
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a);
   t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
+// only credit the bit before " - " as the artist if it actually looks like a
+// person's name (1–4 words, letters only — "Ava N", "Jack O'Brien"); filenames
+// like "IMG 4021 - export" or "screenshot 2026" fall back to SPARK Artist
+function looksLikeName(s){
+  return /^[A-Za-zÀ-ÖØ-öø-ÿ'’.-]+( [A-Za-zÀ-ÖØ-öø-ÿ'’.-]+){0,3}$/.test(s.trim());
+}
 function parseName(filename){
   const base = filename.replace(/\.[^.]+$/,"").replace(/[_]+/g," ").trim();
   const i = base.indexOf(" - ");
-  if (i > 0) return { artist: base.slice(0,i).trim(), title: base.slice(i+3).trim() || "Untitled" };
+  if (i > 0){
+    const artist = base.slice(0,i).trim();
+    const title  = base.slice(i+3).trim() || "Untitled";
+    if (looksLikeName(artist)) return { artist, title };
+  }
   return { artist: "SPARK Artist", title: base || "Untitled" };
 }
 function demoArt(i){
@@ -176,9 +186,36 @@ function takenSlot(idx, used){
 }
 
 /* ═══════════════ HANG THE ART ═══════════════ */
+// Pushes a mesh slightly back in the DEPTH BUFFER only (no visual change),
+// so the frame backing can never z-fight with the artwork in front of it.
+AFRAME.registerComponent("depth-behind", {
+  init(){
+    const apply = () => {
+      const m = this.el.getObject3D("mesh");
+      if (!m) return;
+      m.material.polygonOffset = true;
+      m.material.polygonOffsetFactor = 2;
+      m.material.polygonOffsetUnits = 2;
+      m.material.needsUpdate = true;
+    };
+    apply();
+    this.el.addEventListener("object3dset", apply);
+    this.el.addEventListener("componentchanged", e => { if (e.detail.name === "material") apply(); });
+  }
+});
+
+// Anisotropic filtering stops distant, moving artwork from shimmering/sparkling.
+function sharpenTexture(tex){
+  const scene = document.querySelector("a-scene");
+  const renderer = scene && scene.renderer;
+  if (renderer) tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  tex.needsUpdate = true;
+}
+
 AFRAME.registerComponent("fit-aspect", {   // match frame + label to real image aspect
   init(){
     this.el.addEventListener("materialtextureloaded", e => {
+      if (e.detail.texture) sharpenTexture(e.detail.texture);
       const img = e.detail.texture && e.detail.texture.image;
       if (!img || !img.width) return;
       let w = CONFIG.ART_WIDTH, h = w * (img.height / img.width);
@@ -191,7 +228,7 @@ AFRAME.registerComponent("fit-aspect", {   // match frame + label to real image 
       const frame = holder.querySelector(".frame");
       const label = holder.querySelector(".label");
       if (frame){ frame.setAttribute("width", w+0.28); frame.setAttribute("height", h+0.28); }
-      if (label){ label.setAttribute("position", `0 ${-(h/2)-0.4} 0.04`); }
+      if (label){ label.setAttribute("position", `0 ${-(h/2)-0.4} 0.12`); }
     });
   }
 });
@@ -230,13 +267,14 @@ function placeArtworks(list){
     frame.setAttribute("height", CONFIG.ART_WIDTH*0.75+0.28);
     frame.setAttribute("position","0 0 0");
     frame.setAttribute("material", `color: ${isFeatured ? "#ffd27d" : "#f3ede0"}; shader: flat; side: double`);
+    frame.setAttribute("depth-behind","");
     holder.appendChild(frame);
 
     const isGif = /\.gif$/i.test(art.file);
     const img = document.createElement(isGif ? "a-plane" : "a-image");
     img.setAttribute("width", CONFIG.ART_WIDTH);
     img.setAttribute("height", CONFIG.ART_WIDTH*0.75);
-    img.setAttribute("position","0 0 0.02");
+    img.setAttribute("position","0 0 0.06");
     if (isGif){
       img.setAttribute("material", { shader: "flat" });
       img.setAttribute("gif-player", { src: art.url });
@@ -254,7 +292,7 @@ function placeArtworks(list){
     label.setAttribute("align","center");
     label.setAttribute("color","#ffffff");
     label.setAttribute("width","3.2");
-    label.setAttribute("position", `0 ${-(CONFIG.ART_WIDTH*0.375)-0.4} 0.04`);
+    label.setAttribute("position", `0 ${-(CONFIG.ART_WIDTH*0.375)-0.4} 0.12`);
     holder.appendChild(label);
 
     root.appendChild(holder);
@@ -313,6 +351,9 @@ AFRAME.registerComponent("gif-player", {
       this.ctx.drawImage(this.frames[0].bmp, 0, 0);
       this.tex = new THREE.CanvasTexture(this.canvas);
       this.tex.colorSpace = THREE.SRGBColorSpace;
+      this.tex.generateMipmaps = false;                 // canvas updates every frame
+      this.tex.minFilter = THREE.LinearFilter;
+      sharpenTexture(this.tex);
       const apply = () => {
         const m = this.el.getObject3D("mesh");
         if (!m) return false;
@@ -335,7 +376,7 @@ AFRAME.registerComponent("gif-player", {
     const frame = holder.querySelector(".frame");
     const label = holder.querySelector(".label");
     if (frame){ frame.setAttribute("width", w+0.28); frame.setAttribute("height", h+0.28); }
-    if (label){ label.setAttribute("position", `0 ${-(h/2)-0.4} 0.04`); }
+    if (label){ label.setAttribute("position", `0 ${-(h/2)-0.4} 0.12`); }
   },
   tick(t, dt){
     if (!this.ready || this.frames.length < 2) return;
@@ -424,7 +465,15 @@ AFRAME.registerComponent("auto-tour", {
       this.t += dt;
       this.centreLook(target, dt, 1);
       hudTour(`▶ “${target.title}” — ${target.artist}`);
-      if (this.t >= TOUR.dwellMs) this.phase = "idle";
+      if (this.t >= TOUR.dwellMs){
+        if (this.idx === tourStops.length - 1){
+          // full lap complete → reload the page to pull in freshly uploaded art
+          hudTour("↻ refreshing gallery…");
+          location.reload();
+          return;
+        }
+        this.phase = "idle";
+      }
     }
   },
   centreLook(target, dt, strength){              // desktop only: ease gaze onto the art
