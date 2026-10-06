@@ -399,14 +399,14 @@ function cellHTML(raw, isLast) {
 }
 
 function renderRail(data) {
-  var teams = data.classes.length * 2;
+  var teams = data.classes.length;
   var track = document.getElementById("rail");
   track.style.gridTemplateColumns = "repeat(" + data.milestones.length + ", 1fr)";
   var currentFound = false;
   track.innerHTML = data.milestones.map(function (m, j) {
     var ticks = 0;
     data.classes.forEach(function (c) {
-      ticks += (isDone(c.blue[j]) ? 1 : 0) + (isDone(c.red[j]) ? 1 : 0);
+      if (isDone(c.blue[j]) && isDone(c.red[j])) ticks++;
     });
     var cls = "";
     if (ticks >= teams && teams > 0) cls = "done";
@@ -430,16 +430,20 @@ function renderGrid(data) {
     '<div></div><div>Class</div>' +
     '<div><span class="teamword blue">Blue</span>' + labels() + "</div>" +
     '<div><span class="teamword red">Red</span>' + labels() + "</div>" +
-    '<div style="text-align:right">of ' + (n * 2) + "</div>" +
+    '<div style="text-align:right">of ' + n + "</div>" +
     "</div>";
 
-  /* rank by total milestones: furthest ahead scrolls past first */
+  /* a milestone counts for the class once BOTH teams have it; ties broken
+     by individual team ticks so a class with one team ahead ranks higher */
   var order = data.classes.map(function (c) {
-    var t = 0;
-    c.blue.forEach(function (v) { if (isDone(v)) t++; });
-    c.red.forEach(function (v) { if (isDone(v)) t++; });
-    return { c: c, total: t };
-  }).sort(function (a, b) { return b.total - a.total; });
+    var t = 0, ticks = 0;
+    for (var j = 0; j < n; j++) {
+      var b = isDone(c.blue[j]), r = isDone(c.red[j]);
+      if (b && r) t++;
+      ticks += (b ? 1 : 0) + (r ? 1 : 0);
+    }
+    return { c: c, total: t, ticks: ticks };
+  }).sort(function (a, b) { return (b.total - a.total) || (b.ticks - a.ticks); });
 
   var rowsHTML = order.map(function (e, i) {
     function strip(team, cells) {
@@ -452,7 +456,7 @@ function renderGrid(data) {
       '<div class="name">' + esc(e.c.name) + "</div>" +
       strip("blue", e.c.blue) +
       strip("red", e.c.red) +
-      '<div class="total">' + e.total + "<small>/" + (n * 2) + "</small></div>" +
+      '<div class="total">' + e.total + "<small>/" + n + "</small></div>" +
       "</div>";
   }).join("");
 
