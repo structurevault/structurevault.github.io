@@ -10,12 +10,12 @@
 
   SHEET LAYOUT (one tab, two blocks side by side):
     Blue Team | Beta Test | V1.0 | V1.2 | ... | V1.6 |   | Red Team | Beta Test | ...
-    Prep A    | Yes       |      |      |     |      |   | Prep A   | Yes       |
   Milestone cells: Yes / Y / X / 1 / true / tick = done (green). Blank = not yet (yellow).
   FINAL column (the treasure raid): Yes = treasure found (glowing chest),
   No / Fail = raid failed (empty open chest), blank = not attempted (closed chest).
-  Milestone columns are read from the sheet headers, so adding or renaming
-  a version column in the sheet updates the board automatically.
+
+  The list is ranked with the furthest-ahead classes first and auto-scrolls
+  in a continuous loop when it doesn't all fit on screen. Hover pauses it.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,7 +36,9 @@
     --done: #3fcf7a;       /* green: moving forward */
     --done-edge: #2a9c58;
     --bright: #6dff8e;     /* glowing treasure green */
-    --cell: clamp(16px, 2.0vw, 42px);
+    --cell: clamp(18px, 2.2vw, 48px);
+    --rowh: clamp(46px, 7.5vh, 110px);
+    --rowgap: clamp(4px, .6vh, 10px);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -123,34 +125,57 @@
   }
   .commit.now .tag, .commit.now .count { color: var(--gold); }
 
-  /* ---------- class grid ---------- */
+  /* ---------- class list ---------- */
   main {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: clamp(4px, .55vh, 10px);
   }
   .row {
-    flex: 1;
-    min-height: 0;
+    height: var(--rowh);
+    flex: none;
     display: grid;
-    grid-template-columns: 2.2ch minmax(8ch, 1fr) auto auto 5ch;
+    grid-template-columns: 2.4ch 8ch auto auto 5ch;
+    justify-content: center;
     align-items: center;
-    column-gap: clamp(8px, 1vw, 22px);
+    column-gap: clamp(8px, .9vw, 18px);
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 8px;
     padding: clamp(3px, .4vh, 8px) clamp(10px, 1.1vw, 20px);
   }
   .row.head {
-    flex: 0 0 auto;
+    height: auto;
     background: none;
     border: none;
     padding-top: 0;
-    padding-bottom: 0;
+    padding-bottom: clamp(3px, .5vh, 8px);
     color: var(--muted);
     font-size: clamp(10px, .85vw, 16px);
+  }
+  #scroller {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 3%, #000 97%, transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 3%, #000 97%, transparent);
+  }
+  #scrolllist {
+    display: flex;
+    flex-direction: column;
+    gap: var(--rowgap);
+    will-change: transform;
+  }
+  #scrolllist.anim { animation: scrollup var(--dur, 45s) linear infinite; }
+  #scroller:hover #scrolllist.anim { animation-play-state: paused; }
+  @keyframes scrollup {
+    from { transform: translateY(0); }
+    to   { transform: translateY(calc(-1 * var(--loop, 0px))); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #scrolllist.anim { animation: none; }
+    #scroller { overflow-y: auto; }
   }
   .rank {
     font-family: "Silkscreen", monospace;
@@ -158,7 +183,7 @@
     color: var(--muted);
     text-align: right;
   }
-  .row:nth-child(2) .rank { color: var(--gold); }
+  .rank.r1 { color: var(--gold); }
   .name {
     font-weight: 700;
     font-size: clamp(14px, 1.5vw, 30px);
@@ -244,14 +269,18 @@
 
 <div class="rail"><div class="rail-track" id="rail"></div></div>
 
-<main id="grid"></main>
+<main>
+  <div id="gridhead"></div>
+  <div id="scroller"><div id="scrolllist"></div></div>
+</main>
 
 <div class="banner" id="banner"></div>
 
 <script>
 var CONFIG = {
   sheetCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQuZjLN8FALS27_BdYEwaYcbs1T26JJ8VAXSRJr9u0tMwjbDlAy2pQ-Hpd7-QvsbLhnBEChiEtK2DgH/pub?output=csv",
-  refreshSeconds: 60
+  refreshSeconds: 60,
+  secondsPerRow: 2.8   /* scroll pace: lower = faster */
 };
 
 var DONE = { "yes": 1, "y": 1, "x": 1, "1": 1, "true": 1, "done": 1, "found": 1, "\u2713": 1, "\u2714": 1 };
@@ -397,29 +426,29 @@ function renderGrid(data) {
       return '<div class="lab">' + esc(shortLabel(m)) + "</div>";
     }).join("") + "</div>";
   }
-  var html = '<div class="row head">' +
+  document.getElementById("gridhead").innerHTML = '<div class="row head">' +
     '<div></div><div>Class</div>' +
     '<div><span class="teamword blue">Blue</span>' + labels() + "</div>" +
     '<div><span class="teamword red">Red</span>' + labels() + "</div>" +
     '<div style="text-align:right">of ' + (n * 2) + "</div>" +
     "</div>";
 
-  var ranked = data.classes.map(function (c) {
+  /* rank by total milestones: furthest ahead scrolls past first */
+  var order = data.classes.map(function (c) {
     var t = 0;
     c.blue.forEach(function (v) { if (isDone(v)) t++; });
     c.red.forEach(function (v) { if (isDone(v)) t++; });
     return { c: c, total: t };
-  });
-  var order = ranked.slice().sort(function (a, b) { return b.total - a.total; });
+  }).sort(function (a, b) { return b.total - a.total; });
 
-  html += order.map(function (e, i) {
+  var rowsHTML = order.map(function (e, i) {
     function strip(team, cells) {
       return '<div class="strip ' + team + '">' + cells.map(function (raw, j) {
         return cellHTML(raw, j === n - 1);
       }).join("") + "</div>";
     }
     return '<div class="row">' +
-      '<div class="rank">' + (i + 1) + "</div>" +
+      '<div class="rank' + (i === 0 ? " r1" : "") + '">' + (i + 1) + "</div>" +
       '<div class="name">' + esc(e.c.name) + "</div>" +
       strip("blue", e.c.blue) +
       strip("red", e.c.red) +
@@ -427,7 +456,23 @@ function renderGrid(data) {
       "</div>";
   }).join("");
 
-  document.getElementById("grid").innerHTML = html;
+  var list = document.getElementById("scrolllist");
+  var scroller = document.getElementById("scroller");
+  list.classList.remove("anim");
+  list.style.transform = "";
+  list.innerHTML = rowsHTML;
+
+  /* animate only when the list overflows the screen */
+  requestAnimationFrame(function () {
+    var oneCopy = list.scrollHeight;
+    if (oneCopy > scroller.clientHeight + 2) {
+      var gap = parseFloat(getComputedStyle(list).rowGap) || 0;
+      list.innerHTML = rowsHTML + rowsHTML;       /* second copy for a seamless loop */
+      list.style.setProperty("--loop", (oneCopy + gap) + "px");
+      list.style.setProperty("--dur", (order.length * CONFIG.secondsPerRow) + "s");
+      list.classList.add("anim");
+    }
+  });
 }
 
 function setSync(text, stale) {
