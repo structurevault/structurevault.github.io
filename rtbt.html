@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Castle Defence — Version Board</title>
+<!--
+  CASTLE DEFENCE VERSION BOARD — SPARK Centre, Boneo PS
+  Mirrors the RedTeam/BlueTeam Google Sheet exactly.
+
+  SHEET LAYOUT (one tab, two blocks side by side):
+    Blue Team | Beta Test | V1.0 | V1.2 | ... |   | Red Team | Beta Test | V1.0 | ...
+    Prep A    | Yes       |      |      |     |   | Prep A   | Yes       |      |
+  A cell counts as done when it contains Yes / Y / X / 1 / true / a tick.
+  Milestone columns are read from the sheet headers, so adding or renaming
+  a version column in the sheet updates the board automatically.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #121018;
+    --panel: #1d1927;
+    --panel-2: #241e31;
+    --line: #37304b;
+    --text: #efeaf7;
+    --muted: #9a92b4;
+    --red: #e5484d;
+    --red-dim: #4a2230;
+    --blue: #4a9eea;
+    --blue-dim: #1f2c48;
+    --gold: #f5b83d;
+    --green: #57d98a;
+    --cell: clamp(16px, 2.0vw, 42px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Atkinson Hyperlegible", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(12px, 1.5vw, 28px);
+    gap: clamp(10px, 1.2vh, 18px);
+    overflow: hidden;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-family: "Silkscreen", monospace;
+    font-weight: 700;
+    font-size: clamp(20px, 2.6vw, 44px);
+    letter-spacing: 1px;
+  }
+  header h1 .r { color: var(--red); }
+  header h1 .b { color: var(--blue); }
+  .sync { color: var(--muted); font-size: clamp(12px, 1vw, 18px); }
+  .sync .dot {
+    display: inline-block; width: .6em; height: .6em; border-radius: 50%;
+    background: var(--green); margin-right: .4em;
+  }
+  .sync.stale .dot { background: var(--gold); }
+
+  /* ---------- milestone rail ---------- */
+  .rail {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: clamp(10px, 1.3vh, 20px) clamp(12px, 1.4vw, 26px);
+  }
+  .rail-track { display: grid; position: relative; }
+  .rail-track::before {
+    content: "";
+    position: absolute;
+    left: 7%;
+    right: 7%;
+    top: calc(clamp(14px, 1.6vh, 22px) * 0.85);
+    border-top: 3px dashed var(--line);
+  }
+  .commit {
+    position: relative;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    opacity: .6;
+  }
+  .commit .node {
+    width: clamp(14px, 1.6vh, 22px);
+    height: clamp(14px, 1.6vh, 22px);
+    border: 3px solid var(--muted);
+    background: var(--bg);
+    transform: rotate(45deg);
+    z-index: 1;
+  }
+  .commit .tag {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(11px, 1.05vw, 20px);
+    color: var(--muted);
+  }
+  .commit .count { font-size: clamp(10px, .9vw, 16px); color: var(--muted); }
+  .commit.done { opacity: .95; }
+  .commit.done .node { background: var(--green); border-color: var(--green); }
+  .commit.done .count { color: var(--green); }
+  .commit.now { opacity: 1; }
+  .commit.now .node {
+    border-color: var(--gold);
+    background: var(--gold);
+    box-shadow: 0 0 0 4px rgba(245, 184, 61, .18);
+  }
+  .commit.now .tag, .commit.now .count { color: var(--gold); }
+
+  /* ---------- class grid ---------- */
+  main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(4px, .55vh, 10px);
+  }
+  .row {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 2.2ch minmax(8ch, 1fr) auto auto 5ch;
+    align-items: center;
+    column-gap: clamp(8px, 1vw, 22px);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: clamp(3px, .4vh, 8px) clamp(10px, 1.1vw, 20px);
+  }
+  .row.head {
+    flex: 0 0 auto;
+    background: none;
+    border: none;
+    padding-top: 0;
+    padding-bottom: 0;
+    color: var(--muted);
+    font-size: clamp(10px, .85vw, 16px);
+  }
+  .rank {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(13px, 1.4vw, 28px);
+    color: var(--muted);
+    text-align: right;
+  }
+  .row:nth-child(2) .rank { color: var(--gold); }
+  .name {
+    font-weight: 700;
+    font-size: clamp(14px, 1.5vw, 30px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .strip { display: flex; gap: clamp(3px, .35vw, 7px); }
+  .cellbox {
+    width: var(--cell);
+    height: calc(var(--cell) * .62);
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .strip.blue .cellbox.on { background: var(--blue); border-color: var(--blue); }
+  .strip.red  .cellbox.on { background: var(--red);  border-color: var(--red); }
+  .strip.blue .cellbox.off { background: var(--blue-dim); }
+  .strip.red  .cellbox.off { background: var(--red-dim); }
+  .lab {
+    width: var(--cell);
+    text-align: center;
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(8px, .72vw, 14px);
+    overflow: hidden;
+  }
+  .striplab { display: flex; gap: clamp(3px, .35vw, 7px); }
+  .head .teamword.blue { color: var(--blue); }
+  .head .teamword.red { color: var(--red); }
+  .total {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(14px, 1.5vw, 30px);
+    text-align: right;
+  }
+  .total small { color: var(--muted); font-size: .55em; }
+
+  .banner {
+    text-align: center;
+    color: var(--gold);
+    font-size: clamp(12px, 1vw, 18px);
+    padding: 6px;
+    border: 1px dashed var(--gold);
+    border-radius: 8px;
+    display: none;
+  }
+  .banner.show { display: block; }
+  .banner.error { color: var(--red); border-color: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="r">Red</span> vs <span class="b">Blue</span> — Version Board</h1>
+  <div class="sync" id="sync"><span class="dot"></span><span id="syncText">connecting…</span></div>
+</header>
+
+<div class="rail"><div class="rail-track" id="rail"></div></div>
+
+<main id="grid"></main>
+
+<div class="banner" id="banner"></div>
+
+<script>
+var CONFIG = {
+  sheetCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQuZjLN8FALS27_BdYEwaYcbs1T26JJ8VAXSRJr9u0tMwjbDlAy2pQ-Hpd7-QvsbLhnBEChiEtK2DgH/pub?output=csv",
+  refreshSeconds: 60
+};
+
+var DONE = { "yes": 1, "y": 1, "x": 1, "1": 1, "true": 1, "done": 1, "\u2713": 1, "\u2714": 1 };
+function isDone(v) { return !!DONE[String(v || "").trim().toLowerCase()]; }
+
+function parseCSV(text) {
+  var rows = [], row = [], cell = "", q = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    if (q) {
+      if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (c === '"') { q = false; }
+      else { cell += c; }
+    } else if (c === '"') { q = true; }
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell); cell = "";
+      rows.push(row); row = [];
+    } else { cell += c; }
+  }
+  row.push(cell); rows.push(row);
+  return rows.filter(function (r) {
+    return r.some(function (v) { return String(v).trim() !== ""; });
+  });
+}
+
+/* Find the Blue Team and Red Team blocks wherever they sit in the header row */
+function parseSheet(rows) {
+  var head = rows[0].map(function (h) { return String(h).trim(); });
+  var lower = head.map(function (h) { return h.toLowerCase(); });
+  var bi = lower.indexOf("blue team");
+  var ri = lower.indexOf("red team");
+  if (bi < 0 || ri < 0) throw new Error("couldn't find Blue Team / Red Team headers");
+
+  function milestones(start, stop) {
+    var out = [];
+    for (var i = start + 1; i < stop; i++) {
+      if (head[i] === "") break;
+      out.push({ col: i, label: head[i] });
+    }
+    return out;
+  }
+  var first = Math.min(bi, ri), second = Math.max(bi, ri);
+  var mFirst = milestones(first, second);
+  var mSecond = milestones(second, head.length);
+  var blueM = bi < ri ? mFirst : mSecond;
+  var redM = bi < ri ? mSecond : mFirst;
+
+  var classes = [];
+  rows.slice(1).forEach(function (r) {
+    var name = String(r[bi] || r[ri] || "").trim();
+    if (!name) return;
+    classes.push({
+      name: name,
+      blue: blueM.map(function (m) { return isDone(r[m.col]); }),
+      red: redM.map(function (m) { return isDone(r[m.col]); })
+    });
+  });
+  return { milestones: blueM.map(function (m) { return m.label; }), classes: classes };
+}
+
+var DEMO_CLASSES = ["Prep A","Prep B","1 A","1 B","2 A","2 B","3 A","3 B","3 C","4 A","4 B","4 C","5 A","5 B","6 A","6 B"];
+function demoData() {
+  var ms = ["Beta Test","V1.0","V1.2","V1.3","V1.4","V1.5","V1.6"];
+  return {
+    milestones: ms,
+    classes: DEMO_CLASSES.map(function (n, i) {
+      var prog = 1 + (i * 5) % 3;
+      return {
+        name: n,
+        blue: ms.map(function (_, j) { return j < prog; }),
+        red: ms.map(function (_, j) { return j < prog - (i % 2); })
+      };
+    })
+  };
+}
+
+function shortLabel(s) {
+  return String(s).replace(/^beta.*$/i, "Beta").replace(/^v/i, "");
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+  });
+}
+
+function renderRail(data) {
+  var teams = data.classes.length * 2;
+  var track = document.getElementById("rail");
+  track.style.gridTemplateColumns = "repeat(" + data.milestones.length + ", 1fr)";
+  var currentFound = false;
+  track.innerHTML = data.milestones.map(function (m, j) {
+    var ticks = 0;
+    data.classes.forEach(function (c) { ticks += (c.blue[j] ? 1 : 0) + (c.red[j] ? 1 : 0); });
+    var cls = "";
+    if (ticks >= teams && teams > 0) cls = "done";
+    else if (!currentFound) { cls = "now"; currentFound = true; }
+    return '<div class="commit ' + cls + '">' +
+      '<div class="node"></div>' +
+      '<div class="tag">' + esc(shortLabel(m)) + "</div>" +
+      '<div class="count">' + ticks + "/" + teams + "</div>" +
+      "</div>";
+  }).join("");
+}
+
+function renderGrid(data) {
+  var n = data.milestones.length;
+  function labels() {
+    return '<div class="striplab">' + data.milestones.map(function (m) {
+      return '<div class="lab">' + esc(shortLabel(m)) + "</div>";
+    }).join("") + "</div>";
+  }
+  var html = '<div class="row head">' +
+    '<div></div><div>Class</div>' +
+    '<div><span class="teamword blue">Blue</span>' + labels() + "</div>" +
+    '<div><span class="teamword red">Red</span>' + labels() + "</div>" +
+    '<div style="text-align:right">of ' + (n * 2) + "</div>" +
+    "</div>";
+
+  var ranked = data.classes.map(function (c) {
+    var t = 0;
+    c.blue.forEach(function (v) { if (v) t++; });
+    c.red.forEach(function (v) { if (v) t++; });
+    return { c: c, total: t };
+  });
+  var order = ranked.slice().sort(function (a, b) { return b.total - a.total; });
+
+  html += order.map(function (e, i) {
+    function strip(team, flags) {
+      return '<div class="strip ' + team + '">' + flags.map(function (on) {
+        return '<div class="cellbox ' + (on ? "on" : "off") + '"></div>';
+      }).join("") + "</div>";
+    }
+    return '<div class="row">' +
+      '<div class="rank">' + (i + 1) + "</div>" +
+      '<div class="name">' + esc(e.c.name) + "</div>" +
+      strip("blue", e.c.blue) +
+      strip("red", e.c.red) +
+      '<div class="total">' + e.total + "<small>/" + (n * 2) + "</small></div>" +
+      "</div>";
+  }).join("");
+
+  document.getElementById("grid").innerHTML = html;
+}
+
+function setSync(text, stale) {
+  document.getElementById("sync").classList.toggle("stale", !!stale);
+  document.getElementById("syncText").textContent = text;
+}
+function banner(msg, isError) {
+  var el = document.getElementById("banner");
+  el.textContent = msg || "";
+  el.classList.toggle("show", !!msg);
+  el.classList.toggle("error", !!isError);
+}
+
+async function refresh() {
+  if (!CONFIG.sheetCsvUrl) {
+    var d = demoData();
+    renderRail(d); renderGrid(d);
+    setSync("demo mode", true);
+    return;
+  }
+  try {
+    var res = await fetch(CONFIG.sheetCsvUrl, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var data = parseSheet(parseCSV(await res.text()));
+    if (!data.classes.length) throw new Error("no class rows found");
+    renderRail(data); renderGrid(data);
+    setSync("synced " + new Date().toLocaleTimeString("en-AU",
+      { hour: "2-digit", minute: "2-digit" }));
+    banner("");
+  } catch (e) {
+    var d2 = demoData();
+    renderRail(d2); renderGrid(d2);
+    setSync("sync failed — demo data", true);
+    banner("Could not read the sheet (" + e.message + "). Showing demo data.", true);
+  }
+}
+
+refresh();
+setInterval(refresh, CONFIG.refreshSeconds * 1000);
+</script>
+</body>
+</html>
