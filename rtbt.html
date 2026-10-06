@@ -6,12 +6,14 @@
 <title>Castle Defence — Version Board</title>
 <!--
   CASTLE DEFENCE VERSION BOARD — SPARK Centre, Boneo PS
-  Mirrors the RedTeam/BlueTeam Google Sheet exactly.
+  Mirrors the RedTeam/BlueTeam Google Sheet.
 
   SHEET LAYOUT (one tab, two blocks side by side):
-    Blue Team | Beta Test | V1.0 | V1.2 | ... |   | Red Team | Beta Test | V1.0 | ...
-    Prep A    | Yes       |      |      |     |   | Prep A   | Yes       |      |
-  A cell counts as done when it contains Yes / Y / X / 1 / true / a tick.
+    Blue Team | Beta Test | V1.0 | V1.2 | ... | V1.6 |   | Red Team | Beta Test | ...
+    Prep A    | Yes       |      |      |     |      |   | Prep A   | Yes       |
+  Milestone cells: Yes / Y / X / 1 / true / tick = done (green). Blank = not yet (yellow).
+  FINAL column (the treasure raid): Yes = treasure found (glowing chest),
+  No / Fail = raid failed (empty open chest), blank = not attempted (closed chest).
   Milestone columns are read from the sheet headers, so adding or renaming
   a version column in the sheet updates the board automatically.
 -->
@@ -27,11 +29,13 @@
     --text: #efeaf7;
     --muted: #9a92b4;
     --red: #e5484d;
-    --red-dim: #4a2230;
     --blue: #4a9eea;
-    --blue-dim: #1f2c48;
     --gold: #f5b83d;
-    --green: #57d98a;
+    --todo: #e8b73a;       /* yellow: not done yet */
+    --todo-edge: #9c7a1c;
+    --done: #3fcf7a;       /* green: moving forward */
+    --done-edge: #2a9c58;
+    --bright: #6dff8e;     /* glowing treasure green */
     --cell: clamp(16px, 2.0vw, 42px);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -65,7 +69,7 @@
   .sync { color: var(--muted); font-size: clamp(12px, 1vw, 18px); }
   .sync .dot {
     display: inline-block; width: .6em; height: .6em; border-radius: 50%;
-    background: var(--green); margin-right: .4em;
+    background: var(--done); margin-right: .4em;
   }
   .sync.stale .dot { background: var(--gold); }
 
@@ -97,7 +101,7 @@
   .commit .node {
     width: clamp(14px, 1.6vh, 22px);
     height: clamp(14px, 1.6vh, 22px);
-    border: 3px solid var(--muted);
+    border: 3px solid var(--todo);
     background: var(--bg);
     transform: rotate(45deg);
     z-index: 1;
@@ -109,8 +113,8 @@
   }
   .commit .count { font-size: clamp(10px, .9vw, 16px); color: var(--muted); }
   .commit.done { opacity: .95; }
-  .commit.done .node { background: var(--green); border-color: var(--green); }
-  .commit.done .count { color: var(--green); }
+  .commit.done .node { background: var(--done); border-color: var(--done); }
+  .commit.done .count { color: var(--done); }
   .commit.now { opacity: 1; }
   .commit.now .node {
     border-color: var(--gold);
@@ -162,21 +166,45 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .strip { display: flex; gap: clamp(3px, .35vw, 7px); }
+  .strip { display: flex; gap: clamp(3px, .35vw, 7px); align-items: center; }
   .cellbox {
     width: var(--cell);
     height: calc(var(--cell) * .62);
     border-radius: 4px;
     border: 1px solid var(--line);
-    background: var(--panel-2);
     display: flex;
     align-items: center;
     justify-content: center;
   }
-  .strip.blue .cellbox.on { background: var(--blue); border-color: var(--blue); }
-  .strip.red  .cellbox.on { background: var(--red);  border-color: var(--red); }
-  .strip.blue .cellbox.off { background: var(--blue-dim); }
-  .strip.red  .cellbox.off { background: var(--red-dim); }
+  .cellbox.todo { background: var(--todo); border-color: var(--todo-edge); }
+  .cellbox.done { background: var(--done); border-color: var(--done-edge); }
+
+  /* ---------- treasure chest (final milestone) ---------- */
+  .cellbox.chest { background: none; border: none; }
+  .cellbox.chest svg { width: 100%; height: 130%; overflow: visible; }
+  .chest .lid    { fill: #a06a33; stroke: #5c3a16; }
+  .chest .body   { fill: #84552a; stroke: #5c3a16; }
+  .chest .latch  { fill: #d9c15a; stroke: #5c3a16; }
+  .chest .inside { fill: #1a1422; }
+  .chest.pending .lid { fill: var(--todo); stroke: var(--todo-edge); }
+  .chest.pending .body { fill: #b98f2c; stroke: var(--todo-edge); }
+  .chest.found .inside { fill: var(--bright); }
+  .chest.found .gem { fill: #eafff0; }
+  .chest.found svg {
+    filter: drop-shadow(0 0 6px rgba(109, 255, 142, .95));
+    animation: tglow 1.4s ease-in-out infinite;
+  }
+  @keyframes tglow {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(109, 255, 142, .8)); }
+    50%      { filter: drop-shadow(0 0 13px rgba(109, 255, 142, 1)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chest.found svg { animation: none; }
+  }
+  .chest.empty .inside { fill: #15101c; }
+  .chest.empty .lid, .chest.empty .body { fill: #4a3c2a; stroke: #2e2418; }
+  .chest.empty .latch { fill: #6b5c3a; }
+
   .lab {
     width: var(--cell);
     text-align: center;
@@ -226,8 +254,10 @@ var CONFIG = {
   refreshSeconds: 60
 };
 
-var DONE = { "yes": 1, "y": 1, "x": 1, "1": 1, "true": 1, "done": 1, "\u2713": 1, "\u2714": 1 };
+var DONE = { "yes": 1, "y": 1, "x": 1, "1": 1, "true": 1, "done": 1, "found": 1, "\u2713": 1, "\u2714": 1 };
+var FAIL = { "no": 1, "n": 1, "0": 1, "false": 1, "fail": 1, "failed": 1, "empty": 1, "missed": 1 };
 function isDone(v) { return !!DONE[String(v || "").trim().toLowerCase()]; }
+function isFail(v) { return !!FAIL[String(v || "").trim().toLowerCase()]; }
 
 function parseCSV(text) {
   var rows = [], row = [], cell = "", q = false;
@@ -251,7 +281,8 @@ function parseCSV(text) {
   });
 }
 
-/* Find the Blue Team and Red Team blocks wherever they sit in the header row */
+/* Find the Blue Team and Red Team blocks wherever they sit in the header row.
+   Cell values are kept raw so the final column can distinguish Yes / No / blank. */
 function parseSheet(rows) {
   var head = rows[0].map(function (h) { return String(h).trim(); });
   var lower = head.map(function (h) { return h.toLowerCase(); });
@@ -279,8 +310,8 @@ function parseSheet(rows) {
     if (!name) return;
     classes.push({
       name: name,
-      blue: blueM.map(function (m) { return isDone(r[m.col]); }),
-      red: redM.map(function (m) { return isDone(r[m.col]); })
+      blue: blueM.map(function (m) { return String(r[m.col] || "").trim(); }),
+      red: redM.map(function (m) { return String(r[m.col] || "").trim(); })
     });
   });
   return { milestones: blueM.map(function (m) { return m.label; }), classes: classes };
@@ -289,17 +320,17 @@ function parseSheet(rows) {
 var DEMO_CLASSES = ["Prep A","Prep B","1 A","1 B","2 A","2 B","3 A","3 B","3 C","4 A","4 B","4 C","5 A","5 B","6 A","6 B"];
 function demoData() {
   var ms = ["Beta Test","V1.0","V1.2","V1.3","V1.4","V1.5","V1.6"];
-  return {
-    milestones: ms,
-    classes: DEMO_CLASSES.map(function (n, i) {
-      var prog = 1 + (i * 5) % 3;
-      return {
-        name: n,
-        blue: ms.map(function (_, j) { return j < prog; }),
-        red: ms.map(function (_, j) { return j < prog - (i % 2); })
-      };
-    })
-  };
+  var classes = DEMO_CLASSES.map(function (n, i) {
+    var prog = 1 + (i * 5) % 3;
+    return {
+      name: n,
+      blue: ms.map(function (_, j) { return j < prog ? "Yes" : ""; }),
+      red: ms.map(function (_, j) { return j < prog - (i % 2) ? "Yes" : ""; })
+    };
+  });
+  classes[12].blue[6] = "Yes";  /* 5 A blue cracked the treasure */
+  classes[5].red[6] = "No";     /* 2 B red raid failed */
+  return { milestones: ms, classes: classes };
 }
 
 function shortLabel(s) {
@@ -311,6 +342,33 @@ function esc(s) {
   });
 }
 
+function chestSVG(state) {
+  /* state: pending (closed), found (open + glowing loot), empty (open, nothing) */
+  var open = state !== "pending";
+  var lid = open
+    ? '<rect class="lid" x="1" y="0" width="14" height="3" rx="1"></rect>'
+    : '<rect class="lid" x="1" y="3" width="14" height="4" rx="1"></rect>';
+  var inside = open
+    ? '<rect class="inside" x="3" y="6" width="10" height="3"></rect>'
+    : "";
+  var gems = state === "found"
+    ? '<rect class="gem" x="5" y="6.6" width="1.6" height="1.6"></rect>' +
+      '<rect class="gem" x="9.4" y="6.6" width="1.6" height="1.6"></rect>'
+    : "";
+  var latch = open ? "" : '<rect class="latch" x="7" y="6" width="2" height="3"></rect>';
+  return '<svg viewBox="0 0 16 14" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    '<rect class="body" x="1" y="' + (open ? 5 : 6) + '" width="14" height="' + (open ? 8 : 7) + '" rx="1"></rect>' +
+    inside + gems + lid + latch + "</svg>";
+}
+
+function cellHTML(raw, isLast) {
+  if (isLast) {
+    var state = isDone(raw) ? "found" : isFail(raw) ? "empty" : "pending";
+    return '<div class="cellbox chest ' + state + '" title="Treasure raid">' + chestSVG(state) + "</div>";
+  }
+  return '<div class="cellbox ' + (isDone(raw) ? "done" : "todo") + '"></div>';
+}
+
 function renderRail(data) {
   var teams = data.classes.length * 2;
   var track = document.getElementById("rail");
@@ -318,7 +376,9 @@ function renderRail(data) {
   var currentFound = false;
   track.innerHTML = data.milestones.map(function (m, j) {
     var ticks = 0;
-    data.classes.forEach(function (c) { ticks += (c.blue[j] ? 1 : 0) + (c.red[j] ? 1 : 0); });
+    data.classes.forEach(function (c) {
+      ticks += (isDone(c.blue[j]) ? 1 : 0) + (isDone(c.red[j]) ? 1 : 0);
+    });
     var cls = "";
     if (ticks >= teams && teams > 0) cls = "done";
     else if (!currentFound) { cls = "now"; currentFound = true; }
@@ -346,16 +406,16 @@ function renderGrid(data) {
 
   var ranked = data.classes.map(function (c) {
     var t = 0;
-    c.blue.forEach(function (v) { if (v) t++; });
-    c.red.forEach(function (v) { if (v) t++; });
+    c.blue.forEach(function (v) { if (isDone(v)) t++; });
+    c.red.forEach(function (v) { if (isDone(v)) t++; });
     return { c: c, total: t };
   });
   var order = ranked.slice().sort(function (a, b) { return b.total - a.total; });
 
   html += order.map(function (e, i) {
-    function strip(team, flags) {
-      return '<div class="strip ' + team + '">' + flags.map(function (on) {
-        return '<div class="cellbox ' + (on ? "on" : "off") + '"></div>';
+    function strip(team, cells) {
+      return '<div class="strip ' + team + '">' + cells.map(function (raw, j) {
+        return cellHTML(raw, j === n - 1);
       }).join("") + "</div>";
     }
     return '<div class="row">' +
