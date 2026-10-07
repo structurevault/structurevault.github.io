@@ -136,7 +136,7 @@
     height: var(--rowh);
     flex: none;
     display: grid;
-    grid-template-columns: 2.4ch 8ch auto auto 5ch;
+    grid-template-columns: 2.4ch 8ch auto auto;
     justify-content: center;
     align-items: center;
     column-gap: clamp(8px, .9vw, 18px);
@@ -240,12 +240,20 @@
   .striplab { display: flex; gap: clamp(3px, .35vw, 7px); }
   .head .teamword.blue { color: var(--blue); }
   .head .teamword.red { color: var(--red); }
-  .total {
-    font-family: "Silkscreen", monospace;
-    font-size: clamp(14px, 1.5vw, 30px);
-    text-align: right;
+  .teamgroup {
+    display: flex;
+    align-items: center;
+    gap: clamp(6px, .6vw, 14px);
   }
-  .total small { color: var(--muted); font-size: .55em; }
+  .teamtotal {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(13px, 1.3vw, 26px);
+    min-width: 4.2ch;
+  }
+  .teamtotal.blue { color: var(--blue); }
+  .teamtotal.red { color: var(--red); }
+  .teamtotal small { color: var(--muted); font-size: .6em; }
+  .teamtotal.hid { visibility: hidden; }
 
   .banner {
     text-align: center;
@@ -426,37 +434,41 @@ function renderGrid(data) {
       return '<div class="lab">' + esc(shortLabel(m)) + "</div>";
     }).join("") + "</div>";
   }
+  var hidTotal = '<div class="teamtotal hid">0<small>/' + n + "</small></div>";
   document.getElementById("gridhead").innerHTML = '<div class="row head">' +
     '<div></div><div>Class</div>' +
-    '<div><span class="teamword blue">Blue</span>' + labels() + "</div>" +
-    '<div><span class="teamword red">Red</span>' + labels() + "</div>" +
-    '<div style="text-align:right">of ' + n + "</div>" +
+    '<div class="teamgroup"><div><span class="teamword blue">Blue</span>' + labels() + "</div>" + hidTotal + "</div>" +
+    '<div class="teamgroup"><div><span class="teamword red">Red</span>' + labels() + "</div>" + hidTotal + "</div>" +
     "</div>";
 
-  /* a milestone counts for the class once BOTH teams have it; ties broken
-     by individual team ticks so a class with one team ahead ranks higher */
+  /* each team scores its own /7; classes ranked by the two combined,
+     ties broken by milestones where both teams are done */
   var order = data.classes.map(function (c) {
-    var t = 0, ticks = 0;
+    var bt = 0, rt = 0, both = 0;
     for (var j = 0; j < n; j++) {
       var b = isDone(c.blue[j]), r = isDone(c.red[j]);
-      if (b && r) t++;
-      ticks += (b ? 1 : 0) + (r ? 1 : 0);
+      if (b) bt++;
+      if (r) rt++;
+      if (b && r) both++;
     }
-    return { c: c, total: t, ticks: ticks };
-  }).sort(function (a, b) { return (b.total - a.total) || (b.ticks - a.ticks); });
+    return { c: c, bt: bt, rt: rt, both: both };
+  }).sort(function (a, b) {
+    return (b.bt + b.rt) - (a.bt + a.rt) || (b.both - a.both);
+  });
 
   var rowsHTML = order.map(function (e, i) {
-    function strip(team, cells) {
-      return '<div class="strip ' + team + '">' + cells.map(function (raw, j) {
+    function group(team, cells, total) {
+      var strip = '<div class="strip ' + team + '">' + cells.map(function (raw, j) {
         return cellHTML(raw, j === n - 1);
       }).join("") + "</div>";
+      return '<div class="teamgroup">' + strip +
+        '<div class="teamtotal ' + team + '">' + total + "<small>/" + n + "</small></div></div>";
     }
     return '<div class="row">' +
       '<div class="rank' + (i === 0 ? " r1" : "") + '">' + (i + 1) + "</div>" +
       '<div class="name">' + esc(e.c.name) + "</div>" +
-      strip("blue", e.c.blue) +
-      strip("red", e.c.red) +
-      '<div class="total">' + e.total + "<small>/" + n + "</small></div>" +
+      group("blue", e.c.blue, e.bt) +
+      group("red", e.c.red, e.rt) +
       "</div>";
   }).join("");
 
