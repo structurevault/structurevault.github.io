@@ -6,295 +6,367 @@
 <title>Castle Version Control</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
 <style>
+/* Designed as a fixed 1280x720 stage: a 3840x2160 TV at 300% scaling gives exactly
+   that CSS viewport. The stage is scaled to fit any other screen (letterboxed). */
 :root{
-  box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  --bg1:#f3efc9; --bg2:#dcecb4;
-  --ink:#2a3312;
-  --panel:#fbf8e2;
-  --panel-edge:#c9c48f;
-  --grass:#56a81e; --grass-dk:#3e7d13; --grass-deep:#2f5d12;
-  --dirt:#8a5a2b; --dirt-dk:#6b4420;
-  --stone:#9a9a9a; --stone-dk:#6f6f6f;
-  --gold:#e5a50a; --gold-dk:#a16a1b; --gold-lt:#f6c945;
-  --emerald:#3e9f4a;
-  --warn:#c98a12;
-  --console-bg:#10200e;
-  --console-ink:#c6e86a;
-  --tagline:#55631f;
+  --sp:1;
+  --sky1:#070b18; --sky2:#121a36; --sky3:#1d1640;
+  --ink:#eef0dc; --dim:#9aa6c8;
+  --panel1:#1a2240; --panel2:#10162c; --edge:#2f3b66; --edge-lt:#45558c;
+  --grass:#5fbf2a; --grass-dk:#3e7d13; --grass-lt:#8de04a;
+  --dirt:#8a5a2b; --dirt-dk:#5e3b1a;
+  --stone:#8f8f8f; --stone-dk:#5c5c5c; --stone-lt:#b9b9b9;
+  --gold:#f2b51c; --gold-dk:#a16a1b; --gold-lt:#ffd75a;
+  --emerald:#2fd36b;
+  --red:#e0392b; --red-dk:#8e1d14;
+  --console-bg:#06120a; --console-ink:#b8f06a;
 }
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg1:#131a0d; --bg2:#1b2412;
-    --ink:#ecedd2;
-    --panel:#1f2a16; --panel-edge:#3c4a26;
-    --tagline:#b9cc7a;
-  }
-}
-:root[data-theme="dark"]{
-  --bg1:#131a0d; --bg2:#1b2412;
-  --ink:#ecedd2;
-  --panel:#1f2a16; --panel-edge:#3c4a26;
-  --tagline:#b9cc7a;
-}
-*,*::before,*::after{box-sizing:inherit;margin:0;padding:0}
-html,body{height:100%}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
 body{
   font-family:'VT323',"Courier New",monospace;
-  font-size:21px; line-height:1.35;
+  font-size:20px; line-height:1.25;
   color:var(--ink);
-  background:linear-gradient(var(--bg1) 0%, var(--bg2) 100%) fixed;
+  background:#03050c;
   -webkit-font-smoothing:none;
 }
-.wrap{max-width:1680px;margin:0 auto;padding:16px 18px 60px}
 
-/* ---------- hero ---------- */
-header{padding:22px 0 6px;display:flex;flex-wrap:wrap;gap:8px 30px;align-items:baseline}
-h1{font-family:'Press Start 2P',monospace;font-size:clamp(17px,2.4vw,34px);line-height:1.5;
-   text-shadow:3px 3px 0 rgba(42,51,18,.18)}
-h1 span{color:var(--gold)}
-.sub{font-size:clamp(20px,1.5vw,26px);color:var(--tagline);max-width:64ch}
+/* ---------- stage ---------- */
+.stage{
+  position:absolute;left:50%;top:50%;
+  width:1280px;height:720px;
+  transform:translate(-50%,-50%);
+  transform-origin:center center;
+  overflow:hidden;
+  background:
+    radial-gradient(1px 1px at 8% 12%,#fff 99%,transparent),
+    radial-gradient(1px 1px at 22% 38%,#cfd8ff 99%,transparent),
+    radial-gradient(2px 2px at 37% 8%,#fff 99%,transparent),
+    radial-gradient(1px 1px at 51% 27%,#fff 99%,transparent),
+    radial-gradient(1px 1px at 63% 6%,#cfd8ff 99%,transparent),
+    radial-gradient(2px 2px at 78% 18%,#fff 99%,transparent),
+    radial-gradient(1px 1px at 91% 9%,#fff 99%,transparent),
+    radial-gradient(1px 1px at 96% 44%,#cfd8ff 99%,transparent),
+    radial-gradient(1px 1px at 4% 70%,#fff 99%,transparent),
+    radial-gradient(ellipse at 80% -10%,rgba(120,90,255,.25),transparent 55%),
+    radial-gradient(ellipse at 0% 110%,rgba(47,211,107,.18),transparent 50%),
+    linear-gradient(160deg,var(--sky1) 0%,var(--sky2) 55%,var(--sky3) 100%);
+}
+.frame{
+  position:absolute;inset:0;padding:12px 14px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.frame.shake{animation:shake calc(.5s / var(--sp)) steps(10)}
+@keyframes shake{
+  0%,100%{transform:none}
+  10%{transform:translate(-8px,4px)} 20%{transform:translate(7px,-6px)}
+  30%{transform:translate(-6px,-3px)} 40%{transform:translate(6px,5px)}
+  50%{transform:translate(-4px,3px)} 60%{transform:translate(4px,-4px)}
+  70%{transform:translate(-3px,2px)} 80%{transform:translate(2px,-2px)}
+}
+.flash{position:absolute;inset:0;pointer-events:none;background:#fff;opacity:0;z-index:50}
+.flash.go{animation:flash calc(.6s / var(--sp)) ease-out}
+@keyframes flash{0%{opacity:.85}100%{opacity:0}}
 
-/* ---------- panels ---------- */
-.panel{
-  background:var(--panel);
-  border:4px solid var(--panel-edge);
-  box-shadow:0 6px 0 var(--panel-edge);
-  margin-top:22px;
-  padding:16px;
-}
-.panel h2{font-family:'Press Start 2P',monospace;font-size:clamp(11px,1vw,15px);margin-bottom:12px;line-height:1.7;color:var(--grass-deep)}
-:root[data-theme="dark"] .panel h2{color:var(--gold-lt)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .panel h2{color:var(--gold-lt)}}
-
-/* ---------- big-screen layout ---------- */
-.layout{display:block}
-@media (min-width:1100px){
-  .layout{display:grid;grid-template-columns:7fr 5fr;gap:0 24px;align-items:start}
-  .col-right{position:sticky;top:calc(14px + env(safe-area-inset-top,0px))}
-  body{font-size:23px}
-  .graph{height:380px !important}
-  .console{height:240px !important;font-size:22px !important}
-}
-@media (min-width:1500px){
-  .graph{height:440px !important}
-  .console{height:280px !important}
-}
+/* ---------- header ---------- */
+header{height:56px;flex:none;display:flex;align-items:center;gap:20px}
+.titles{flex:1;min-width:0}
+h1{font-family:'Press Start 2P',monospace;font-size:22px;line-height:1.3;white-space:nowrap;
+   color:#fff;text-shadow:3px 3px 0 #000,0 0 18px rgba(255,215,90,.25)}
+h1 .hl{color:var(--grass-lt);text-shadow:3px 3px 0 #000,0 0 14px rgba(141,224,74,.6)}
+h1 .cur{color:var(--gold);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.sub{font-size:19px;color:var(--dim);letter-spacing:.5px;margin-top:2px}
 
 /* ---------- controls ---------- */
-.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.controls{display:flex;gap:10px;align-items:center;flex:none}
 button{
-  font-family:'Press Start 2P',monospace;font-size:clamp(11px,0.9vw,14px);
-  padding:14px 18px;cursor:pointer;color:#fff;
-  background:var(--grass);border:0;
-  border-bottom:5px solid var(--grass-dk);
-  border-right:4px solid var(--grass-dk);
+  font-family:'Press Start 2P',monospace;font-size:12px;line-height:1;
+  padding:12px 14px;cursor:pointer;color:#fff;text-shadow:2px 2px 0 rgba(0,0,0,.6);
+  background:var(--stone);
+  border:3px solid #000;
+  box-shadow:inset 3px 3px 0 var(--stone-lt),inset -3px -3px 0 var(--stone-dk);
 }
-button:active{transform:translate(2px,2px);border-bottom-width:3px;border-right-width:2px}
-button.alt{background:var(--dirt);border-color:var(--dirt-dk)}
+button:hover{background:#9aa0c8;box-shadow:inset 3px 3px 0 #c6cbf0,inset -3px -3px 0 #5d6390}
+button:active{transform:translate(2px,2px)}
 button:focus-visible{outline:3px dashed var(--gold);outline-offset:3px}
-.speed{display:flex;gap:6px;align-items:center}
-.speed button{padding:10px 12px;font-size:clamp(10px,0.8vw,12px)}
-.speed button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold-dk);color:#2a1f00}
+button.go{background:var(--grass);box-shadow:inset 3px 3px 0 var(--grass-lt),inset -3px -3px 0 var(--grass-dk),0 0 18px rgba(95,191,42,.45)}
+button.go:hover{background:#6fd335}
+.speed{display:flex;gap:4px}
+.speed button{padding:12px 10px;font-size:11px}
+.speed button[aria-pressed="true"]{background:var(--gold);color:#2a1f00;text-shadow:none;
+  box-shadow:inset 3px 3px 0 var(--gold-lt),inset -3px -3px 0 var(--gold-dk),0 0 12px rgba(242,181,28,.5)}
+
+/* ---------- panels ---------- */
+.main{flex:1;min-height:0;display:grid;grid-template-columns:1.4fr 1fr;grid-template-rows:1fr 188px;gap:10px}
+.panel{
+  position:relative;min-height:0;
+  display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--panel1),var(--panel2));
+  border:3px solid #000;
+  box-shadow:inset 0 0 0 2px var(--edge),inset 0 3px 0 2px var(--edge-lt),0 8px 22px rgba(0,0,0,.55);
+  padding:10px 12px;
+}
+.phead{display:flex;align-items:center;gap:12px;height:28px;margin-bottom:6px;flex:none}
+.panel h2{font-family:'Press Start 2P',monospace;font-size:13px;line-height:1;color:var(--gold-lt);
+  text-shadow:2px 2px 0 #000,0 0 10px rgba(255,215,90,.35);white-space:nowrap}
+.panel h2::before{content:"\25A0 ";color:var(--grass-lt)}
 
 /* ---------- sprint banner + version ---------- */
-.status{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
-.sprintlabel{font-family:'Press Start 2P',monospace;font-size:clamp(11px,1vw,15px)}
+.sprintlabel{margin-left:auto;font-family:'Press Start 2P',monospace;font-size:11px;color:var(--ink);white-space:nowrap}
+.sprintlabel.bad{color:#ff7a6b;text-shadow:0 0 10px rgba(255,90,70,.6)}
 .vtag{
-  font-family:'Press Start 2P',monospace;font-size:clamp(14px,1.3vw,20px);color:#2a1f00;
-  background:var(--gold);padding:10px 14px;border-bottom:4px solid var(--gold-dk);
+  font-family:'Press Start 2P',monospace;font-size:16px;line-height:1;color:#2a1f00;
+  background:var(--gold);padding:7px 10px;border:3px solid #000;
+  box-shadow:inset 2px 2px 0 var(--gold-lt),inset -2px -2px 0 var(--gold-dk),0 0 16px rgba(242,181,28,.55);
 }
-.vtag.bump{animation:pop .5s}
+.vtag.bump{animation:pop calc(.5s / var(--sp))}
+.vtag.deny{animation:deny calc(.7s / var(--sp))}
 @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.35) rotate(-3deg)}100%{transform:scale(1)}}
-
-/* ---------- builders ---------- */
-.builders{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:4px}
-.builder{display:flex;align-items:center;gap:7px;font-size:clamp(17px,1.1vw,21px);padding:3px;opacity:.55;transition:opacity .2s}
-.builder.active{opacity:1}
-.face{width:28px;height:28px;position:relative;image-rendering:pixelated;flex:none;border:2px solid rgba(42,51,18,.3)}
-.face::before{content:"";position:absolute;left:4px;top:8px;width:5px;height:5px;background:#243016;box-shadow:12px 0 0 #243016}
-.face::after{content:"";position:absolute;left:9px;top:18px;width:8px;height:3px;background:rgba(0,0,0,.35)}
-.builder.active .face{animation:bob .5s}
-.builder .tick{margin-left:auto;font-size:20px;visibility:hidden}
-.builder .tick.yes{visibility:visible;color:var(--grass)}
-.builder .tick.no{visibility:visible;color:var(--warn)}
-@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes deny{0%,100%{transform:none;background:var(--gold)}20%,60%{transform:translateX(-5px);background:var(--red)}40%,80%{transform:translateX(5px);background:var(--red)}}
 
 /* ---------- timeline / commit graph ---------- */
-.graphbox{overflow-x:auto;padding-bottom:6px}
+.graphbox{flex:1;min-height:0;overflow:hidden;border:3px solid #000}
 .graph{
-  position:relative;min-width:620px;height:300px;
+  position:relative;height:100%;
   background:
-    linear-gradient(to top, var(--grass) 0 26px, transparent 26px),
-    linear-gradient(to top, var(--dirt) 0 18px, transparent 18px);
+    repeating-linear-gradient(90deg,rgba(0,0,0,.18) 0 6px,transparent 6px 12px) 0 100%/100% 20px no-repeat,
+    linear-gradient(to top,var(--dirt-dk) 0 6px,var(--dirt) 6px 20px,var(--grass-dk) 20px 23px,var(--grass) 23px 30px,transparent 30px),
+    radial-gradient(1px 1px at 15% 20%,#fff 99%,transparent),
+    radial-gradient(1px 1px at 42% 12%,#fff 99%,transparent),
+    radial-gradient(1px 1px at 70% 30%,#cfd8ff 99%,transparent),
+    radial-gradient(1px 1px at 88% 15%,#fff 99%,transparent),
+    linear-gradient(180deg,#0a1028 0%,#18234a 100%);
 }
-.sprintcol{position:absolute;bottom:26px;width:15%;}
+.sprintcol{position:absolute;bottom:30px;top:0;width:15%}
 .sprintcol .colname{
-  position:absolute;bottom:-24px;width:100%;text-align:center;
-  font-size:clamp(16px,1vw,20px);color:var(--tagline);
+  position:absolute;bottom:-26px;width:100%;text-align:center;
+  font-family:'Press Start 2P',monospace;font-size:9px;color:#fff;text-shadow:1px 1px 0 #000;
 }
 .block{
-  position:absolute;width:26px;height:26px;left:50%;margin-left:-13px;
-  image-rendering:pixelated;
-  border:2px solid rgba(42,51,18,.35);
-  box-shadow:inset -5px -5px 0 rgba(0,0,0,.22), inset 4px 4px 0 rgba(255,255,255,.22);
-  animation:drop .45s cubic-bezier(.2,.9,.3,1.2);
+  position:absolute;width:26px;height:22px;left:50%;margin-left:-13px;
+  border:2px solid rgba(0,0,0,.55);
+  box-shadow:inset -4px -4px 0 rgba(0,0,0,.25),inset 3px 3px 0 rgba(255,255,255,.25);
+  animation:drop calc(.45s / var(--sp)) cubic-bezier(.2,.9,.3,1.2);
 }
+.block::after{content:"";position:absolute;left:5px;top:5px;width:3px;height:3px;background:rgba(0,0,0,.2);box-shadow:9px 6px 0 rgba(0,0,0,.2),4px 9px 0 rgba(255,255,255,.15)}
 @keyframes drop{0%{transform:translateY(-160px);opacity:0}100%{transform:translateY(0);opacity:1}}
 .block.b-stone{background:var(--stone)}
 .block.b-dirt{background:var(--dirt)}
 .block.b-wood{background:#b07b3f}
-.block.b-emerald{background:var(--emerald)}
-.block.b-gold{background:var(--gold)}
-.block.doom{animation:crumble .9s forwards}
+.block.b-emerald{background:var(--emerald);box-shadow:inset -4px -4px 0 rgba(0,0,0,.25),inset 3px 3px 0 rgba(255,255,255,.3),0 0 10px rgba(47,211,107,.6)}
+.block.b-gold{background:var(--gold);box-shadow:inset -4px -4px 0 rgba(0,0,0,.25),inset 3px 3px 0 rgba(255,255,255,.3),0 0 10px rgba(242,181,28,.6)}
+.block.doom{animation:crumble calc(.9s / var(--sp)) forwards}
 @keyframes crumble{
   0%{transform:none}
-  25%{transform:translateX(-4px);background:var(--warn)}
-  50%{transform:translateX(4px) rotate(6deg);background:var(--warn)}
-  100%{transform:translateY(60px) rotate(25deg);opacity:0}
+  25%{transform:translateX(-4px);background:#ff7a3b}
+  50%{transform:translateX(4px) rotate(6deg);background:#ff7a3b}
+  100%{transform:translateY(80px) rotate(35deg);opacity:0}
 }
 .tagflag{
-  position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
-  font-family:'Press Start 2P',monospace;font-size:clamp(9px,0.7vw,11px);color:#2a1f00;
-  background:var(--gold);padding:5px 7px;white-space:nowrap;
-  border-bottom:3px solid var(--gold-dk);animation:pop .5s;
+  position:absolute;left:50%;transform:translateX(-50%);
+  font-family:'Press Start 2P',monospace;font-size:10px;line-height:1;color:#2a1f00;
+  background:var(--gold);padding:5px 6px;white-space:nowrap;border:2px solid #000;
+  box-shadow:0 0 12px rgba(242,181,28,.6);
+  animation:flagpop calc(.5s / var(--sp));
 }
-.tagflag.rolled{background:#7a7044;border-color:#55502f;color:#ece6c6;text-decoration:line-through}
+@keyframes flagpop{0%{transform:translateX(-50%) scale(1)}40%{transform:translateX(-50%) scale(1.35)}100%{transform:translateX(-50%) scale(1)}}
+.tagflag.rolled{background:#5a2a26;color:#ffb3a8;text-decoration:line-through;box-shadow:0 0 12px rgba(224,57,43,.5)}
+
+/* explosives */
+.creeper,.tnt{position:absolute;width:30px;height:30px;left:50%;margin-left:-15px;border:2px solid #000;z-index:3}
 .creeper{
-  position:absolute;width:32px;height:32px;left:50%;margin-left:-16px;
-  background:#4fae3f;border:2px solid rgba(42,51,18,.4);image-rendering:pixelated;
-  animation:fuse 1s steps(4) 3, boom .4s 2.6s forwards;
+  background:#4fae3f;
+  background-image:linear-gradient(45deg,rgba(0,0,0,.12) 25%,transparent 25% 75%,rgba(0,0,0,.12) 75%),linear-gradient(45deg,rgba(0,0,0,.12) 25%,transparent 25% 75%,rgba(0,0,0,.12) 75%);
+  background-size:8px 8px;background-position:0 0,4px 4px;
+  animation:fuse calc(.6s / var(--sp)) steps(2) infinite;
 }
-.creeper::before{content:"";position:absolute;left:5px;top:6px;width:6px;height:7px;background:#163812;box-shadow:12px 0 0 #163812}
-.creeper::after{content:"";position:absolute;left:11px;top:14px;width:6px;height:10px;background:#163812;box-shadow:-4px 5px 0 #163812,10px 5px 0 #163812}
-@keyframes fuse{0%,100%{filter:brightness(1)}50%{filter:brightness(2.1) saturate(.3)}}
-@keyframes boom{to{transform:scale(3);opacity:0;filter:brightness(3)}}
+.creeper::before{content:"";position:absolute;left:4px;top:5px;width:6px;height:7px;background:#102a0c;box-shadow:12px 0 0 #102a0c}
+.creeper::after{content:"";position:absolute;left:10px;top:12px;width:6px;height:9px;background:#102a0c;box-shadow:-4px 4px 0 #102a0c,6px 4px 0 #102a0c}
+.tnt{
+  background:
+    linear-gradient(180deg,transparent 0 9px,#eee 9px 17px,transparent 17px),
+    repeating-linear-gradient(90deg,var(--red) 0 4px,var(--red-dk) 4px 6px);
+  animation:fuse calc(.5s / var(--sp)) steps(2) infinite;
+}
+.tnt b{position:absolute;left:0;right:0;top:9px;text-align:center;font:6px/8px 'Press Start 2P',monospace;color:#000}
+.tnt::before{content:"";position:absolute;left:12px;top:-8px;width:3px;height:6px;background:#3a2a16}
+.tnt::after{content:"";position:absolute;left:11px;top:-12px;width:5px;height:5px;background:#ffe14d;box-shadow:0 0 8px #ffb13b;animation:spark calc(.15s / var(--sp)) steps(2) infinite}
+@keyframes spark{50%{transform:translate(2px,-2px);background:#ff7a3b}}
+@keyframes fuse{0%,100%{filter:brightness(1)}50%{filter:brightness(2.4) saturate(.2)}}
+.creeper.boom,.tnt.boom{animation:boom calc(.3s / var(--sp)) forwards}
+@keyframes boom{to{transform:scale(3);opacity:0;filter:brightness(4)}}
+.blast{
+  position:absolute;left:50%;width:40px;height:40px;margin-left:-20px;border-radius:50%;z-index:4;pointer-events:none;
+  background:radial-gradient(circle,#fff 0 20%,#ffe14d 35%,#ff7a3b 55%,rgba(224,57,43,0) 72%);
+  animation:blast calc(.6s / var(--sp)) ease-out forwards;
+}
+@keyframes blast{0%{transform:scale(.2);opacity:1}100%{transform:scale(5);opacity:0}}
+.particle{
+  position:absolute;left:50%;width:7px;height:7px;z-index:5;pointer-events:none;
+  animation:fly calc(.9s / var(--sp)) cubic-bezier(.15,.7,.4,1) forwards;
+}
+@keyframes fly{
+  0%{transform:translate(0,0) rotate(0);opacity:1}
+  65%{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:1}
+  100%{transform:translate(calc(var(--dx) * 1.15),calc(var(--dy) + 50px)) rotate(var(--r));opacity:0}
+}
 
 /* ---------- console ---------- */
 .console{
-  background:var(--console-bg);color:var(--console-ink);
-  font-size:19px;height:190px;overflow-y:auto;padding:10px 12px;
-  border:4px solid #0a1408;
+  flex:1;min-height:0;overflow-y:auto;
+  background:repeating-linear-gradient(rgba(0,0,0,.28) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,#0b2212,var(--console-bg));
+  color:var(--console-ink);text-shadow:0 0 6px rgba(150,230,90,.45);
+  font-size:19px;line-height:1.2;padding:6px 10px;
+  border:3px solid #000;box-shadow:inset 0 0 22px rgba(0,0,0,.8);
+  scrollbar-width:none;
 }
-.console p{margin:0 0 2px;white-space:pre-wrap}
-.console .warn{color:var(--gold-lt)}
-.console .bad{color:#f0b429;font-weight:bold}
-.console .good{color:#9ae45a}
+.console::-webkit-scrollbar{display:none}
+.console p{white-space:pre-wrap}
+.console .warn{color:var(--gold-lt);text-shadow:0 0 6px rgba(255,215,90,.5)}
+.console .bad{color:#ff7a6b;text-shadow:0 0 8px rgba(255,90,70,.6)}
+.console .good{color:#7dff8f;text-shadow:0 0 6px rgba(80,255,120,.5)}
 
 /* ---------- castle preview ---------- */
-.castlebox{display:flex;justify-content:center;padding:8px 0}
-.castle{width:100%;max-width:700px;height:auto}
+.castlebox{flex:1;min-height:0;display:flex;justify-content:center;border:3px solid #000}
+.castle{width:100%;height:100%;display:block}
 .cpart{opacity:0;transition:opacity .6s}
 .cpart.on{opacity:1}
+.flame{animation:flicker 1.2s steps(3) infinite}
+.flame.f2{animation-delay:.4s}
+@keyframes flicker{0%,100%{opacity:1}33%{opacity:.7}66%{opacity:.9}}
 
-/* ---------- rules cards ---------- */
-.rules{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:8px}
-.rule{border:3px solid var(--panel-edge);padding:14px;background:rgba(229,165,10,.08)}
-.rule h3{font-family:'Press Start 2P',monospace;font-size:clamp(10px,0.85vw,13px);line-height:1.7;margin-bottom:8px}
-.rule p{font-size:clamp(18px,1.2vw,22px)}
-.rule .ico{font-size:32px;display:block;margin-bottom:6px}
+/* ---------- builders ---------- */
+.builders{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:24px;gap:3px 10px}
+.builder{display:flex;align-items:center;gap:8px;font-size:19px;opacity:.5;transition:opacity .2s;white-space:nowrap;min-width:0}
+.builder span:nth-child(2){overflow:hidden;text-overflow:ellipsis}
+.builder.active{opacity:1;color:#fff;text-shadow:0 0 8px rgba(141,224,74,.8)}
+.face{width:20px;height:20px;position:relative;flex:none;border:2px solid #000}
+.face::before{content:"";position:absolute;left:2px;top:5px;width:4px;height:4px;background:#fff;box-shadow:8px 0 0 #fff}
+.face::after{content:"";position:absolute;left:4px;top:11px;width:8px;height:2px;background:rgba(0,0,0,.45)}
+.builder.active .face{animation:bob calc(.5s / var(--sp));box-shadow:0 0 10px rgba(141,224,74,.8)}
+.builder .tick{margin-left:auto;font-size:22px;visibility:hidden}
+.builder .tick.yes{visibility:visible;color:#7dff8f}
+.builder .tick.no{visibility:visible;color:#ff7a6b}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 
-footer{margin-top:30px;font-size:clamp(17px,1vw,20px);color:var(--tagline);text-align:center}
+/* ---------- rules strip ---------- */
+.rules{height:92px;flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.rule{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;
+  background:linear-gradient(180deg,var(--panel1),var(--panel2));
+  border:3px solid #000;box-shadow:inset 0 0 0 2px var(--edge)}
+.rule .ico{font-size:28px;line-height:1;flex:none}
+.rule h3{font-family:'Press Start 2P',monospace;font-size:10px;line-height:1.4;color:var(--gold-lt);margin-bottom:3px}
+.rule p{font-size:17px;line-height:1.1;color:#cfd5ea}
 
 @media (prefers-reduced-motion: reduce){
-  .block,.tagflag,.vtag.bump,.builder.active .face,.creeper{animation:none !important}
+  .block,.tagflag,.vtag.bump,.vtag.deny,.builder.active .face,.creeper,.tnt,.tnt::after,.frame.shake,.flash.go,.flame,h1 .cur{animation:none !important}
+  .particle,.blast{display:none}
   .cpart{transition:none}
 }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="stage" id="stage">
+<div class="frame" id="frame">
 
 <header>
-  <h1>CASTLE VERSION CONTROL<span>_</span></h1>
-  <p class="sub">15 builders, one castle, zero chaos. Every lesson is a sprint. Every sprint ends with a team review. Unanimous tick = version bump. No consensus = rollback, and that version number has to wait until the team earns it next sprint.</p>
-</header>
-
-<section class="panel" aria-label="Simulation controls">
-  <div class="controls">
-    <button id="play">&#9654; PLAY 6 SPRINTS</button>
-    <button id="reset" class="alt">RESET</button>
+  <div class="titles">
+    <h1>CASTLE <span class="hl">VERSION</span> CONTROL<span class="cur">_</span></h1>
+    <p class="sub">SPARK Centre &bull; 15 builders &bull; 6 sprints &bull; one castle worth protecting</p>
+  </div>
+  <div class="controls" aria-label="Simulation controls">
+    <button id="play" class="go">&#9654; PLAY 6 SPRINTS</button>
+    <button id="reset">RESET</button>
     <div class="speed" role="group" aria-label="Speed">
       <button data-sp="1" aria-pressed="true">1x</button>
       <button data-sp="2" aria-pressed="false">2x</button>
       <button data-sp="4" aria-pressed="false">4x</button>
     </div>
-    <div class="status" style="margin:0;margin-left:auto">
+    <button id="fs" title="Fullscreen (F) &bull; Space = play &bull; R = reset" aria-label="Fullscreen">&#x26F6;</button>
+  </div>
+</header>
+
+<div class="main">
+  <section class="panel" aria-label="Commit timeline">
+    <div class="phead">
+      <h2>BUILD TIMELINE</h2>
       <div class="sprintlabel" id="sprintlabel">READY TO BUILD</div>
       <div class="vtag" id="vtag">v1.0</div>
     </div>
-  </div>
-</section>
+    <div class="graphbox"><div class="graph" id="graph"></div></div>
+  </section>
 
-<div class="layout">
-  <div class="col-left">
-    <section class="panel" aria-label="Commit timeline">
-      <h2>BUILD TIMELINE</h2>
-      <div class="graphbox">
-        <div class="graph" id="graph"></div>
-      </div>
-    </section>
+  <section class="panel" aria-label="The castle grows">
+    <div class="phead"><h2>THE CASTLE</h2></div>
+    <div class="castlebox">
+      <svg class="castle" viewBox="0 0 220 130" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Castle growing as versions increase" shape-rendering="crispEdges">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#070b1f"/><stop offset="1" stop-color="#25336a"/>
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="220" height="130" fill="url(#sky)"/>
+        <rect x="186" y="10" width="16" height="16" fill="#f4f1d0"/>
+        <rect x="189" y="14" width="4" height="4" fill="#d6d2a8"/><rect x="195" y="19" width="3" height="3" fill="#d6d2a8"/>
+        <rect x="20" y="14" width="1" height="1" fill="#fff"/><rect x="48" y="8" width="1" height="1" fill="#fff"/>
+        <rect x="90" y="18" width="1" height="1" fill="#cfd8ff"/><rect x="130" y="6" width="1" height="1" fill="#fff"/>
+        <rect x="160" y="30" width="1" height="1" fill="#fff"/><rect x="8" y="40" width="1" height="1" fill="#cfd8ff"/>
+        <rect x="112" y="34" width="1" height="1" fill="#fff"/><rect x="210" y="44" width="1" height="1" fill="#fff"/>
+        <rect x="0" y="118" width="220" height="12" fill="#5fbf2a"/>
+        <rect x="0" y="122" width="220" height="8" fill="#8a5a2b"/>
+        <rect x="0" y="127" width="220" height="3" fill="#5e3b1a"/>
+        <g class="cpart" data-v="1"><rect x="55" y="78" width="110" height="40" fill="#9a9a9a"/><rect x="55" y="78" width="110" height="6" fill="#bdbdbd"/>
+          <rect x="62" y="92" width="8" height="8" fill="#7f7f7f"/><rect x="150" y="100" width="8" height="8" fill="#7f7f7f"/></g>
+        <g class="cpart" data-v="2">
+          <rect x="40" y="52" width="26" height="66" fill="#8a8a8a"/><rect x="154" y="52" width="26" height="66" fill="#8a8a8a"/>
+          <rect x="38" y="44" width="8" height="8" fill="#6f6f6f"/><rect x="50" y="44" width="8" height="8" fill="#6f6f6f"/><rect x="60" y="44" width="8" height="8" fill="#6f6f6f"/>
+          <rect x="152" y="44" width="8" height="8" fill="#6f6f6f"/><rect x="164" y="44" width="8" height="8" fill="#6f6f6f"/><rect x="174" y="44" width="8" height="8" fill="#6f6f6f"/>
+          <rect x="50" y="66" width="6" height="10" fill="#ffcf5a" opacity=".85"/><rect x="164" y="66" width="6" height="10" fill="#ffcf5a" opacity=".85"/>
+        </g>
+        <g class="cpart" data-v="3">
+          <rect x="96" y="90" width="28" height="28" fill="#3a2a16"/><rect x="100" y="94" width="20" height="24" fill="#b07b3f"/>
+          <rect x="10" y="112" width="40" height="8" fill="#2f6fbf"/><rect x="170" y="112" width="40" height="8" fill="#2f6fbf"/>
+        </g>
+        <g class="cpart" data-v="4">
+          <rect x="58" y="70" width="10" height="8" fill="#6f6f6f"/><rect x="76" y="70" width="10" height="8" fill="#6f6f6f"/><rect x="94" y="70" width="10" height="8" fill="#6f6f6f"/><rect x="112" y="70" width="10" height="8" fill="#6f6f6f"/><rect x="130" y="70" width="10" height="8" fill="#6f6f6f"/><rect x="148" y="70" width="10" height="8" fill="#6f6f6f"/>
+          <circle cx="89.5" cy="82" r="7" fill="#ffb13b" opacity=".25" class="flame"/>
+          <circle cx="130.5" cy="82" r="7" fill="#ffb13b" opacity=".25" class="flame f2"/>
+          <rect x="88" y="84" width="3" height="8" fill="#3a2a16"/><rect x="87" y="79" width="5" height="5" fill="#ffb13b" class="flame"/>
+          <rect x="129" y="84" width="3" height="8" fill="#3a2a16"/><rect x="128" y="79" width="5" height="5" fill="#ffb13b" class="flame f2"/>
+        </g>
+        <g class="cpart" data-v="5">
+          <rect x="70" y="112" width="80" height="4" fill="#f2b51c"/>
+          <rect x="51" y="24" width="3" height="22" fill="#3a2a16"/><path d="M54 24 L74 29 L54 34 Z" fill="#f2b51c"/>
+          <rect x="165" y="24" width="3" height="22" fill="#3a2a16"/><path d="M168 24 L188 29 L168 34 Z" fill="#f2b51c"/>
+          <rect x="102" y="60" width="16" height="12" fill="#f2b51c" stroke="#6b4420" stroke-width="2"/>
+          <rect x="108" y="64" width="4" height="4" fill="#6b4420"/>
+          <text x="110" y="54" text-anchor="middle" font-size="8" font-family="monospace" fill="#ffd75a">the treasure</text>
+        </g>
+      </svg>
+    </div>
+  </section>
 
-    <section class="panel" aria-label="Server console">
-      <h2>SERVER CONSOLE</h2>
-      <div class="console" id="console" aria-live="polite"></div>
-    </section>
-  </div>
+  <section class="panel" aria-label="Server console">
+    <div class="phead"><h2>SERVER CONSOLE</h2></div>
+    <div class="console" id="console" aria-live="polite"></div>
+  </section>
 
-  <div class="col-right">
-    <section class="panel" aria-label="The castle grows">
-      <h2>THE CASTLE, VERSION BY VERSION</h2>
-      <div class="castlebox">
-        <svg class="castle" viewBox="0 0 220 130" role="img" aria-label="Castle growing as versions increase">
-          <rect x="0" y="118" width="220" height="12" fill="#56a81e"/>
-          <rect x="0" y="126" width="220" height="4" fill="#6b4420"/>
-          <g class="cpart" data-v="1"><rect x="55" y="78" width="110" height="40" fill="#9a9a9a"/><rect x="55" y="78" width="110" height="6" fill="#bdbdbd"/></g>
-          <g class="cpart" data-v="2">
-            <rect x="40" y="52" width="26" height="66" fill="#8a8a8a"/><rect x="154" y="52" width="26" height="66" fill="#8a8a8a"/>
-            <rect x="38" y="44" width="8" height="8" fill="#6f6f6f"/><rect x="50" y="44" width="8" height="8" fill="#6f6f6f"/><rect x="60" y="44" width="8" height="8" fill="#6f6f6f"/>
-            <rect x="152" y="44" width="8" height="8" fill="#6f6f6f"/><rect x="164" y="44" width="8" height="8" fill="#6f6f6f"/><rect x="174" y="44" width="8" height="8" fill="#6f6f6f"/>
-          </g>
-          <g class="cpart" data-v="3">
-            <rect x="96" y="90" width="28" height="28" fill="#3a2a16"/><rect x="100" y="94" width="20" height="24" fill="#b07b3f"/>
-            <rect x="10" y="112" width="40" height="8" fill="#5a8f3c"/><rect x="170" y="112" width="40" height="8" fill="#5a8f3c"/>
-          </g>
-          <g class="cpart" data-v="4">
-            <rect x="58" y="70" width="10" height="8" fill="#6f6f6f"/><rect x="76" y="70" width="10" height="8" fill="#6f6f6f"/><rect x="94" y="70" width="10" height="8" fill="#6f6f6f"/><rect x="112" y="70" width="10" height="8" fill="#6f6f6f"/><rect x="130" y="70" width="10" height="8" fill="#6f6f6f"/><rect x="148" y="70" width="10" height="8" fill="#6f6f6f"/>
-            <rect x="88" y="84" width="3" height="8" fill="#3a2a16"/><circle cx="89.5" cy="82" r="3" fill="#ffb13b"/>
-            <rect x="129" y="84" width="3" height="8" fill="#3a2a16"/><circle cx="130.5" cy="82" r="3" fill="#ffb13b"/>
-          </g>
-          <g class="cpart" data-v="5">
-            <rect x="70" y="112" width="80" height="4" fill="#e5a50a"/>
-            <rect x="51" y="24" width="3" height="22" fill="#3a2a16"/><path d="M54 24 L74 29 L54 34 Z" fill="#e5a50a"/>
-            <rect x="165" y="24" width="3" height="22" fill="#3a2a16"/><path d="M168 24 L188 29 L168 34 Z" fill="#e5a50a"/>
-            <rect x="102" y="60" width="16" height="12" fill="#e5a50a" stroke="#6b4420" stroke-width="2"/>
-            <rect x="108" y="64" width="4" height="4" fill="#6b4420"/>
-            <text x="110" y="54" text-anchor="middle" font-size="8" font-family="monospace" fill="#c98a12">the treasure</text>
-          </g>
-        </svg>
-      </div>
-    </section>
-
-    <section class="panel" aria-label="The team">
-      <h2>THE TEAM &mdash; 15 BUILDERS</h2>
-      <div class="builders" id="builders"></div>
-    </section>
-  </div>
+  <section class="panel" aria-label="The team">
+    <div class="phead"><h2>THE TEAM &mdash; 15 BUILDERS</h2></div>
+    <div class="builders" id="builders"></div>
+  </section>
 </div>
 
-<section class="panel" aria-label="The rules">
-  <h2>HOW IT WORKS</h2>
-  <div class="rules">
-    <div class="rule"><span class="ico">&#129521;</span><h3>COMMIT</h3><p>Every change a builder makes is a block on the timeline. Small changes, made often, with your name on them. No mystery edits.</p></div>
-    <div class="rule"><span class="ico">&#128269;</span><h3>TEAM REVIEW</h3><p>At the end of each sprint the team runs its own meeting and checks the build against the defence plan. Everyone votes.</p></div>
-    <div class="rule"><span class="ico">&#9989;</span><h3>VERSION BUMP</h3><p>Unanimous tick? The build is tagged as the next version: v1.1, v1.2, v1.3... That tag is a save point you can always get back to.</p></div>
-    <div class="rule"><span class="ico">&#128165;</span><h3>ROLLBACK</h3><p>No consensus? Roll back to the last tagged version. The failed version number isn't skipped, it just has to wait: the team earns it in the next sprint instead.</p></div>
-  </div>
+<section class="rules" aria-label="The rules">
+  <div class="rule"><span class="ico">&#129521;</span><div><h3>COMMIT</h3><p>Every change is a block on the timeline, with your name on it. Small and often.</p></div></div>
+  <div class="rule"><span class="ico">&#128269;</span><div><h3>TEAM REVIEW</h3><p>End of sprint: check the build against the defence plan. Everyone votes.</p></div></div>
+  <div class="rule"><span class="ico">&#9989;</span><div><h3>VERSION BUMP</h3><p>Unanimous tick = next version tag. A save point you can always return to.</p></div></div>
+  <div class="rule"><span class="ico">&#128165;</span><div><h3>ROLLBACK</h3><p>No consensus? BOOM. Back to the last tag. That version waits to be earned.</p></div></div>
 </section>
 
-<footer>SPARK Centre &bull; 15 builders &bull; 6 sprints &bull; one castle worth protecting</footer>
+</div>
+<div class="flash" id="flash"></div>
 </div>
 
 <script>
@@ -304,7 +376,11 @@ var NAME_POOL=["Ava","Noah","Mia","Leo","Zoe","Max","Ivy","Sam","Ruby","Finn","I
 var COLORS=["#2f6d1a","#56a81e","#7bc143","#a4d65e","#cde26b","#e5c51a","#f0b429","#c98a12","#a16a1b","#7a5a24","#5d7a24","#3e8f4a","#8fae1b","#d9a404","#4f6b12"];
 var MSGS=["dug the moat","raised the east wall","added a drawbridge","placed torches on the ramparts","built a lookout tower","set an iron door","wired a tripwire trap","planted the team flag","reinforced the gate with obsidian","added arrow slits","built the armoury","laid a hidden tunnel","stacked the battlements","put a pressure-plate alarm in","moved the chest deeper inside","patched a hole in the north wall"];
 var BAD_MSGS=["replaced the gate with a dirt block (??)","knocked a hole in the wall 'to make a window'","moved the treasure chest outside the walls","swapped the iron door for a wooden one","deleted the moat to 'save space'"];
+var STEP=22, W=1280, H=720;
 
+var stage=document.getElementById('stage');
+var frame=document.getElementById('frame');
+var flashEl=document.getElementById('flash');
 var graph=document.getElementById('graph');
 var consoleEl=document.getElementById('console');
 var buildersEl=document.getElementById('builders');
@@ -314,13 +390,20 @@ var playBtn=document.getElementById('play');
 var resetBtn=document.getElementById('reset');
 var speed=1, running=false, timers=[];
 var NAMES=[], builderEls=[];
-var version=0, failSprint=0, dissenter=0;
+var version=0, failPlan={}, rollbacks=0;
+
+function fit(){
+  var s=Math.min(window.innerWidth/W, window.innerHeight/H);
+  stage.style.transform='translate(-50%,-50%) scale('+s+')';
+}
+window.addEventListener('resize',fit);
+fit();
 
 for(var s=0;s<6;s++){
   var col=document.createElement('div');
   col.className='sprintcol'; col.id='col'+s;
-  col.style.left=(3+s*16)+'%'; col.style.height='250px';
-  col.innerHTML='<div class="colname">Sprint '+(s+1)+'</div>';
+  col.style.left=(2.5+s*16)+'%';
+  col.innerHTML='<div class="colname">SPRINT '+(s+1)+'</div>';
   graph.appendChild(col);
 }
 
@@ -331,6 +414,15 @@ function shuffle(arr){
     var t=a[i];a[i]=a[j];a[j]=t;
   }
   return a;
+}
+
+// 1 or 2 sprints fail, each blown up by either TNT or a Creeper
+function planFailures(){
+  failPlan={};
+  var count=Math.random()<0.5?1:2;
+  shuffle([0,1,2,3,4,5]).slice(0,count).forEach(function(s){
+    failPlan[s]=Math.random()<0.5?'tnt':'creeper';
+  });
 }
 
 function rollTeam(){
@@ -354,6 +446,7 @@ function log(txt,cls){
 }
 function wait(ms){return new Promise(function(res){var t=setTimeout(res,ms/speed);timers.push(t);});}
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function restart(el,cls){el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);}
 function setCastle(v){
   document.querySelectorAll('.cpart').forEach(function(el){
     el.classList.toggle('on', +el.dataset.v<=v);
@@ -361,14 +454,15 @@ function setCastle(v){
 }
 function bumpTag(txt){
   vtag.textContent=txt;
-  vtag.classList.remove('bump'); void vtag.offsetWidth; vtag.classList.add('bump');
+  vtag.classList.remove('deny');
+  restart(vtag,'bump');
 }
 function clearTicks(){builderEls.forEach(function(b){var t=b.querySelector('.tick');t.className='tick';t.textContent='';b.classList.remove('active');});}
 
 function addBlock(col,stackIndex,type){
   var b=document.createElement('div');
   b.className='block b-'+type;
-  b.style.bottom=(stackIndex*24)+'px';
+  b.style.bottom=(stackIndex*STEP)+'px';
   col.appendChild(b);
   return b;
 }
@@ -376,17 +470,68 @@ function addFlag(col,height,txt,rolled){
   var f=document.createElement('div');
   f.className='tagflag'+(rolled?' rolled':'');
   f.textContent=txt;
-  f.style.bottom=(height*24+8)+'px';
+  f.style.bottom=(height*STEP+6)+'px';
   col.appendChild(f);
   return f;
+}
+function burst(col,bottom,colors,count,dist){
+  for(var i=0;i<count;i++){
+    var p=document.createElement('div');
+    p.className='particle';
+    var a=Math.random()*Math.PI*2, d=dist*(0.4+Math.random()*0.6);
+    p.style.bottom=bottom+'px';
+    p.style.background=pick(colors);
+    p.style.setProperty('--dx',Math.round(Math.cos(a)*d)+'px');
+    p.style.setProperty('--dy',Math.round(-Math.abs(Math.sin(a))*d)+'px');
+    p.style.setProperty('--r',Math.round(Math.random()*540-270)+'deg');
+    col.appendChild(p);
+    (function(el){setTimeout(function(){el.remove();},1100/speed);})(p);
+  }
+}
+
+async function explode(col,blocks,kind){
+  var bottom=blocks.length*STEP;
+  var bomb=document.createElement('div');
+  bomb.className=kind;
+  bomb.style.bottom=bottom+'px';
+  if(kind==='tnt')bomb.innerHTML='<b>TNT</b>';
+  col.appendChild(bomb);
+  if(kind==='tnt')log('[!!!] someone lit the TNT on top of the build... fuse burning','bad');
+  else log('[!!!] sss... sssSSSS... a Creeper crept up on the build','bad');
+  await wait(2400);
+  if(!running)return false;
+
+  bomb.classList.add('boom');
+  var blast=document.createElement('div');
+  blast.className='blast';
+  blast.style.bottom=(bottom-5)+'px';
+  col.appendChild(blast);
+  var colors=kind==='tnt'
+    ? ['#e0392b','#ffffff','#ffe14d','#ff7a3b','#8e1d14']
+    : ['#4fae3f','#2c6b22','#ffe14d','#ff7a3b','#9a9a9a'];
+  burst(col,bottom+10,colors,26,140);
+  restart(flashEl,'go');
+  restart(frame,'shake');
+  restart(vtag,'deny');
+  log('  * * * B O O M * * *','bad');
+  blocks.forEach(function(b,idx){
+    setTimeout(function(){b.classList.add('doom');},(idx*70)/speed);
+  });
+  await wait(350);
+  bomb.remove();
+  await wait(350);
+  blast.remove();
+  return true;
 }
 
 async function runSprint(s){
   var col=document.getElementById('col'+s);
-  var fails=(s===failSprint);
+  var kind=failPlan[s];
+  var fails=!!kind;
   var target=version+1;
-  sprintlabel.textContent='SPRINT '+(s+1)+' \u2014 building on v1.'+version;
-  log('[sprint '+(s+1)+'] lesson starts \u2014 version bump target: v1.'+target,'good');
+  sprintlabel.className='sprintlabel';
+  sprintlabel.textContent='SPRINT '+(s+1)+' — ON v1.'+version;
+  log('[sprint '+(s+1)+'] lesson starts — version bump target: v1.'+target,'good');
   await wait(600);
 
   var commits=6+Math.floor(Math.random()*3);
@@ -400,54 +545,48 @@ async function runSprint(s){
     used.push(bi);
     var sabotage=fails&&c===commits-1;
     builderEls[bi].classList.add('active');
-    var blk=addBlock(col,c,sabotage?'dirt':pick(types));
-    blocks.push(blk);
+    blocks.push(addBlock(col,c,sabotage?'dirt':pick(types)));
     log('  '+NAMES[bi]+' committed: '+(sabotage?pick(BAD_MSGS):pick(MSGS)), sabotage?'warn':null);
     await wait(650);
     builderEls[bi].classList.remove('active');
   }
 
-  log('[sprint '+(s+1)+'] team meeting \u2014 reviewing against the defence plan...');
+  log('[sprint '+(s+1)+'] team meeting — reviewing against the defence plan...');
   await wait(500);
-  if(fails)dissenter=Math.floor(Math.random()*15);
+  var dissenter=fails?Math.floor(Math.random()*15):-1;
   for(var i=0;i<15;i++){
     if(!running)return false;
     var t=builderEls[i].querySelector('.tick');
-    var votesNo=fails&&i===dissenter;
-    t.textContent=votesNo?'\u2717':'\u2713';
+    var votesNo=i===dissenter;
+    t.textContent=votesNo?'✗':'✓';
     t.className='tick '+(votesNo?'no':'yes');
     await wait(110);
   }
   await wait(500);
 
   if(fails){
-    sprintlabel.textContent='SPRINT '+(s+1)+' \u2014 ROLLBACK';
-    log('[review] 14 ticks, 1 cross \u2014 NO CONSENSUS','bad');
+    rollbacks++;
+    sprintlabel.className='sprintlabel bad';
+    sprintlabel.textContent='SPRINT '+(s+1)+' — ROLLBACK';
+    log('[review] 14 ticks, 1 cross — NO CONSENSUS','bad');
     log('[rollback] '+NAMES[dissenter]+' spotted the problem. Rolling back to v1.'+version+'...','bad');
-    var creeper=document.createElement('div');
-    creeper.style.bottom=(blocks.length*24)+'px';
-    creeper.className='creeper';
-    col.appendChild(creeper);
-    await wait(2800);
-    creeper.remove();
-    blocks.forEach(function(b,idx){
-      setTimeout(function(){b.classList.add('doom');},(idx*90)/speed);
-    });
-    addFlag(col,blocks.length,'v1.'+target,true);
-    await wait(1600);
+    if(!(await explode(col,blocks,kind)))return false;
+    addFlag(col,0,'v1.'+target,true);
+    await wait(1200);
     blocks.forEach(function(b){b.remove();});
     clearTicks();
-    log('[rollback] restored v1.'+version+' \u2014 nothing lost, lesson learned','good');
-    log('[tag] v1.'+target+' was NOT earned this sprint \u2014 it has to wait until next sprint','warn');
+    log('[rollback] restored v1.'+version+' — nothing lost, lesson learned','good');
+    log('[tag] v1.'+target+' was NOT earned this sprint — it has to wait until next sprint','warn');
     await wait(900);
     return true;
   }
 
   addFlag(col,commits,'v1.'+target,false);
+  burst(col,commits*STEP+10,['#2fd36b','#ffd75a','#ffffff','#8de04a'],14,80);
   version=target;
   bumpTag('v1.'+version);
   setCastle(version);
-  log('[tag] build approved and tagged v1.'+version+' \u2014 new save point','good');
+  log('[tag] build approved and tagged v1.'+version+' — new save point','good');
   clearTicks();
   await wait(900);
   return true;
@@ -456,14 +595,15 @@ async function runSprint(s){
 async function run(){
   if(running)return;
   running=true;
-  playBtn.textContent='\u23F8 RUNNING...';
+  playBtn.textContent='⏸ RUNNING...';
   for(var s=0;s<6;s++){
     var ok=await runSprint(s);
     if(!ok||!running)break;
   }
   if(running){
-    sprintlabel.textContent='DONE \u2014 v1.'+version+' SHIPPED';
-    log('[server] 6 sprints, '+version+' versions earned, 1 rollback survived. The treasure is hidden. Defend it well.','good');
+    sprintlabel.className='sprintlabel';
+    sprintlabel.textContent='DONE — v1.'+version+' SHIPPED';
+    log('[server] 6 sprints, '+version+' versions earned, '+rollbacks+' rollback'+(rollbacks===1?'':'s')+' survived. The treasure is hidden. Defend it well.','good');
   }
   running=false;
   playBtn.innerHTML='&#9654; PLAY AGAIN';
@@ -472,28 +612,45 @@ async function run(){
 function reset(){
   running=false;
   timers.forEach(clearTimeout); timers=[];
-  version=0;
-  failSprint=Math.floor(Math.random()*6);
+  version=0; rollbacks=0;
+  planFailures();
   rollTeam();
   for(var s=0;s<6;s++){
-    var col=document.getElementById('col'+s);
-    col.innerHTML='<div class="colname">Sprint '+(s+1)+'</div>';
+    document.getElementById('col'+s).innerHTML='<div class="colname">SPRINT '+(s+1)+'</div>';
   }
   consoleEl.innerHTML='';
+  frame.classList.remove('shake'); flashEl.classList.remove('go');
   bumpTag('v1.0');
   setCastle(0);
+  sprintlabel.className='sprintlabel';
   sprintlabel.textContent='READY TO BUILD';
   playBtn.innerHTML='&#9654; PLAY 6 SPRINTS';
   log('[server] Umbrel online. 15 builders connected. Defence plan approved.','good');
+  log('[server] warning: hostile mobs and loose TNT detected nearby...','warn');
+}
+
+function setSpeed(v){
+  speed=v;
+  document.documentElement.style.setProperty('--sp',v);
+  document.querySelectorAll('.speed button').forEach(function(x){x.setAttribute('aria-pressed',+x.dataset.sp===v?'true':'false');});
+}
+function toggleFs(){
+  if(document.fullscreenElement)document.exitFullscreen();
+  else if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen();
 }
 
 playBtn.addEventListener('click',function(){ if(!running) run(); });
 resetBtn.addEventListener('click',reset);
+document.getElementById('fs').addEventListener('click',toggleFs);
 document.querySelectorAll('.speed button').forEach(function(b){
-  b.addEventListener('click',function(){
-    speed=+b.dataset.sp;
-    document.querySelectorAll('.speed button').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});
-  });
+  b.addEventListener('click',function(){ setSpeed(+b.dataset.sp); });
+});
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='BUTTON'&&(e.key===' '||e.key==='Enter'))return;
+  if(e.key===' '){e.preventDefault(); if(!running) run();}
+  else if(e.key==='r'||e.key==='R')reset();
+  else if(e.key==='f'||e.key==='F')toggleFs();
+  else if(e.key==='1'||e.key==='2'||e.key==='4')setSpeed(+e.key);
 });
 
 reset();
