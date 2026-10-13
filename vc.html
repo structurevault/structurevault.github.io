@@ -283,6 +283,7 @@ button.go:hover{background:#6fd335}
       <button data-sp="2" aria-pressed="false">2x</button>
       <button data-sp="4" aria-pressed="false">4x</button>
     </div>
+    <button id="snd" title="Sound on/off (M)" aria-label="Sound on" aria-pressed="true">&#128266;</button>
     <button id="fs" title="Fullscreen (F) &bull; Space = play &bull; R = reset" aria-label="Fullscreen">&#x26F6;</button>
   </div>
 </header>
@@ -392,6 +393,75 @@ var speed=1, running=false, timers=[];
 var NAMES=[], builderEls=[];
 var version=0, failPlan={}, rollbacks=0;
 
+// ---------- sound (synthesised with Web Audio, no files needed) ----------
+var AC=null, master=null, noiseBuf=null, muted=false, voices=[];
+function audio(){
+  if(!AC){
+    var C=window.AudioContext||window.webkitAudioContext;
+    if(!C)return null;
+    AC=new C();
+    master=AC.createGain(); master.gain.value=muted?0:0.9;
+    var comp=AC.createDynamicsCompressor();
+    master.connect(comp); comp.connect(AC.destination);
+    noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);
+    var d=noiseBuf.getChannelData(0);
+    for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  }
+  if(AC.state==='suspended')AC.resume();
+  return AC;
+}
+function track(src,stopAt){
+  voices.push(src);
+  src.onended=function(){var i=voices.indexOf(src); if(i>-1)voices.splice(i,1);};
+  src.stop(stopAt);
+}
+function stopSounds(){voices.slice().forEach(function(v){try{v.stop();}catch(e){}}); voices=[];}
+function noise(){var n=AC.createBufferSource(); n.buffer=noiseBuf; n.loop=true; return n;}
+function tickAt(t,pitch){
+  var o=AC.createOscillator(), g=AC.createGain();
+  o.type='square'; o.frequency.setValueAtTime(pitch,t);
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(0.35,t+0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+0.06);
+  o.connect(g); g.connect(master);
+  o.start(t); track(o,t+0.08);
+}
+// accelerating tick-tick-tick over the fuse, plus a sizzle (TNT) or hiss (Creeper)
+function sfxFuse(dur,kind){
+  if(!audio())return;
+  var t0=AC.currentTime, t=0, gap=dur/5, n=0;
+  while(t<dur-0.05){ tickAt(t0+t, n%2?1050:1300); t+=gap; gap=Math.max(0.06,gap*0.78); n++; }
+  var src=noise(), f=AC.createBiquadFilter(), g=AC.createGain();
+  if(kind==='tnt'){ f.type='bandpass'; f.frequency.value=5000; f.Q.value=1.5;
+    g.gain.setValueAtTime(0.12,t0); g.gain.linearRampToValueAtTime(0.2,t0+dur); }
+  else { f.type='highpass'; f.frequency.value=2500;
+    g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.4,t0+dur); }
+  src.connect(f); f.connect(g); g.connect(master);
+  src.start(t0); track(src,t0+dur);
+}
+function sfxBoom(){
+  if(!audio())return;
+  var t=AC.currentTime;
+  var src=noise(), f=AC.createBiquadFilter(), g=AC.createGain();
+  f.type='lowpass'; f.frequency.setValueAtTime(3000,t); f.frequency.exponentialRampToValueAtTime(60,t+1.8);
+  g.gain.setValueAtTime(1.2,t); g.gain.exponentialRampToValueAtTime(0.0001,t+2);
+  src.connect(f); f.connect(g); g.connect(master);
+  src.start(t); track(src,t+2.1);
+  var o=AC.createOscillator(), og=AC.createGain();
+  o.type='sine'; o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(28,t+0.7);
+  og.gain.setValueAtTime(1.4,t); og.gain.exponentialRampToValueAtTime(0.0001,t+0.9);
+  o.connect(og); og.connect(master);
+  o.start(t); track(o,t+1);
+}
+function setMuted(m){
+  muted=m;
+  if(master)master.gain.value=m?0:0.9;
+  var b=document.getElementById('snd');
+  b.innerHTML=m?'&#128263;':'&#128266;';
+  b.setAttribute('aria-pressed',m?'false':'true');
+  b.setAttribute('aria-label',m?'Sound off':'Sound on');
+}
+
 function fit(){
   var s=Math.min(window.innerWidth/W, window.innerHeight/H);
   stage.style.transform='translate(-50%,-50%) scale('+s+')';
@@ -498,9 +568,11 @@ async function explode(col,blocks,kind){
   col.appendChild(bomb);
   if(kind==='tnt')log('[!!!] someone lit the TNT on top of the build... fuse burning','bad');
   else log('[!!!] sss... sssSSSS... a Creeper crept up on the build','bad');
+  sfxFuse(2.4/speed,kind);
   await wait(2400);
   if(!running)return false;
 
+  sfxBoom();
   bomb.classList.add('boom');
   var blast=document.createElement('div');
   blast.className='blast';
@@ -612,6 +684,7 @@ async function run(){
 function reset(){
   running=false;
   timers.forEach(clearTimeout); timers=[];
+  stopSounds();
   version=0; rollbacks=0;
   planFailures();
   rollTeam();
@@ -639,15 +712,17 @@ function toggleFs(){
   else if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen();
 }
 
-playBtn.addEventListener('click',function(){ if(!running) run(); });
+playBtn.addEventListener('click',function(){ audio(); if(!running) run(); });
 resetBtn.addEventListener('click',reset);
+document.getElementById('snd').addEventListener('click',function(){ audio(); setMuted(!muted); });
 document.getElementById('fs').addEventListener('click',toggleFs);
 document.querySelectorAll('.speed button').forEach(function(b){
   b.addEventListener('click',function(){ setSpeed(+b.dataset.sp); });
 });
 document.addEventListener('keydown',function(e){
   if(e.target.tagName==='BUTTON'&&(e.key===' '||e.key==='Enter'))return;
-  if(e.key===' '){e.preventDefault(); if(!running) run();}
+  if(e.key===' '){e.preventDefault(); audio(); if(!running) run();}
+  else if(e.key==='m'||e.key==='M'){audio(); setMuted(!muted);}
   else if(e.key==='r'||e.key==='R')reset();
   else if(e.key==='f'||e.key==='F')toggleFs();
   else if(e.key==='1'||e.key==='2'||e.key==='4')setSpeed(+e.key);
