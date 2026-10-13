@@ -453,6 +453,31 @@ function sfxBoom(){
   o.connect(og); og.connect(master);
   o.start(t); track(o,t+1);
 }
+// cash-register "ka-ching" for an approved build
+function bellAt(t,freq,vol,len){
+  [1,2.76,5.4].forEach(function(mult,i){
+    var o=AC.createOscillator(), g=AC.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(freq*mult,t);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol/(i+1),t+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+len/(i+1));
+    o.connect(g); g.connect(master);
+    o.start(t); track(o,t+len+0.05);
+  });
+}
+function sfxChing(){
+  if(!audio())return;
+  var t=AC.currentTime;
+  // "ka": short metallic drawer clack
+  var src=noise(), f=AC.createBiquadFilter(), g=AC.createGain();
+  f.type='bandpass'; f.frequency.value=3200; f.Q.value=2;
+  g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.07);
+  src.connect(f); f.connect(g); g.connect(master);
+  src.start(t); track(src,t+0.08);
+  // "ching": two bright bells
+  bellAt(t+0.08,1568,0.3,0.6);
+  bellAt(t+0.16,2093,0.35,1.1);
+}
 function setMuted(m){
   muted=m;
   if(master)master.gain.value=m?0:0.9;
@@ -654,6 +679,7 @@ async function runSprint(s){
   }
 
   addFlag(col,commits,'v1.'+target,false);
+  sfxChing();
   burst(col,commits*STEP+10,['#2fd36b','#ffd75a','#ffffff','#8de04a'],14,80);
   version=target;
   bumpTag('v1.'+version);
