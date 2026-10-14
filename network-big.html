@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SPARK Centre Network Map</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg0: #0A1428;
+    --bg1: #101E38;
+    --card: #14233E;
+    --card-edge: #2B4066;
+    --ink: #E9F1FC;
+    --muted: #8DA4C6;
+    --faint: #5E738F;
+    --line: #33496E;
+    --cyan: #4FD8E8;
+    --amber: #FFB454;
+    --red: #FF5D5D;
+    --blue: #5D9BFF;
+    --green: #58E6A8;
+    --violet: #B08CFF;
+    --wifi: #8FB7E8;
+    --zone-dns: rgba(79,216,232,0.05);
+    --zone-battle: rgba(255,93,93,0.045);
+    --grid-dot: rgba(141,164,198,0.14);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  * , *::before, *::after { box-sizing: inherit; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 500px at 50% -10%, #142A52 0%, rgba(20,42,82,0) 60%),
+      var(--bg0);
+    color: var(--ink);
+    font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    min-height: 100%;
+  }
+  .wrap {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+  }
+  .map-scroller {
+    overflow-x: auto;
+    border-radius: 14px;
+  }
+  svg.map {
+    display: block;
+    min-width: 980px;
+    width: 100%;
+    height: auto;
+  }
+  text { font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+  .mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+
+  .h-title { font-size: 30px; font-weight: 700; fill: var(--ink); letter-spacing: 0.5px; }
+  .h-sub { font-size: 13.5px; fill: var(--muted); }
+  .h-net { font-size: 14px; fill: var(--green); }
+
+  .zone { fill: var(--zone-dns); stroke: rgba(79,216,232,0.22); stroke-dasharray: 3 5; rx: 18; }
+  .zone-battle { fill: var(--zone-battle); stroke: rgba(255,93,93,0.25); }
+  .zone-label { font-size: 12.5px; fill: var(--faint); font-weight: 600; letter-spacing: 1px; }
+
+  .edge { fill: none; stroke: var(--line); stroke-width: 2; }
+  .edge-flow { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 2 10; animation: flow 1.4s linear infinite; }
+  .flow-main { stroke: var(--green); }
+  .flow-dns { stroke: var(--cyan); animation-duration: 1.8s; }
+  .flow-mesh { stroke: var(--amber); animation-duration: 1.6s; }
+  .flow-battle-r { stroke: var(--red); animation-duration: 1.2s; }
+  .flow-battle-b { stroke: var(--blue); animation-duration: 1.2s; }
+  .flow-file { stroke: var(--violet); animation-duration: 2.2s; }
+  @keyframes flow { to { stroke-dashoffset: -24; } }
+
+  .wireless { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 7 6; fill: none; opacity: 0.85; }
+  .wifi-edge { stroke: var(--wifi); stroke-width: 1.8; stroke-dasharray: 4 5; fill: none; opacity: 0.8; }
+  .flow-wifi { stroke: var(--wifi); animation-duration: 2s; }
+
+  .panel { fill: rgba(20,35,62,0.65); stroke: var(--card-edge); stroke-width: 1.3; rx: 14; filter: url(#cardShadow); }
+  .panel-h { font-size: 14px; font-weight: 600; fill: var(--ink); }
+  .panel-sub { font-size: 10.5px; fill: var(--faint); }
+  .tile { fill: rgba(141,164,198,0.07); stroke: rgba(141,164,198,0.22); rx: 9; transition: stroke 0.15s ease; }
+  g.tilegrp:hover .tile { stroke: var(--wifi); }
+  .tile-t { font-size: 11.5px; fill: var(--ink); font-weight: 500; }
+  .tile-s { font-size: 9.5px; fill: var(--faint); }
+
+  .edge-label { font-size: 11px; fill: var(--faint); }
+  .edge-label-strong { font-size: 11.5px; fill: var(--amber); }
+
+  .node rect.body {
+    fill: var(--card);
+    stroke: var(--card-edge);
+    stroke-width: 1.4;
+    rx: 12;
+    filter: url(#cardShadow);
+    transition: stroke 0.15s ease;
+  }
+  .node:hover rect.body { stroke: var(--green); }
+  .node.n-dns:hover rect.body { stroke: var(--cyan); }
+  .node.n-mesh:hover rect.body { stroke: var(--amber); }
+  .node.n-red:hover rect.body { stroke: var(--red); }
+  .node.n-blue:hover rect.body { stroke: var(--blue); }
+  .node.n-file:hover rect.body { stroke: var(--violet); }
+
+  .n-name { font-size: 15px; font-weight: 600; fill: var(--ink); }
+  .n-name-sm { font-size: 13.5px; font-weight: 600; fill: var(--ink); }
+  .n-role { font-size: 11px; fill: var(--muted); }
+  .n-ip { font-size: 12px; fill: var(--green); }
+  .n-ip-c { fill: var(--cyan); }
+  a:hover .n-ip { text-decoration: underline; }
+
+  .chip { fill: rgba(141,164,198,0.12); stroke: rgba(141,164,198,0.3); rx: 8; }
+  .chip-t { font-size: 10px; fill: var(--muted); font-weight: 500; }
+  .chip-dns { fill: rgba(79,216,232,0.1); stroke: rgba(79,216,232,0.35); }
+  .chip-dns-t { fill: var(--cyan); }
+  .chip-warn { fill: rgba(255,180,84,0.1); stroke: rgba(255,180,84,0.4); }
+  .chip-warn-t { fill: var(--amber); }
+  .chip-red { fill: rgba(255,93,93,0.1); stroke: rgba(255,93,93,0.4); }
+  .chip-red-t { fill: var(--red); }
+  .chip-blue { fill: rgba(93,155,255,0.1); stroke: rgba(93,155,255,0.4); }
+  .chip-blue-t { fill: var(--blue); }
+  .chip-vio { fill: rgba(176,140,255,0.1); stroke: rgba(176,140,255,0.4); }
+  .chip-vio-t { fill: var(--violet); }
+  .chip-green { fill: rgba(88,230,168,0.1); stroke: rgba(88,230,168,0.4); }
+  .chip-green-t { fill: var(--green); }
+
+  .icon { stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .icon-pad { fill: rgba(141,164,198,0.08); stroke: rgba(141,164,198,0.25); rx: 10; }
+
+  .status { animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .legend-t { font-size: 11.5px; fill: var(--muted); }
+  .legend-h { font-size: 12px; fill: var(--ink); font-weight: 600; }
+
+  .sat-ring { animation: satspin 14s linear infinite; transform-origin: 720px 64px; }
+  @keyframes satspin { to { transform: rotate(360deg); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .edge-flow, .status, .sat-ring, .packet { animation: none !important; }
+    .packets { display: none; }
+  }
+
+  footer { color: var(--faint); font-size: 12.5px; padding: 14px 6px 0; font-family: "Chakra Petch", system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="map-scroller">
+  <svg class="map" viewBox="0 0 1440 985" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SPARK Centre network map">
+    <defs>
+      <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="160%">
+        <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.45"/>
+      </filter>
+      <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+        <feGaussianBlur stdDeviation="4" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse">
+        <circle cx="1.2" cy="1.2" r="1.2" fill="var(--grid-dot)"/>
+      </pattern>
+
+      <!-- edge paths (reused by packets) -->
+      <path id="p-wan"    d="M 720 128 C 720 160, 720 178, 720 206"/>
+      <path id="p-trunk"  d="M 720 316 C 720 345, 720 360, 720 388"/>
+      <path id="p-dns1"   d="M 672 470 C 600 540, 700 560, 770 596"/>
+      <path id="p-dns2"   d="M 704 470 C 690 540, 900 540, 950 596"/>
+      <path id="p-dns3"   d="M 736 470 C 780 545, 1080 530, 1130 596"/>
+      <path id="p-dns4"   d="M 768 470 C 880 560, 1240 520, 1312 596"/>
+      <path id="p-file"   d="M 834 420 C 980 400, 1060 380, 1148 358"/>
+      <path id="p-mesh"   d="M 598 266 C 500 300, 470 320, 442 364"/>
+      <path id="p-m2s"    d="M 332 432 C 336 470, 340 500, 344 536"/>
+      <path id="p-red"    d="M 318 610 C 280 650, 240 680, 212 714"/>
+      <path id="p-blue"   d="M 372 610 C 420 650, 480 680, 522 714"/>
+      <path id="p-disp"   d="M 598 250 C 566 242, 554 236, 534 226"/>
+      <path id="p-class"  d="M 842 240 C 878 222, 892 210, 920 192"/>
+    </defs>
+
+    <rect x="0" y="0" width="1440" height="985" fill="url(#dots)"/>
+
+    <!-- ===================== HEADER ===================== -->
+    <g>
+      <text class="h-title" x="42" y="64">SPARK Centre network</text>
+      <text class="h-sub" x="42" y="90">Boneo Primary School, hands-on technology classroom</text>
+      <circle cx="48" cy="116" r="4" fill="var(--green)" class="status"/>
+      <text class="h-net mono" x="60" y="120">192.168.8.0/24</text>
+      <text class="h-sub" x="195" y="120">Starlink uplink, GL.iNet core, quad AdGuard DNS</text>
+    </g>
+
+    <!-- ===================== ZONES ===================== -->
+    <rect class="zone" x="652" y="520" width="762" height="230" rx="18"/>
+    <text class="zone-label" x="672" y="548">DNS shield grid, dnsmasq fans out to all four resolvers</text>
+
+    <rect class="zone zone-battle" x="60" y="500" width="548" height="400" rx="18"/>
+    <text class="zone-label" x="80" y="528" fill="rgba(255,120,120,0.75)">Cyber battleground, Minecraft red team vs blue team</text>
+
+    <!-- ===================== EDGES ===================== -->
+    <!-- WAN beam -->
+    <use href="#p-wan" class="edge"/>
+    <use href="#p-wan" class="edge-flow flow-main"/>
+    <text class="edge-label" x="736" y="172">Starlink WAN uplink</text>
+
+    <!-- trunk -->
+    <use href="#p-trunk" class="edge"/>
+    <use href="#p-trunk" class="edge-flow flow-main"/>
+    <text class="edge-label" x="736" y="358">LAN trunk</text>
+
+    <!-- DNS fan -->
+    <use href="#p-dns1" class="edge"/><use href="#p-dns1" class="edge-flow flow-dns"/>
+    <use href="#p-dns2" class="edge"/><use href="#p-dns2" class="edge-flow flow-dns"/>
+    <use href="#p-dns3" class="edge"/><use href="#p-dns3" class="edge-flow flow-dns"/>
+    <use href="#p-dns4" class="edge"/><use href="#p-dns4" class="edge-flow flow-dns"/>
+
+    <!-- file server -->
+    <use href="#p-file" class="edge"/>
+    <use href="#p-file" class="edge-flow flow-file"/>
+    <text class="edge-label" x="960" y="374">SMB</text>
+
+    <!-- mesh backhaul (wireless) -->
+    <use href="#p-mesh" class="wireless"/>
+    <use href="#p-mesh" class="edge-flow flow-mesh"/>
+    <text class="edge-label-strong" x="455" y="300">wireless mesh backhaul</text>
+
+    <!-- mesh to 10 port -->
+    <use href="#p-m2s" class="edge"/>
+    <use href="#p-m2s" class="edge-flow flow-mesh"/>
+
+    <!-- battle links -->
+    <use href="#p-red" class="edge"/><use href="#p-red" class="edge-flow flow-battle-r"/>
+    <use href="#p-blue" class="edge"/><use href="#p-blue" class="edge-flow flow-battle-b"/>
+
+    <!-- Wi-Fi client links -->
+    <use href="#p-disp" class="wifi-edge"/>
+    <use href="#p-disp" class="edge-flow flow-wifi"/>
+    <use href="#p-class" class="wifi-edge"/>
+    <use href="#p-class" class="edge-flow flow-wifi"/>
+
+    <!-- ===================== DISPLAY WALL ===================== -->
+    <g class="node">
+      <rect class="panel" x="60" y="148" width="472" height="166"/>
+      <text class="panel-h" x="76" y="172">Display wall</text>
+      <text class="panel-sub" x="186" y="172">Wi-Fi screens on the main router, live dashboards</text>
+
+      <!-- Starlink stats -->
+      <g class="tilegrp">
+        <rect class="tile" x="76" y="184" width="140" height="52"/>
+        <g class="icon" stroke="var(--green)">
+          <rect x="88" y="196" width="20" height="13" rx="2"/>
+          <line x1="95" y1="212" x2="101" y2="212"/>
+          <circle cx="98" cy="202.5" r="1.5" fill="var(--green)"/>
+          <path d="M 94 200 q 4 -4 8 0" stroke-width="1.2"/>
+        </g>
+        <text class="tile-t" x="118" y="206">starlink</text>
+        <text class="tile-s" x="118" y="220">dish stats</text>
+      </g>
+      <!-- Heartbeat -->
+      <g class="tilegrp">
+        <rect class="tile" x="228" y="184" width="140" height="52"/>
+        <g class="icon" stroke="var(--red)">
+          <rect x="240" y="196" width="20" height="13" rx="2"/>
+          <line x1="247" y1="212" x2="253" y2="212"/>
+          <path d="M 243 203 h 4 l 2 -4 l 3 7 l 2 -3 h 3" stroke-width="1.3"/>
+        </g>
+        <text class="tile-t" x="270" y="206">heartbeat</text>
+        <text class="tile-s" x="270" y="220">network pulse</text>
+      </g>
+      <!-- Mempool -->
+      <g class="tilegrp">
+        <rect class="tile" x="380" y="184" width="140" height="52"/>
+        <g class="icon" stroke="var(--amber)">
+          <rect x="392" y="196" width="20" height="13" rx="2"/>
+          <line x1="399" y1="212" x2="405" y2="212"/>
+          <rect x="395" y="199" width="4" height="7" fill="var(--amber)" stroke="none"/>
+          <rect x="400" y="201" width="4" height="5" fill="var(--amber)" stroke="none" opacity="0.7"/>
+          <rect x="405" y="198" width="4" height="8" fill="var(--amber)" stroke="none" opacity="0.5"/>
+        </g>
+        <text class="tile-t" x="422" y="206">mempool</text>
+        <text class="tile-s" x="422" y="220">bitcoin blocks</text>
+      </g>
+      <!-- Uptime board -->
+      <g class="tilegrp">
+        <rect class="tile" x="76" y="246" width="140" height="52"/>
+        <g class="icon" stroke="var(--green)">
+          <rect x="88" y="258" width="20" height="13" rx="2"/>
+          <line x1="95" y1="274" x2="101" y2="274"/>
+          <path d="M 94 264 l 3 3 l 6 -6" stroke-width="1.4"/>
+        </g>
+        <text class="tile-t" x="118" y="268">uptime</text>
+        <text class="tile-s" x="118" y="282">Kuma board</text>
+      </g>
+      <!-- Weather -->
+      <g class="tilegrp">
+        <rect class="tile" x="228" y="246" width="140" height="52"/>
+        <g class="icon" stroke="var(--cyan)">
+          <rect x="240" y="258" width="20" height="13" rx="2"/>
+          <line x1="247" y1="274" x2="253" y2="274"/>
+          <circle cx="248" cy="264" r="2.4"/>
+          <line x1="248" y1="259.5" x2="248" y2="260.5" stroke-width="1.1"/>
+          <line x1="252.5" y1="264" x2="253.5" y2="264" stroke-width="1.1"/>
+          <line x1="242.5" y1="264" x2="243.5" y2="264" stroke-width="1.1"/>
+        </g>
+        <text class="tile-t" x="270" y="268">weather</text>
+        <text class="tile-s" x="270" y="282">Boneo sky</text>
+      </g>
+      <!-- Big screen -->
+      <g class="tilegrp">
+        <rect class="tile" x="380" y="246" width="140" height="52"/>
+        <g class="icon" stroke="var(--muted)">
+          <rect x="390" y="256" width="24" height="15" rx="2"/>
+          <line x1="399" y1="274" x2="406" y2="274"/>
+          <line x1="402.5" y1="271" x2="402.5" y2="274"/>
+        </g>
+        <text class="tile-t" x="422" y="268">bigSCREEN</text>
+        <text class="tile-s" x="422" y="282">85 inch hub</text>
+      </g>
+    </g>
+
+    <!-- ===================== CLASSROOM CLIENTS ===================== -->
+    <g class="node">
+      <rect class="panel" x="920" y="64" width="470" height="176"/>
+      <text class="panel-h" x="936" y="90">Classroom clients</text>
+      <text class="panel-sub" x="1086" y="90">student and staff gear, addresses hidden on purpose</text>
+
+      <!-- Minecraft rigs -->
+      <g class="tilegrp">
+        <rect class="tile" x="936" y="102" width="140" height="52"/>
+        <g class="icon" stroke="var(--green)">
+          <rect x="948" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="953" y="109" width="12" height="12" rx="1.5"/>
+        </g>
+        <text class="tile-t" x="974" y="124">minecraft rigs</text>
+        <text class="tile-s" x="974" y="138">3x ThinkCentre</text>
+      </g>
+      <!-- Teacher laptop -->
+      <g class="tilegrp">
+        <rect class="tile" x="1088" y="102" width="140" height="52"/>
+        <g class="icon" stroke="var(--muted)">
+          <rect x="1100" y="112" width="20" height="12" rx="2"/>
+          <path d="M 1097 127 h 26 l -3 -3 h -20 z" stroke-width="1.3"/>
+        </g>
+        <text class="tile-t" x="1130" y="124">teacher1</text>
+        <text class="tile-s" x="1130" y="138">staff laptop</text>
+      </g>
+      <!-- Arcade -->
+      <g class="tilegrp">
+        <rect class="tile" x="1240" y="102" width="136" height="52"/>
+        <g class="icon" stroke="var(--violet)">
+          <rect x="1250" y="114" width="22" height="12" rx="5"/>
+          <circle cx="1266" cy="120" r="1.3" fill="var(--violet)"/>
+          <line x1="1256" y1="118" x2="1256" y2="122"/>
+          <line x1="1254" y1="120" x2="1258" y2="120"/>
+        </g>
+        <text class="tile-t" x="1280" y="124">arcade</text>
+        <text class="tile-s" x="1280" y="138">MakeCode wall</text>
+      </g>
+      <!-- Green screen -->
+      <g class="tilegrp">
+        <rect class="tile" x="936" y="164" width="140" height="52"/>
+        <g class="icon" stroke="var(--green)">
+          <rect x="948" y="176" width="22" height="14" rx="2"/>
+          <line x1="951" y1="176" x2="951" y2="172"/>
+          <line x1="967" y1="176" x2="967" y2="172"/>
+          <rect x="952" y="180" width="14" height="7" fill="rgba(88,230,168,0.35)" stroke="none"/>
+        </g>
+        <text class="tile-t" x="978" y="186">greenscreen</text>
+        <text class="tile-s" x="978" y="200">video studio</text>
+      </g>
+      <!-- STEM rig -->
+      <g class="tilegrp">
+        <rect class="tile" x="1088" y="164" width="140" height="52"/>
+        <g class="icon" stroke="var(--blue)">
+          <rect x="1102" y="172" width="12" height="20" rx="2"/>
+          <line x1="1105" y1="177" x2="1111" y2="177"/>
+          <circle cx="1108" cy="186" r="1.4" fill="var(--blue)"/>
+        </g>
+        <text class="tile-t" x="1130" y="186">STEM</text>
+        <text class="tile-s" x="1130" y="200">build machine</text>
+      </g>
+      <!-- Printer -->
+      <g class="tilegrp">
+        <rect class="tile" x="1240" y="164" width="136" height="52"/>
+        <g class="icon" stroke="var(--muted)">
+          <rect x="1252" y="180" width="20" height="10" rx="2"/>
+          <path d="M 1256 180 v -5 h 12 v 5"/>
+          <line x1="1256" y1="190" x2="1268" y2="193" stroke-width="0"/>
+          <rect x="1256" y="187" width="12" height="6" rx="1"/>
+        </g>
+        <text class="tile-t" x="1280" y="186">printer</text>
+        <text class="tile-s" x="1280" y="200">paper jams</text>
+      </g>
+    </g>
+
+    <!-- ===================== STARLINK ===================== -->
+    <g class="node">
+      <g class="sat-ring" opacity="0.5">
+        <circle cx="720" cy="64" r="52" fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="4 8"/>
+        <circle cx="720" cy="12" r="3" fill="var(--green)"/>
+      </g>
+      <g filter="url(#glow)">
+        <!-- satellite icon -->
+        <g class="icon" stroke="var(--ink)">
+          <rect x="706" y="52" width="28" height="20" rx="3"/>
+          <rect x="678" y="56" width="22" height="12" rx="2" stroke="var(--cyan)"/>
+          <rect x="740" y="56" width="22" height="12" rx="2" stroke="var(--cyan)"/>
+          <line x1="700" y1="62" x2="706" y2="62"/>
+          <line x1="734" y1="62" x2="740" y2="62"/>
+          <path d="M 714 80 q 6 8 12 0" stroke="var(--green)"/>
+          <path d="M 710 86 q 10 12 20 0" stroke="var(--green)" opacity="0.6"/>
+        </g>
+      </g>
+      <text class="n-name-sm" x="720" y="36" text-anchor="middle">Starlink</text>
+      <text class="n-role" x="720" y="112" text-anchor="middle">low earth orbit internet</text>
+    </g>
+
+    <!-- ===================== GL.iNet ROUTER ===================== -->
+    <g class="node">
+      <rect class="body" x="596" y="206" width="248" height="110"/>
+      <rect class="icon-pad" x="612" y="226" width="44" height="44"/>
+      <g class="icon" stroke="var(--green)">
+        <rect x="620" y="246" width="28" height="13" rx="3"/>
+        <line x1="626" y1="246" x2="626" y2="234"/>
+        <line x1="642" y1="246" x2="642" y2="234"/>
+        <circle cx="626" cy="252.5" r="1.4" fill="var(--green)"/>
+        <circle cx="633" cy="252.5" r="1.4" fill="var(--green)"/>
+      </g>
+      <text class="n-name" x="668" y="244">GL.iNet BE9300</text>
+      <a href="http://192.168.8.1/" target="_blank" rel="noopener"><text class="n-ip mono" x="668" y="263">192.168.8.1</text></a>
+      <rect class="chip chip-green" x="612" y="282" width="48" height="19"/>
+      <text class="chip-t chip-green-t" x="636" y="295" text-anchor="middle">DHCP</text>
+      <rect class="chip" x="666" y="282" width="68" height="19"/>
+      <text class="chip-t" x="700" y="295" text-anchor="middle">dnsmasq</text>
+      <rect class="chip" x="740" y="282" width="78" height="19"/>
+      <text class="chip-t" x="779" y="295" text-anchor="middle">Wi-Fi 7 core</text>
+      <circle cx="828" cy="222" r="4" fill="var(--green)" class="status"/>
+    </g>
+
+    <!-- ===================== 24 PORT SWITCH ===================== -->
+    <g class="node">
+      <rect class="body" x="606" y="388" width="228" height="82"/>
+      <rect class="icon-pad" x="620" y="404" width="44" height="44"/>
+      <g class="icon" stroke="var(--ink)">
+        <rect x="627" y="416" width="30" height="18" rx="3"/>
+        <line x1="632" y1="429" x2="632" y2="424"/>
+        <line x1="638" y1="429" x2="638" y2="424"/>
+        <line x1="644" y1="429" x2="644" y2="424"/>
+        <line x1="650" y1="429" x2="650" y2="424"/>
+      </g>
+      <text class="n-name" x="676" y="422">24 port switch</text>
+      <text class="n-role" x="676" y="440">unmanaged, main fan-out</text>
+      <rect class="chip" x="676" y="448" width="88" height="17"/>
+      <text class="chip-t" x="720" y="460" text-anchor="middle">gigabit copper</text>
+    </g>
+
+    <!-- ===================== ADGUARD x4 ===================== -->
+    <!-- shield icon template drawn per node -->
+    <!-- AdGuard 1 -->
+    <g class="node n-dns">
+      <rect class="body" x="700" y="596" width="150" height="134"/>
+      <g class="icon" stroke="var(--cyan)" filter="url(#glow)">
+        <path d="M 775 612 l 16 6 v 14 c 0 12 -7 19 -16 23 c -9 -4 -16 -11 -16 -23 v -14 z"/>
+        <path d="M 768 632 l 5 5 l 10 -11" stroke-width="2"/>
+      </g>
+      <text class="n-name-sm" x="775" y="674" text-anchor="middle">adguard</text>
+      <a href="http://192.168.8.138/" target="_blank" rel="noopener"><text class="n-ip n-ip-c mono" x="775" y="692" text-anchor="middle">192.168.8.138</text></a>
+      <rect class="chip chip-dns" x="729" y="702" width="42" height="18"/>
+      <text class="chip-t chip-dns-t" x="750" y="714" text-anchor="middle">DNS</text>
+      <rect class="chip" x="777" y="702" width="48" height="18"/>
+      <text class="chip-t" x="801" y="714" text-anchor="middle">Umbrel</text>
+    </g>
+    <!-- AdGuard 2 -->
+    <g class="node n-dns">
+      <rect class="body" x="880" y="596" width="150" height="134"/>
+      <g class="icon" stroke="var(--cyan)" filter="url(#glow)">
+        <path d="M 955 612 l 16 6 v 14 c 0 12 -7 19 -16 23 c -9 -4 -16 -11 -16 -23 v -14 z"/>
+        <path d="M 948 632 l 5 5 l 10 -11" stroke-width="2"/>
+      </g>
+      <text class="n-name-sm" x="955" y="674" text-anchor="middle">adguard2</text>
+      <a href="http://192.168.8.136/" target="_blank" rel="noopener"><text class="n-ip n-ip-c mono" x="955" y="692" text-anchor="middle">192.168.8.136</text></a>
+      <rect class="chip chip-dns" x="909" y="702" width="42" height="18"/>
+      <text class="chip-t chip-dns-t" x="930" y="714" text-anchor="middle">DNS</text>
+      <rect class="chip" x="957" y="702" width="48" height="18"/>
+      <text class="chip-t" x="981" y="714" text-anchor="middle">Umbrel</text>
+    </g>
+    <!-- AdGuard 3 -->
+    <g class="node n-dns">
+      <rect class="body" x="1060" y="596" width="150" height="134"/>
+      <g class="icon" stroke="var(--cyan)" filter="url(#glow)">
+        <path d="M 1135 612 l 16 6 v 14 c 0 12 -7 19 -16 23 c -9 -4 -16 -11 -16 -23 v -14 z"/>
+        <path d="M 1128 632 l 5 5 l 10 -11" stroke-width="2"/>
+      </g>
+      <text class="n-name-sm" x="1135" y="674" text-anchor="middle">adguard3</text>
+      <a href="http://192.168.8.161/" target="_blank" rel="noopener"><text class="n-ip n-ip-c mono" x="1135" y="692" text-anchor="middle">192.168.8.161</text></a>
+      <rect class="chip chip-dns" x="1114" y="702" width="42" height="18"/>
+      <text class="chip-t chip-dns-t" x="1135" y="714" text-anchor="middle">DNS</text>
+    </g>
+    <!-- AdGuard 4 -->
+    <g class="node n-dns">
+      <rect class="body" x="1240" y="596" width="158" height="134"/>
+      <g class="icon" stroke="var(--cyan)" filter="url(#glow)">
+        <path d="M 1319 612 l 16 6 v 14 c 0 12 -7 19 -16 23 c -9 -4 -16 -11 -16 -23 v -14 z"/>
+        <path d="M 1312 632 l 5 5 l 10 -11" stroke-width="2"/>
+      </g>
+      <text class="n-name-sm" x="1319" y="674" text-anchor="middle">adguard4</text>
+      <a href="http://192.168.8.215/" target="_blank" rel="noopener"><text class="n-ip n-ip-c mono" x="1319" y="692" text-anchor="middle">192.168.8.215</text></a>
+      <rect class="chip chip-dns" x="1252" y="702" width="42" height="18"/>
+      <text class="chip-t chip-dns-t" x="1273" y="714" text-anchor="middle">DNS</text>
+      <rect class="chip chip-green" x="1300" y="702" width="88" height="18"/>
+      <text class="chip-t chip-green-t" x="1344" y="714" text-anchor="middle">Uptime Kuma</text>
+    </g>
+
+    <!-- ===================== FILE SERVER ===================== -->
+    <g class="node n-file">
+      <rect class="body" x="1148" y="300" width="246" height="118"/>
+      <rect class="icon-pad" x="1164" y="318" width="44" height="44"/>
+      <g class="icon" stroke="var(--violet)">
+        <rect x="1172" y="326" width="28" height="9" rx="2"/>
+        <rect x="1172" y="338" width="28" height="9" rx="2"/>
+        <rect x="1172" y="350" width="28" height="9" rx="2"/>
+        <circle cx="1177" cy="330.5" r="1.3" fill="var(--violet)"/>
+        <circle cx="1177" cy="342.5" r="1.3" fill="var(--violet)"/>
+        <circle cx="1177" cy="354.5" r="1.3" fill="var(--violet)"/>
+      </g>
+      <text class="n-name" x="1220" y="336">File server</text>
+      <text class="n-ip mono" x="1220" y="354" fill="var(--violet)">192.168.8.107</text>
+      <text class="n-role mono" x="1220" y="372">//shared/hackerspace</text>
+      <rect class="chip chip-vio" x="1164" y="384" width="52" height="19"/>
+      <text class="chip-t chip-vio-t" x="1190" y="397" text-anchor="middle">SMB</text>
+      <rect class="chip chip-vio" x="1222" y="384" width="76" height="19"/>
+      <text class="chip-t chip-vio-t" x="1260" y="397" text-anchor="middle">Clonezilla</text>
+      <rect class="chip" x="1304" y="384" width="80" height="19"/>
+      <text class="chip-t" x="1344" y="397" text-anchor="middle">hackerspace</text>
+    </g>
+
+    <!-- ===================== GL MESH ===================== -->
+    <g class="node n-mesh">
+      <rect class="body" x="222" y="334" width="220" height="98"/>
+      <rect class="icon-pad" x="238" y="352" width="44" height="44"/>
+      <g class="icon" stroke="var(--amber)">
+        <rect x="246" y="376" width="28" height="12" rx="3"/>
+        <path d="M 254 368 q 6 -5 12 0"/>
+        <path d="M 250 362 q 10 -9 20 0"/>
+        <circle cx="252" cy="382" r="1.4" fill="var(--amber)"/>
+      </g>
+      <text class="n-name" x="294" y="372">GL Mesh node</text>
+      <a href="http://192.168.8.203/" target="_blank" rel="noopener"><text class="n-ip mono" x="294" y="391" fill="var(--amber)">192.168.8.203</text></a>
+      <rect class="chip chip-warn" x="294" y="400" width="104" height="18"/>
+      <text class="chip-t chip-warn-t" x="346" y="412" text-anchor="middle">same subnet AP</text>
+    </g>
+
+    <!-- ===================== 10 PORT SWITCH ===================== -->
+    <g class="node">
+      <rect class="body" x="252" y="536" width="192" height="74"/>
+      <rect class="icon-pad" x="266" y="550" width="40" height="40"/>
+      <g class="icon" stroke="var(--ink)">
+        <rect x="272" y="562" width="28" height="16" rx="3"/>
+        <line x1="277" y1="574" x2="277" y2="570"/>
+        <line x1="283" y1="574" x2="283" y2="570"/>
+        <line x1="289" y1="574" x2="289" y2="570"/>
+      </g>
+      <text class="n-name-sm" x="316" y="566">10 port switch</text>
+      <text class="n-role" x="316" y="584">battle LAN fan-out</text>
+    </g>
+
+    <!-- ===================== RED TEAM ===================== -->
+    <g class="node n-red">
+      <rect class="body" x="92" y="714" width="238" height="150"/>
+      <g class="icon" stroke="var(--red)" filter="url(#glow)">
+        <!-- crossed swords -->
+        <path d="M 116 736 l 24 24 m 0 -24 l -24 24"/>
+        <path d="M 114 734 l 5 -2 m -7 4 l 2 -5" stroke-width="1.4"/>
+        <path d="M 142 734 l -5 -2 m 7 4 l -2 -5" stroke-width="1.4"/>
+        <circle cx="128" cy="748" r="2" fill="var(--red)"/>
+      </g>
+      <text class="n-name" x="158" y="744" fill="var(--red)">RED TEAM</text>
+      <text class="n-role" x="158" y="762">attack bench + JetKVM</text>
+      <a href="https://app.jetkvm.com/devices/b1686e894ee9037e" target="_blank" rel="noopener">
+        <text class="n-ip mono" x="108" y="792" fill="var(--red)">app.jetkvm.com/devices/</text>
+        <text class="n-ip mono" x="108" y="808" fill="var(--red)">b1686e894ee9037e</text>
+      </a>
+      <rect class="chip chip-red" x="108" y="822" width="64" height="19"/>
+      <text class="chip-t chip-red-t" x="140" y="835" text-anchor="middle">JetKVM</text>
+      <rect class="chip chip-red" x="178" y="822" width="118" height="19"/>
+      <text class="chip-t chip-red-t" x="237" y="835" text-anchor="middle">hidden treasure IP</text>
+    </g>
+
+    <!-- ===================== BLUE TEAM ===================== -->
+    <g class="node n-blue">
+      <rect class="body" x="418" y="714" width="212" height="128"/>
+      <g class="icon" stroke="var(--blue)" filter="url(#glow)">
+        <!-- shield + monitor -->
+        <rect x="438" y="736" width="30" height="20" rx="3"/>
+        <line x1="449" y1="756" x2="449" y2="762"/>
+        <line x1="443" y1="762" x2="457" y2="762"/>
+        <path d="M 452 740 l 6 2 v 5 c 0 4.5 -2.6 7 -6 8.5 c -3.4 -1.5 -6 -4 -6 -8.5 v -5 z" stroke-width="1.5"/>
+      </g>
+      <text class="n-name" x="482" y="748" fill="var(--blue)">BLUE TEAM</text>
+      <text class="n-role" x="482" y="766">main rig, defence</text>
+      <rect class="chip chip-blue" x="434" y="786" width="76" height="19"/>
+      <text class="chip-t chip-blue-t" x="472" y="799" text-anchor="middle">defenders</text>
+      <rect class="chip chip-blue" x="516" y="786" width="100" height="19"/>
+      <text class="chip-t chip-blue-t" x="566" y="799" text-anchor="middle">castle keepers</text>
+      <text class="n-role" x="434" y="826">guard the castle, watch the logs</text>
+    </g>
+
+    <!-- ===================== PACKETS ===================== -->
+    <g class="packets">
+      <circle class="packet" r="3.4" fill="var(--green)" filter="url(#glow)">
+        <animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#p-wan"/></animateMotion>
+      </circle>
+      <circle class="packet" r="3.4" fill="var(--green)" filter="url(#glow)">
+        <animateMotion dur="2.2s" begin="0.6s" repeatCount="indefinite"><mpath href="#p-trunk"/></animateMotion>
+      </circle>
+      <circle class="packet" r="3" fill="var(--cyan)" filter="url(#glow)">
+        <animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#p-dns1"/></animateMotion>
+      </circle>
+      <circle class="packet" r="3" fill="var(--cyan)" filter="url(#glow)">
+        <animateMotion dur="2.8s" begin="0.9s" repeatCount="indefinite"><mpath href="#p-dns3"/></animateMotion>
+      </circle>
+      <circle class="packet" r="3" fill="var(--cyan)" filter="url(#glow)">
+        <animateMotion dur="3.1s" begin="1.5s" repeatCount="indefinite"><mpath href="#p-dns4"/></animateMotion>
+      </circle>
+      <circle class="packet" r="3" fill="var(--amber)" filter="url(#glow)">
+        <animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#p-mesh"/></animateMotion>
+      </circle>
+      <circle class="packet" r="3" fill="var(--amber)" filter="url(#glow)">
+        <animateMotion dur="2.2s" begin="1s" repeatCount="indefinite"><mpath href="#p-m2s"/></animateMotion>
+      </circle>
+      <circle class="packet" r="3" fill="var(--red)" filter="url(#glow)">
+        <animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#p-red"/></animateMotion>
+      </circle>
+      <circle class="packet" r="3" fill="var(--blue)" filter="url(#glow)">
+        <animateMotion dur="1.8s" begin="0.9s" repeatCount="indefinite"><mpath href="#p-blue"/></animateMotion>
+      </circle>
+      <circle class="packet" r="3" fill="var(--violet)" filter="url(#glow)">
+        <animateMotion dur="3s" repeatCount="indefinite"><mpath href="#p-file"/></animateMotion>
+      </circle>
+      <circle class="packet" r="2.6" fill="var(--wifi)" filter="url(#glow)">
+        <animateMotion dur="2s" repeatCount="indefinite"><mpath href="#p-disp"/></animateMotion>
+      </circle>
+      <circle class="packet" r="2.6" fill="var(--wifi)" filter="url(#glow)">
+        <animateMotion dur="2s" begin="1s" repeatCount="indefinite"><mpath href="#p-class"/></animateMotion>
+      </circle>
+    </g>
+
+    <!-- ===================== LEGEND ===================== -->
+    <g>
+      <rect class="body" x="1080" y="790" width="318" height="168" rx="12" fill="var(--card)" stroke="var(--card-edge)" stroke-width="1.2" filter="url(#cardShadow)"/>
+      <text class="legend-h" x="1100" y="816">Traffic key</text>
+      <line x1="1100" y1="834" x2="1140" y2="834" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round"/>
+      <text class="legend-t" x="1150" y="838">internet trunk</text>
+      <line x1="1100" y1="856" x2="1140" y2="856" stroke="var(--cyan)" stroke-width="2.5" stroke-linecap="round"/>
+      <text class="legend-t" x="1150" y="860">DNS queries to AdGuard grid</text>
+      <line x1="1100" y1="878" x2="1140" y2="878" stroke="var(--amber)" stroke-width="2.5" stroke-dasharray="6 5" stroke-linecap="round"/>
+      <text class="legend-t" x="1150" y="882">wireless mesh backhaul</text>
+      <line x1="1100" y1="900" x2="1118" y2="900" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="1122" y1="900" x2="1140" y2="900" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round"/>
+      <text class="legend-t" x="1150" y="904">red vs blue battle LAN</text>
+      <line x1="1100" y1="922" x2="1140" y2="922" stroke="var(--violet)" stroke-width="2.5" stroke-linecap="round"/>
+      <text class="legend-t" x="1150" y="926">file shares and imaging</text>
+      <line x1="1100" y1="944" x2="1140" y2="944" stroke="var(--wifi)" stroke-width="2" stroke-dasharray="4 5" stroke-linecap="round"/>
+      <text class="legend-t" x="1150" y="948">Wi-Fi clients and displays</text>
+    </g>
+  </svg>
+  </div>
+  <footer>Click any address to open its admin page. Links only resolve while you are on the SPARK LAN. Client devices are shown by name only, no addresses, on purpose.</footer>
+</div>
+</body>
+</html>

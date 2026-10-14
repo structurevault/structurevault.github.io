@@ -8,70 +8,68 @@
 <style>
   :root {
     box-sizing: border-box;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    --bg0: #0A1428;
-    --bg1: #101E38;
-    --card: #14233E;
-    --card-edge: #2B4066;
-    --ink: #E9F1FC;
-    --muted: #8DA4C6;
-    --faint: #5E738F;
-    --line: #33496E;
-    --cyan: #4FD8E8;
-    --amber: #FFB454;
-    --red: #FF5D5D;
-    --blue: #5D9BFF;
-    --green: #58E6A8;
-    --violet: #B08CFF;
-    --wifi: #8FB7E8;
-    --zone-dns: rgba(79,216,232,0.05);
-    --zone-battle: rgba(255,93,93,0.045);
-    --grid-dot: rgba(141,164,198,0.14);
+    --bg0: #0D1C38;
+    --bg1: #142A52;
+    --card: #1B3158;
+    --card-edge: #4466A0;
+    --ink: #F7FBFF;
+    --muted: #BACDEA;
+    --faint: #93AACB;
+    --line: #5878AE;
+    --cyan: #6EF2FF;
+    --amber: #FFC872;
+    --red: #FF7676;
+    --blue: #80B6FF;
+    --green: #6DFFC2;
+    --violet: #CBAEFF;
+    --wifi: #ACD0FF;
+    --zone-dns: rgba(110,242,255,0.08);
+    --zone-battle: rgba(255,118,118,0.075);
+    --grid-dot: rgba(160,186,224,0.22);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { color-scheme: dark; }
   }
   :root[data-theme="dark"] { color-scheme: dark; }
-  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  html, body { height: 100%; }
   * , *::before, *::after { box-sizing: inherit; }
   body {
     margin: 0;
+    overflow-x: hidden;
     background:
-      radial-gradient(1200px 500px at 50% -10%, #142A52 0%, rgba(20,42,82,0) 60%),
+      radial-gradient(1100px 900px at 50% 8%, #1E3F78 0%, rgba(30,63,120,0) 65%),
+      radial-gradient(900px 700px at 50% 85%, #172F5C 0%, rgba(23,47,92,0) 70%),
       var(--bg0);
     color: var(--ink);
     font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
-    min-height: 100%;
   }
   .wrap {
-    max-width: 1500px;
-    margin: 0 auto;
-    padding: 20px 16px 40px;
-  }
-  .map-scroller {
-    overflow-x: auto;
-    border-radius: 14px;
+    height: 100vh;
+    height: 100dvh;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   svg.map {
     display: block;
-    min-width: 980px;
     width: 100%;
-    height: auto;
+    height: 100%;
   }
   text { font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
   .mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
 
-  .h-title { font-size: 30px; font-weight: 700; fill: var(--ink); letter-spacing: 0.5px; }
-  .h-sub { font-size: 13.5px; fill: var(--muted); }
-  .h-net { font-size: 14px; fill: var(--green); }
+  .h-title { font-size: 42px; font-weight: 700; fill: var(--ink); letter-spacing: 0.5px; }
+  .h-sub { font-size: 17px; fill: var(--muted); }
+  .h-net { font-size: 17px; fill: var(--green); }
 
-  .zone { fill: var(--zone-dns); stroke: rgba(79,216,232,0.22); stroke-dasharray: 3 5; rx: 18; }
-  .zone-battle { fill: var(--zone-battle); stroke: rgba(255,93,93,0.25); }
-  .zone-label { font-size: 12.5px; fill: var(--faint); font-weight: 600; letter-spacing: 1px; }
+  .zone { fill: var(--zone-dns); stroke: rgba(110,242,255,0.42); stroke-width: 1.4; stroke-dasharray: 4 5; rx: 18; }
+  .zone-battle { fill: var(--zone-battle); stroke: rgba(255,118,118,0.45); }
+  .zone-label { font-size: 13.5px; fill: var(--cyan); font-weight: 600; letter-spacing: 1px; opacity: 0.9; }
+  .zone-label-battle { fill: var(--red); }
 
-  .edge { fill: none; stroke: var(--line); stroke-width: 2; }
-  .edge-flow { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 2 10; animation: flow 1.4s linear infinite; }
+  .edge { fill: none; stroke: var(--line); stroke-width: 2.6; }
+  .edge-flow { fill: none; stroke-width: 2.8; stroke-linecap: round; stroke-dasharray: 2 10; animation: flow 1.4s linear infinite; }
   .flow-main { stroke: var(--green); }
   .flow-dns { stroke: var(--cyan); animation-duration: 1.8s; }
   .flow-mesh { stroke: var(--amber); animation-duration: 1.6s; }
@@ -80,25 +78,25 @@
   .flow-file { stroke: var(--violet); animation-duration: 2.2s; }
   @keyframes flow { to { stroke-dashoffset: -24; } }
 
-  .wireless { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 7 6; fill: none; opacity: 0.85; }
-  .wifi-edge { stroke: var(--wifi); stroke-width: 1.8; stroke-dasharray: 4 5; fill: none; opacity: 0.8; }
+  .wireless { stroke: var(--amber); stroke-width: 2.4; stroke-dasharray: 7 6; fill: none; }
+  .wifi-edge { stroke: var(--wifi); stroke-width: 2.2; stroke-dasharray: 4 5; fill: none; opacity: 0.95; }
   .flow-wifi { stroke: var(--wifi); animation-duration: 2s; }
 
-  .panel { fill: rgba(20,35,62,0.65); stroke: var(--card-edge); stroke-width: 1.3; rx: 14; filter: url(#cardShadow); }
-  .panel-h { font-size: 14px; font-weight: 600; fill: var(--ink); }
-  .panel-sub { font-size: 10.5px; fill: var(--faint); }
-  .tile { fill: rgba(141,164,198,0.07); stroke: rgba(141,164,198,0.22); rx: 9; transition: stroke 0.15s ease; }
+  .panel { fill: rgba(27,49,88,0.85); stroke: var(--card-edge); stroke-width: 1.5; rx: 14; filter: url(#cardShadow); }
+  .panel-h { font-size: 15px; font-weight: 600; fill: var(--ink); }
+  .panel-sub { font-size: 11px; fill: var(--faint); }
+  .tile { fill: rgba(160,186,224,0.11); stroke: rgba(160,186,224,0.36); rx: 9; transition: stroke 0.15s ease; }
   g.tilegrp:hover .tile { stroke: var(--wifi); }
-  .tile-t { font-size: 11.5px; fill: var(--ink); font-weight: 500; }
-  .tile-s { font-size: 9.5px; fill: var(--faint); }
+  .tile-t { font-size: 12px; fill: var(--ink); font-weight: 500; }
+  .tile-s { font-size: 10px; fill: var(--muted); }
 
-  .edge-label { font-size: 11px; fill: var(--faint); }
-  .edge-label-strong { font-size: 11.5px; fill: var(--amber); }
+  .edge-label { font-size: 12.5px; fill: var(--muted); }
+  .edge-label-strong { font-size: 12.5px; fill: var(--amber); }
 
   .node rect.body {
     fill: var(--card);
     stroke: var(--card-edge);
-    stroke-width: 1.4;
+    stroke-width: 1.6;
     rx: 12;
     filter: url(#cardShadow);
     transition: stroke 0.15s ease;
@@ -110,108 +108,106 @@
   .node.n-blue:hover rect.body { stroke: var(--blue); }
   .node.n-file:hover rect.body { stroke: var(--violet); }
 
-  .n-name { font-size: 15px; font-weight: 600; fill: var(--ink); }
-  .n-name-sm { font-size: 13.5px; font-weight: 600; fill: var(--ink); }
-  .n-role { font-size: 11px; fill: var(--muted); }
-  .n-ip { font-size: 12px; fill: var(--green); }
+  .n-name { font-size: 15.5px; font-weight: 600; fill: var(--ink); }
+  .n-name-sm { font-size: 14px; font-weight: 600; fill: var(--ink); }
+  .n-role { font-size: 11.5px; fill: var(--muted); }
+  .n-ip { font-size: 12.5px; fill: var(--green); }
   .n-ip-c { fill: var(--cyan); }
   a:hover .n-ip { text-decoration: underline; }
 
-  .chip { fill: rgba(141,164,198,0.12); stroke: rgba(141,164,198,0.3); rx: 8; }
-  .chip-t { font-size: 10px; fill: var(--muted); font-weight: 500; }
-  .chip-dns { fill: rgba(79,216,232,0.1); stroke: rgba(79,216,232,0.35); }
+  .chip { fill: rgba(160,186,224,0.16); stroke: rgba(160,186,224,0.45); rx: 8; }
+  .chip-t { font-size: 10.5px; fill: var(--muted); font-weight: 500; }
+  .chip-dns { fill: rgba(110,242,255,0.15); stroke: rgba(110,242,255,0.55); }
   .chip-dns-t { fill: var(--cyan); }
-  .chip-warn { fill: rgba(255,180,84,0.1); stroke: rgba(255,180,84,0.4); }
+  .chip-warn { fill: rgba(255,200,114,0.15); stroke: rgba(255,200,114,0.6); }
   .chip-warn-t { fill: var(--amber); }
-  .chip-red { fill: rgba(255,93,93,0.1); stroke: rgba(255,93,93,0.4); }
+  .chip-red { fill: rgba(255,118,118,0.15); stroke: rgba(255,118,118,0.6); }
   .chip-red-t { fill: var(--red); }
-  .chip-blue { fill: rgba(93,155,255,0.1); stroke: rgba(93,155,255,0.4); }
+  .chip-blue { fill: rgba(128,182,255,0.15); stroke: rgba(128,182,255,0.6); }
   .chip-blue-t { fill: var(--blue); }
-  .chip-vio { fill: rgba(176,140,255,0.1); stroke: rgba(176,140,255,0.4); }
+  .chip-vio { fill: rgba(203,174,255,0.15); stroke: rgba(203,174,255,0.6); }
   .chip-vio-t { fill: var(--violet); }
-  .chip-green { fill: rgba(88,230,168,0.1); stroke: rgba(88,230,168,0.4); }
+  .chip-green { fill: rgba(109,255,194,0.15); stroke: rgba(109,255,194,0.6); }
   .chip-green-t { fill: var(--green); }
 
-  .icon { stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-  .icon-pad { fill: rgba(141,164,198,0.08); stroke: rgba(141,164,198,0.25); rx: 10; }
+  .icon { stroke-width: 1.9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .icon-pad { fill: rgba(160,186,224,0.12); stroke: rgba(160,186,224,0.38); rx: 10; }
 
   .status { animation: pulse 2.4s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-  .legend-t { font-size: 11.5px; fill: var(--muted); }
-  .legend-h { font-size: 12px; fill: var(--ink); font-weight: 600; }
+  .legend-t { font-size: 13px; fill: var(--muted); }
+  .legend-h { font-size: 14px; fill: var(--ink); font-weight: 600; }
+  .foot { font-size: 13.5px; fill: var(--faint); }
 
-  .sat-ring { animation: satspin 14s linear infinite; transform-origin: 720px 64px; }
+  .sat-ring { animation: satspin 14s linear infinite; transform-box: fill-box; transform-origin: center; }
   @keyframes satspin { to { transform: rotate(360deg); } }
 
   @media (prefers-reduced-motion: reduce) {
     .edge-flow, .status, .sat-ring, .packet { animation: none !important; }
     .packets { display: none; }
   }
-
-  footer { color: var(--faint); font-size: 12.5px; padding: 14px 6px 0; font-family: "Chakra Petch", system-ui, sans-serif; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="map-scroller">
-  <svg class="map" viewBox="0 0 1440 985" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SPARK Centre network map">
+  <svg class="map" viewBox="0 0 1080 1880" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SPARK Centre network map">
     <defs>
       <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="160%">
-        <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.45"/>
+        <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.35"/>
       </filter>
       <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
-        <feGaussianBlur stdDeviation="4" result="b"/>
-        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        <feGaussianBlur stdDeviation="4.5" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
       <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse">
         <circle cx="1.2" cy="1.2" r="1.2" fill="var(--grid-dot)"/>
       </pattern>
 
       <!-- edge paths (reused by packets) -->
-      <path id="p-wan"    d="M 720 128 C 720 160, 720 178, 720 206"/>
-      <path id="p-trunk"  d="M 720 316 C 720 345, 720 360, 720 388"/>
-      <path id="p-dns1"   d="M 672 470 C 600 540, 700 560, 770 596"/>
-      <path id="p-dns2"   d="M 704 470 C 690 540, 900 540, 950 596"/>
-      <path id="p-dns3"   d="M 736 470 C 780 545, 1080 530, 1130 596"/>
-      <path id="p-dns4"   d="M 768 470 C 880 560, 1240 520, 1312 596"/>
-      <path id="p-file"   d="M 834 420 C 980 400, 1060 380, 1148 358"/>
-      <path id="p-mesh"   d="M 598 266 C 500 300, 470 320, 442 364"/>
-      <path id="p-m2s"    d="M 332 432 C 336 470, 340 500, 344 536"/>
-      <path id="p-red"    d="M 318 610 C 280 650, 240 680, 212 714"/>
-      <path id="p-blue"   d="M 372 610 C 420 650, 480 680, 522 714"/>
-      <path id="p-disp"   d="M 598 250 C 566 242, 554 236, 534 226"/>
-      <path id="p-class"  d="M 842 240 C 878 222, 892 210, 920 192"/>
+      <path id="p-wan"    d="M 540 364 C 540 500, 540 600, 540 720"/>
+      <path id="p-trunk"  d="M 540 830 C 540 880, 540 910, 540 950"/>
+      <path id="p-dns1"   d="M 590 1032 C 600 1110, 720 1120, 727 1190"/>
+      <path id="p-dns2"   d="M 640 1032 C 660 1090, 905 1090, 911 1190"/>
+      <path id="p-dns3"   d="M 560 1032 C 600 1090, 636 1090, 636 1180 L 636 1400 C 636 1418, 642 1429, 652 1429"/>
+      <path id="p-dns4"   d="M 615 1032 C 625 1090, 819 1090, 819 1180 L 819 1400 C 819 1418, 826 1429, 836 1429"/>
+      <path id="p-file"   d="M 654 991 C 700 991, 735 991, 780 991"/>
+      <path id="p-mesh"   d="M 416 805 C 330 820, 240 860, 220 940"/>
+      <path id="p-m2s"    d="M 220 1038 C 225 1090, 300 1100, 304 1150"/>
+      <path id="p-red"    d="M 278 1224 C 240 1264, 200 1294, 172 1328"/>
+      <path id="p-blue"   d="M 332 1224 C 380 1264, 440 1294, 482 1328"/>
+      <path id="p-disp"   d="M 470 720 C 460 670, 320 650, 300 598"/>
+      <path id="p-class"  d="M 610 720 C 620 670, 780 660, 800 608"/>
     </defs>
 
-    <rect x="0" y="0" width="1440" height="985" fill="url(#dots)"/>
+    <rect x="0" y="0" width="1080" height="1880" fill="url(#dots)"/>
 
     <!-- ===================== HEADER ===================== -->
     <g>
-      <text class="h-title" x="42" y="64">SPARK Centre network</text>
-      <text class="h-sub" x="42" y="90">Boneo Primary School, hands-on technology classroom</text>
-      <circle cx="48" cy="116" r="4" fill="var(--green)" class="status"/>
-      <text class="h-net mono" x="60" y="120">192.168.8.0/24</text>
-      <text class="h-sub" x="195" y="120">Starlink uplink, GL.iNet core, quad AdGuard DNS</text>
+      <text class="h-title" x="40" y="80">SPARK Centre network</text>
+      <text class="h-sub" x="40" y="114">Boneo Primary School, hands-on technology classroom</text>
+      <circle cx="46" cy="142" r="5" fill="var(--green)" class="status" filter="url(#glow)"/>
+      <text class="h-net mono" x="60" y="148">192.168.8.0/24</text>
+      <text class="h-sub" x="222" y="148">Starlink uplink, GL.iNet core, quad AdGuard DNS</text>
     </g>
 
     <!-- ===================== ZONES ===================== -->
-    <rect class="zone" x="652" y="520" width="762" height="230" rx="18"/>
-    <text class="zone-label" x="672" y="548">DNS shield grid, dnsmasq fans out to all four resolvers</text>
+    <rect class="zone" x="620" y="1110" width="406" height="430" rx="18"/>
+    <text class="zone-label" x="644" y="1524">DNS SHIELD GRID, FOUR ADGUARD RESOLVERS</text>
 
-    <rect class="zone zone-battle" x="60" y="500" width="548" height="400" rx="18"/>
-    <text class="zone-label" x="80" y="528" fill="rgba(255,120,120,0.75)">Cyber battleground, Minecraft red team vs blue team</text>
+    <rect class="zone zone-battle" x="24" y="1110" width="582" height="430" rx="18"/>
+    <text class="zone-label zone-label-battle" x="48" y="1524">CYBER BATTLEGROUND, MINECRAFT RED VS BLUE</text>
 
     <!-- ===================== EDGES ===================== -->
     <!-- WAN beam -->
     <use href="#p-wan" class="edge"/>
     <use href="#p-wan" class="edge-flow flow-main"/>
-    <text class="edge-label" x="736" y="172">Starlink WAN uplink</text>
+    <text class="edge-label" x="554" y="410">Starlink WAN uplink</text>
 
     <!-- trunk -->
     <use href="#p-trunk" class="edge"/>
     <use href="#p-trunk" class="edge-flow flow-main"/>
-    <text class="edge-label" x="736" y="358">LAN trunk</text>
+    <text class="edge-label" x="554" y="895">LAN trunk</text>
 
     <!-- DNS fan -->
     <use href="#p-dns1" class="edge"/><use href="#p-dns1" class="edge-flow flow-dns"/>
@@ -222,12 +218,12 @@
     <!-- file server -->
     <use href="#p-file" class="edge"/>
     <use href="#p-file" class="edge-flow flow-file"/>
-    <text class="edge-label" x="960" y="374">SMB</text>
+    <text class="edge-label" x="702" y="980">SMB</text>
 
     <!-- mesh backhaul (wireless) -->
     <use href="#p-mesh" class="wireless"/>
     <use href="#p-mesh" class="edge-flow flow-mesh"/>
-    <text class="edge-label-strong" x="455" y="300">wireless mesh backhaul</text>
+    <text class="edge-label-strong" x="40" y="880">wireless mesh backhaul</text>
 
     <!-- mesh to 10 port -->
     <use href="#p-m2s" class="edge"/>
@@ -244,7 +240,7 @@
     <use href="#p-class" class="edge-flow flow-wifi"/>
 
     <!-- ===================== DISPLAY WALL ===================== -->
-    <g class="node">
+    <g class="node" transform="translate(-21 282)">
       <rect class="panel" x="60" y="148" width="472" height="166"/>
       <text class="panel-h" x="76" y="172">Display wall</text>
       <text class="panel-sub" x="186" y="172">Wi-Fi screens on the main router, live dashboards</text>
@@ -324,7 +320,7 @@
     </g>
 
     <!-- ===================== CLASSROOM CLIENTS ===================== -->
-    <g class="node">
+    <g class="node" transform="translate(-349 366)">
       <rect class="panel" x="920" y="64" width="470" height="176"/>
       <text class="panel-h" x="936" y="90">Classroom clients</text>
       <text class="panel-sub" x="1086" y="90">student and staff gear, addresses hidden on purpose</text>
@@ -368,7 +364,7 @@
           <rect x="948" y="176" width="22" height="14" rx="2"/>
           <line x1="951" y1="176" x2="951" y2="172"/>
           <line x1="967" y1="176" x2="967" y2="172"/>
-          <rect x="952" y="180" width="14" height="7" fill="rgba(88,230,168,0.35)" stroke="none"/>
+          <rect x="952" y="180" width="14" height="7" fill="rgba(109,255,194,0.4)" stroke="none"/>
         </g>
         <text class="tile-t" x="978" y="186">greenscreen</text>
         <text class="tile-s" x="978" y="200">video studio</text>
@@ -390,7 +386,6 @@
         <g class="icon" stroke="var(--muted)">
           <rect x="1252" y="180" width="20" height="10" rx="2"/>
           <path d="M 1256 180 v -5 h 12 v 5"/>
-          <line x1="1256" y1="190" x2="1268" y2="193" stroke-width="0"/>
           <rect x="1256" y="187" width="12" height="6" rx="1"/>
         </g>
         <text class="tile-t" x="1280" y="186">printer</text>
@@ -399,10 +394,10 @@
     </g>
 
     <!-- ===================== STARLINK ===================== -->
-    <g class="node">
-      <g class="sat-ring" opacity="0.5">
-        <circle cx="720" cy="64" r="52" fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="4 8"/>
-        <circle cx="720" cy="12" r="3" fill="var(--green)"/>
+    <g class="node" transform="translate(-180 236)">
+      <g class="sat-ring" opacity="0.75">
+        <circle cx="720" cy="64" r="52" fill="none" stroke="var(--line)" stroke-width="1.3" stroke-dasharray="4 8"/>
+        <circle cx="720" cy="12" r="3.4" fill="var(--green)"/>
       </g>
       <g filter="url(#glow)">
         <!-- satellite icon -->
@@ -413,7 +408,7 @@
           <line x1="700" y1="62" x2="706" y2="62"/>
           <line x1="734" y1="62" x2="740" y2="62"/>
           <path d="M 714 80 q 6 8 12 0" stroke="var(--green)"/>
-          <path d="M 710 86 q 10 12 20 0" stroke="var(--green)" opacity="0.6"/>
+          <path d="M 710 86 q 10 12 20 0" stroke="var(--green)" opacity="0.7"/>
         </g>
       </g>
       <text class="n-name-sm" x="720" y="36" text-anchor="middle">Starlink</text>
@@ -421,7 +416,7 @@
     </g>
 
     <!-- ===================== GL.iNet ROUTER ===================== -->
-    <g class="node">
+    <g class="node" transform="translate(-180 514)">
       <rect class="body" x="596" y="206" width="248" height="110"/>
       <rect class="icon-pad" x="612" y="226" width="44" height="44"/>
       <g class="icon" stroke="var(--green)">
@@ -437,13 +432,13 @@
       <text class="chip-t chip-green-t" x="636" y="295" text-anchor="middle">DHCP</text>
       <rect class="chip" x="666" y="282" width="68" height="19"/>
       <text class="chip-t" x="700" y="295" text-anchor="middle">dnsmasq</text>
-      <rect class="chip" x="740" y="282" width="78" height="19"/>
-      <text class="chip-t" x="779" y="295" text-anchor="middle">Wi-Fi 7 core</text>
-      <circle cx="828" cy="222" r="4" fill="var(--green)" class="status"/>
+      <rect class="chip" x="740" y="282" width="84" height="19"/>
+      <text class="chip-t" x="782" y="295" text-anchor="middle">Wi-Fi 7 core</text>
+      <circle cx="828" cy="222" r="4" fill="var(--green)" class="status" filter="url(#glow)"/>
     </g>
 
     <!-- ===================== 24 PORT SWITCH ===================== -->
-    <g class="node">
+    <g class="node" transform="translate(-180 562)">
       <rect class="body" x="606" y="388" width="228" height="82"/>
       <rect class="icon-pad" x="620" y="404" width="44" height="44"/>
       <g class="icon" stroke="var(--ink)">
@@ -455,14 +450,13 @@
       </g>
       <text class="n-name" x="676" y="422">24 port switch</text>
       <text class="n-role" x="676" y="440">unmanaged, main fan-out</text>
-      <rect class="chip" x="676" y="448" width="88" height="17"/>
-      <text class="chip-t" x="720" y="460" text-anchor="middle">gigabit copper</text>
+      <rect class="chip" x="676" y="448" width="92" height="17"/>
+      <text class="chip-t" x="722" y="460" text-anchor="middle">gigabit copper</text>
     </g>
 
     <!-- ===================== ADGUARD x4 ===================== -->
-    <!-- shield icon template drawn per node -->
     <!-- AdGuard 1 -->
-    <g class="node n-dns">
+    <g class="node n-dns" transform="translate(-48 594)">
       <rect class="body" x="700" y="596" width="150" height="134"/>
       <g class="icon" stroke="var(--cyan)" filter="url(#glow)">
         <path d="M 775 612 l 16 6 v 14 c 0 12 -7 19 -16 23 c -9 -4 -16 -11 -16 -23 v -14 z"/>
@@ -476,7 +470,7 @@
       <text class="chip-t" x="801" y="714" text-anchor="middle">Umbrel</text>
     </g>
     <!-- AdGuard 2 -->
-    <g class="node n-dns">
+    <g class="node n-dns" transform="translate(-44 594)">
       <rect class="body" x="880" y="596" width="150" height="134"/>
       <g class="icon" stroke="var(--cyan)" filter="url(#glow)">
         <path d="M 955 612 l 16 6 v 14 c 0 12 -7 19 -16 23 c -9 -4 -16 -11 -16 -23 v -14 z"/>
@@ -490,7 +484,7 @@
       <text class="chip-t" x="981" y="714" text-anchor="middle">Umbrel</text>
     </g>
     <!-- AdGuard 3 -->
-    <g class="node n-dns">
+    <g class="node n-dns" transform="translate(-408 766)">
       <rect class="body" x="1060" y="596" width="150" height="134"/>
       <g class="icon" stroke="var(--cyan)" filter="url(#glow)">
         <path d="M 1135 612 l 16 6 v 14 c 0 12 -7 19 -16 23 c -9 -4 -16 -11 -16 -23 v -14 z"/>
@@ -502,7 +496,7 @@
       <text class="chip-t chip-dns-t" x="1135" y="714" text-anchor="middle">DNS</text>
     </g>
     <!-- AdGuard 4 -->
-    <g class="node n-dns">
+    <g class="node n-dns" transform="translate(-404 766)">
       <rect class="body" x="1240" y="596" width="158" height="134"/>
       <g class="icon" stroke="var(--cyan)" filter="url(#glow)">
         <path d="M 1319 612 l 16 6 v 14 c 0 12 -7 19 -16 23 c -9 -4 -16 -11 -16 -23 v -14 z"/>
@@ -517,7 +511,7 @@
     </g>
 
     <!-- ===================== FILE SERVER ===================== -->
-    <g class="node n-file">
+    <g class="node n-file" transform="translate(-368 632)">
       <rect class="body" x="1148" y="300" width="246" height="118"/>
       <rect class="icon-pad" x="1164" y="318" width="44" height="44"/>
       <g class="icon" stroke="var(--violet)">
@@ -540,7 +534,7 @@
     </g>
 
     <!-- ===================== GL MESH ===================== -->
-    <g class="node n-mesh">
+    <g class="node n-mesh" transform="translate(-122 606)">
       <rect class="body" x="222" y="334" width="220" height="98"/>
       <rect class="icon-pad" x="238" y="352" width="44" height="44"/>
       <g class="icon" stroke="var(--amber)">
@@ -551,12 +545,12 @@
       </g>
       <text class="n-name" x="294" y="372">GL Mesh node</text>
       <a href="http://192.168.8.203/" target="_blank" rel="noopener"><text class="n-ip mono" x="294" y="391" fill="var(--amber)">192.168.8.203</text></a>
-      <rect class="chip chip-warn" x="294" y="400" width="104" height="18"/>
-      <text class="chip-t chip-warn-t" x="346" y="412" text-anchor="middle">same subnet AP</text>
+      <rect class="chip chip-warn" x="294" y="400" width="108" height="18"/>
+      <text class="chip-t chip-warn-t" x="348" y="412" text-anchor="middle">same subnet AP</text>
     </g>
 
     <!-- ===================== 10 PORT SWITCH ===================== -->
-    <g class="node">
+    <g class="node" transform="translate(-40 614)">
       <rect class="body" x="252" y="536" width="192" height="74"/>
       <rect class="icon-pad" x="266" y="550" width="40" height="40"/>
       <g class="icon" stroke="var(--ink)">
@@ -570,7 +564,7 @@
     </g>
 
     <!-- ===================== RED TEAM ===================== -->
-    <g class="node n-red">
+    <g class="node n-red" transform="translate(-40 614)">
       <rect class="body" x="92" y="714" width="238" height="150"/>
       <g class="icon" stroke="var(--red)" filter="url(#glow)">
         <!-- crossed swords -->
@@ -587,12 +581,12 @@
       </a>
       <rect class="chip chip-red" x="108" y="822" width="64" height="19"/>
       <text class="chip-t chip-red-t" x="140" y="835" text-anchor="middle">JetKVM</text>
-      <rect class="chip chip-red" x="178" y="822" width="118" height="19"/>
-      <text class="chip-t chip-red-t" x="237" y="835" text-anchor="middle">hidden treasure IP</text>
+      <rect class="chip chip-red" x="178" y="822" width="122" height="19"/>
+      <text class="chip-t chip-red-t" x="239" y="835" text-anchor="middle">hidden treasure IP</text>
     </g>
 
     <!-- ===================== BLUE TEAM ===================== -->
-    <g class="node n-blue">
+    <g class="node n-blue" transform="translate(-40 614)">
       <rect class="body" x="418" y="714" width="212" height="128"/>
       <g class="icon" stroke="var(--blue)" filter="url(#glow)">
         <!-- shield + monitor -->
@@ -612,65 +606,73 @@
 
     <!-- ===================== PACKETS ===================== -->
     <g class="packets">
-      <circle class="packet" r="3.4" fill="var(--green)" filter="url(#glow)">
-        <animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#p-wan"/></animateMotion>
+      <circle class="packet" r="4" fill="var(--green)" filter="url(#glow)">
+        <animateMotion dur="3.4s" repeatCount="indefinite"><mpath href="#p-wan"/></animateMotion>
       </circle>
-      <circle class="packet" r="3.4" fill="var(--green)" filter="url(#glow)">
-        <animateMotion dur="2.2s" begin="0.6s" repeatCount="indefinite"><mpath href="#p-trunk"/></animateMotion>
+      <circle class="packet" r="4" fill="var(--green)" filter="url(#glow)">
+        <animateMotion dur="1.8s" begin="0.6s" repeatCount="indefinite"><mpath href="#p-trunk"/></animateMotion>
       </circle>
-      <circle class="packet" r="3" fill="var(--cyan)" filter="url(#glow)">
+      <circle class="packet" r="3.4" fill="var(--cyan)" filter="url(#glow)">
         <animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#p-dns1"/></animateMotion>
       </circle>
-      <circle class="packet" r="3" fill="var(--cyan)" filter="url(#glow)">
-        <animateMotion dur="2.8s" begin="0.9s" repeatCount="indefinite"><mpath href="#p-dns3"/></animateMotion>
+      <circle class="packet" r="3.4" fill="var(--cyan)" filter="url(#glow)">
+        <animateMotion dur="2.6s" begin="0.5s" repeatCount="indefinite"><mpath href="#p-dns2"/></animateMotion>
       </circle>
-      <circle class="packet" r="3" fill="var(--cyan)" filter="url(#glow)">
-        <animateMotion dur="3.1s" begin="1.5s" repeatCount="indefinite"><mpath href="#p-dns4"/></animateMotion>
+      <circle class="packet" r="3.4" fill="var(--cyan)" filter="url(#glow)">
+        <animateMotion dur="3.1s" begin="0.9s" repeatCount="indefinite"><mpath href="#p-dns3"/></animateMotion>
       </circle>
-      <circle class="packet" r="3" fill="var(--amber)" filter="url(#glow)">
+      <circle class="packet" r="3.4" fill="var(--cyan)" filter="url(#glow)">
+        <animateMotion dur="3.3s" begin="1.5s" repeatCount="indefinite"><mpath href="#p-dns4"/></animateMotion>
+      </circle>
+      <circle class="packet" r="3.4" fill="var(--amber)" filter="url(#glow)">
         <animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#p-mesh"/></animateMotion>
       </circle>
-      <circle class="packet" r="3" fill="var(--amber)" filter="url(#glow)">
+      <circle class="packet" r="3.4" fill="var(--amber)" filter="url(#glow)">
         <animateMotion dur="2.2s" begin="1s" repeatCount="indefinite"><mpath href="#p-m2s"/></animateMotion>
       </circle>
-      <circle class="packet" r="3" fill="var(--red)" filter="url(#glow)">
+      <circle class="packet" r="3.4" fill="var(--red)" filter="url(#glow)">
         <animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#p-red"/></animateMotion>
       </circle>
-      <circle class="packet" r="3" fill="var(--blue)" filter="url(#glow)">
+      <circle class="packet" r="3.4" fill="var(--blue)" filter="url(#glow)">
         <animateMotion dur="1.8s" begin="0.9s" repeatCount="indefinite"><mpath href="#p-blue"/></animateMotion>
       </circle>
-      <circle class="packet" r="3" fill="var(--violet)" filter="url(#glow)">
-        <animateMotion dur="3s" repeatCount="indefinite"><mpath href="#p-file"/></animateMotion>
+      <circle class="packet" r="3.4" fill="var(--violet)" filter="url(#glow)">
+        <animateMotion dur="2s" repeatCount="indefinite"><mpath href="#p-file"/></animateMotion>
       </circle>
-      <circle class="packet" r="2.6" fill="var(--wifi)" filter="url(#glow)">
+      <circle class="packet" r="3" fill="var(--wifi)" filter="url(#glow)">
         <animateMotion dur="2s" repeatCount="indefinite"><mpath href="#p-disp"/></animateMotion>
       </circle>
-      <circle class="packet" r="2.6" fill="var(--wifi)" filter="url(#glow)">
+      <circle class="packet" r="3" fill="var(--wifi)" filter="url(#glow)">
         <animateMotion dur="2s" begin="1s" repeatCount="indefinite"><mpath href="#p-class"/></animateMotion>
       </circle>
     </g>
 
     <!-- ===================== LEGEND ===================== -->
     <g>
-      <rect class="body" x="1080" y="790" width="318" height="168" rx="12" fill="var(--card)" stroke="var(--card-edge)" stroke-width="1.2" filter="url(#cardShadow)"/>
-      <text class="legend-h" x="1100" y="816">Traffic key</text>
-      <line x1="1100" y1="834" x2="1140" y2="834" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round"/>
-      <text class="legend-t" x="1150" y="838">internet trunk</text>
-      <line x1="1100" y1="856" x2="1140" y2="856" stroke="var(--cyan)" stroke-width="2.5" stroke-linecap="round"/>
-      <text class="legend-t" x="1150" y="860">DNS queries to AdGuard grid</text>
-      <line x1="1100" y1="878" x2="1140" y2="878" stroke="var(--amber)" stroke-width="2.5" stroke-dasharray="6 5" stroke-linecap="round"/>
-      <text class="legend-t" x="1150" y="882">wireless mesh backhaul</text>
-      <line x1="1100" y1="900" x2="1118" y2="900" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="1122" y1="900" x2="1140" y2="900" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round"/>
-      <text class="legend-t" x="1150" y="904">red vs blue battle LAN</text>
-      <line x1="1100" y1="922" x2="1140" y2="922" stroke="var(--violet)" stroke-width="2.5" stroke-linecap="round"/>
-      <text class="legend-t" x="1150" y="926">file shares and imaging</text>
-      <line x1="1100" y1="944" x2="1140" y2="944" stroke="var(--wifi)" stroke-width="2" stroke-dasharray="4 5" stroke-linecap="round"/>
-      <text class="legend-t" x="1150" y="948">Wi-Fi clients and displays</text>
+      <rect x="24" y="1600" width="1002" height="150" rx="14" fill="var(--card)" stroke="var(--card-edge)" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <text class="legend-h" x="52" y="1636">Traffic key</text>
+
+      <line x1="52" y1="1676" x2="92" y2="1676" stroke="var(--green)" stroke-width="3" stroke-linecap="round"/>
+      <text class="legend-t" x="104" y="1681">internet trunk</text>
+      <line x1="52" y1="1716" x2="92" y2="1716" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round"/>
+      <text class="legend-t" x="104" y="1721">DNS queries to AdGuard grid</text>
+
+      <line x1="376" y1="1676" x2="416" y2="1676" stroke="var(--amber)" stroke-width="3" stroke-dasharray="6 5" stroke-linecap="round"/>
+      <text class="legend-t" x="428" y="1681">wireless mesh backhaul</text>
+      <line x1="376" y1="1716" x2="394" y2="1716" stroke="var(--red)" stroke-width="3" stroke-linecap="round"/>
+      <line x1="398" y1="1716" x2="416" y2="1716" stroke="var(--blue)" stroke-width="3" stroke-linecap="round"/>
+      <text class="legend-t" x="428" y="1721">red vs blue battle LAN</text>
+
+      <line x1="700" y1="1676" x2="740" y2="1676" stroke="var(--violet)" stroke-width="3" stroke-linecap="round"/>
+      <text class="legend-t" x="752" y="1681">file shares and imaging</text>
+      <line x1="700" y1="1716" x2="740" y2="1716" stroke="var(--wifi)" stroke-width="2.5" stroke-dasharray="4 5" stroke-linecap="round"/>
+      <text class="legend-t" x="752" y="1721">Wi-Fi clients and displays</text>
     </g>
+
+    <!-- ===================== FOOTER ===================== -->
+    <text class="foot" x="540" y="1800" text-anchor="middle">Click any address to open its admin page. Links only resolve while you are on the SPARK LAN.</text>
+    <text class="foot" x="540" y="1824" text-anchor="middle">Client devices are shown by name only, no addresses, on purpose.</text>
   </svg>
-  </div>
-  <footer>Click any address to open its admin page. Links only resolve while you are on the SPARK LAN. Client devices are shown by name only, no addresses, on purpose.</footer>
 </div>
 </body>
 </html>

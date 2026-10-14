@@ -465,18 +465,29 @@ function bellAt(t,freq,vol,len){
     o.start(t); track(o,t+len+0.05);
   });
 }
+function coinAt(t,freq,len,vol){
+  var o=AC.createOscillator(), g=AC.createGain();
+  o.type='square'; o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(vol,t);
+  g.gain.setValueAtTime(vol,t+len*0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+len);
+  o.connect(g); g.connect(master);
+  o.start(t); track(o,t+len+0.02);
+}
 function sfxChing(){
   if(!audio())return;
-  var t=AC.currentTime;
-  // "ka": short metallic drawer clack
+  var t=AC.currentTime+0.02;
+  // "ka": metallic drawer clack
   var src=noise(), f=AC.createBiquadFilter(), g=AC.createGain();
-  f.type='bandpass'; f.frequency.value=3200; f.Q.value=2;
-  g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.07);
+  f.type='bandpass'; f.frequency.value=2200; f.Q.value=1.2;
+  g.gain.setValueAtTime(1.0,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.09);
   src.connect(f); f.connect(g); g.connect(master);
-  src.start(t); track(src,t+0.08);
-  // "ching": two bright bells
-  bellAt(t+0.08,1568,0.3,0.6);
-  bellAt(t+0.16,2093,0.35,1.1);
+  src.start(t); track(src,t+0.1);
+  // "ching": coin blip up a fourth, ringing bells on top
+  coinAt(t+0.07,988,0.08,0.35);
+  coinAt(t+0.15,1319,0.45,0.35);
+  bellAt(t+0.15,1319,0.9,1.4);
+  bellAt(t+0.22,2637,0.5,1.0);
 }
 function setMuted(m){
   muted=m;
@@ -684,7 +695,7 @@ async function runSprint(s){
   version=target;
   bumpTag('v1.'+version);
   setCastle(version);
-  log('[tag] build approved and tagged v1.'+version+' — new save point','good');
+  log('[tag] build approved and tagged v1.'+version+' — new save point  $$ KA-CHING $$','good');
   clearTicks();
   await wait(900);
   return true;
