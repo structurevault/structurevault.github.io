@@ -279,6 +279,69 @@
   .teamtotal small { color: var(--muted); font-size: .6em; }
   .teamtotal.hid { visibility: hidden; }
 
+  /* ---------- treasure versions ---------- */
+  .rail { display: flex; align-items: center; gap: clamp(12px, 1.6vw, 32px); }
+  .rail-track { flex: 1; }
+  .quest {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, .8vw, 16px);
+    padding: clamp(6px, .8vh, 14px) clamp(10px, 1vw, 20px);
+    border: 2px solid var(--gold);
+    border-radius: 10px;
+    background: rgba(245, 184, 61, .08);
+    flex: none;
+  }
+  .qchest { width: clamp(32px, 3vw, 64px); }
+  .qchest svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .qtop {
+    font-family: "Silkscreen", monospace;
+    color: var(--gold);
+    font-size: clamp(11px, .95vw, 18px);
+  }
+  .qloot { font-weight: 700; font-size: clamp(15px, 1.6vw, 32px); color: var(--bright); }
+  .qsub { color: var(--muted); font-size: clamp(10px, .8vw, 15px); }
+
+  .mini { display: inline-block; width: 1.1em; height: .95em; vertical-align: -.1em; margin-right: .25em; }
+  .mini svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .lab .mini { display: block; margin: 0 auto 2px; height: 1em; }
+  .lab.tr { color: var(--gold); }
+  .lab.wk {
+    background: var(--gold);
+    color: #1a1422;
+    border-radius: 4px 4px 0 0;
+  }
+  .commit.tr .tag { color: var(--gold); }
+  .wkflag {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(9px, .75vw, 14px);
+    background: var(--gold);
+    color: #1a1422;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* treasure columns: small gold gem in the corner; this week: gold frame */
+  .cellbox.tr:not(.chest) { position: relative; }
+  .cellbox.tr:not(.chest)::after {
+    content: "";
+    position: absolute;
+    top: 2px; right: 2px;
+    width: calc(var(--cell) * .13);
+    height: calc(var(--cell) * .13);
+    background: var(--gold);
+    border: 1px solid #5c3a16;
+    transform: rotate(45deg);
+  }
+  .cellbox.wk:not(.chest) { outline: 3px solid var(--gold); outline-offset: 1px; opacity: 1; }
+  .cellbox.wk.todo { animation: wkpulse 1.6s ease-in-out infinite; }
+  @keyframes wkpulse {
+    0%, 100% { outline-color: var(--gold); }
+    50%      { outline-color: rgba(245, 184, 61, .3); }
+  }
+  @media (prefers-reduced-motion: reduce) { .cellbox.wk.todo { animation: none; } }
+  .legend .key.tr { background: none; width: .8em; height: .8em; border: 1px solid #5c3a16; background-color: var(--gold); transform: rotate(45deg); }
+
   .banner {
     text-align: center;
     color: var(--gold);
@@ -299,11 +362,15 @@
   <div class="legend">
     <span><i class="key done"></i>Version done</span>
     <span><i class="key todo"></i>Not yet</span>
+    <span><i class="key tr"></i>Has treasure</span>
   </div>
   <div class="sync" id="sync"><span class="dot"></span><span id="syncText">connecting…</span></div>
 </header>
 
-<div class="rail"><div class="rail-track" id="rail"></div></div>
+<div class="rail">
+  <div class="quest" id="quest" style="display:none"></div>
+  <div class="rail-track" id="rail"></div>
+</div>
 
 <main>
   <div id="gridhead"></div>
@@ -316,8 +383,31 @@
 var CONFIG = {
   sheetCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQuZjLN8FALS27_BdYEwaYcbs1T26JJ8VAXSRJr9u0tMwjbDlAy2pQ-Hpd7-QvsbLhnBEChiEtK2DgH/pub?output=csv",
   refreshSeconds: 60,
-  secondsPerRow: 2.8   /* scroll pace: lower = faster */
+  secondsPerRow: 2.8,  /* scroll pace: lower = faster */
+
+  /* TREASURE: every version from treasureFrom onward has a hidden treasure.
+     Update thisWeek + add the treasure each week. */
+  treasureFrom: "V1.2",
+  thisWeek: "V1.2",
+  treasures: {
+    "V1.2": "an IP address"
+  }
 };
+
+function verKey(s) { return shortLabel(s).toUpperCase(); }
+function treasureInfo(milestones) {
+  var keys = milestones.map(verKey);
+  return {
+    start: keys.indexOf(verKey(CONFIG.treasureFrom || "")),
+    week: keys.indexOf(verKey(CONFIG.thisWeek || ""))
+  };
+}
+function isTreasureCol(t, j) { return t.start >= 0 && j >= t.start; }
+function treasureFor(label) {
+  var k = verKey(label);
+  for (var key in CONFIG.treasures) if (verKey(key) === k) return CONFIG.treasures[key];
+  return "";
+}
 
 var DONE = { "yes": 1, "y": 1, "x": 1, "1": 1, "true": 1, "done": 1, "found": 1, "\u2713": 1, "\u2714": 1 };
 var FAIL = { "no": 1, "n": 1, "0": 1, "false": 1, "fail": 1, "failed": 1, "empty": 1, "missed": 1 };
@@ -426,12 +516,13 @@ function chestSVG(state) {
     inside + gems + lid + latch + "</svg>";
 }
 
-function cellHTML(raw, isLast, label) {
+function cellHTML(raw, isLast, label, extra) {
+  extra = extra || "";
   if (isLast) {
     var state = isDone(raw) ? "found" : isFail(raw) ? "empty" : "pending";
-    return '<div class="cellbox chest ' + state + '" title="' + esc(label) + ' — treasure raid">' + chestSVG(state) + "</div>";
+    return '<div class="cellbox chest ' + state + extra + '" title="' + esc(label) + ' — treasure raid">' + chestSVG(state) + "</div>";
   }
-  return '<div class="cellbox ' + (isDone(raw) ? "done" : "todo") + '" title="' + esc(label) + '">' +
+  return '<div class="cellbox ' + (isDone(raw) ? "done" : "todo") + extra + '" title="' + esc(label) + '">' +
     esc(shortLabel(label)) + "</div>";
 }
 
@@ -439,28 +530,54 @@ function renderRail(data) {
   var teams = data.classes.length;
   var track = document.getElementById("rail");
   track.style.gridTemplateColumns = "repeat(" + data.milestones.length + ", 1fr)";
-  var currentFound = false;
+  var t = treasureInfo(data.milestones);
+  var currentFound = t.week >= 0;
   track.innerHTML = data.milestones.map(function (m, j) {
     var ticks = 0;
     data.classes.forEach(function (c) {
       if (isDone(c.blue[j]) && isDone(c.red[j])) ticks++;
     });
     var cls = "";
-    if (ticks >= teams && teams > 0) cls = "done";
+    if (j === t.week) cls = "now";
+    else if (ticks >= teams && teams > 0) cls = "done";
     else if (!currentFound) { cls = "now"; currentFound = true; }
-    return '<div class="commit ' + cls + '">' +
+    var tr = isTreasureCol(t, j);
+    return '<div class="commit ' + cls + (tr ? " tr" : "") + '">' +
       '<div class="node"></div>' +
-      '<div class="tag">' + esc(shortLabel(m)) + "</div>" +
+      '<div class="tag">' + (tr ? '<span class="mini chest pending">' + chestSVG("pending") + "</span>" : "") +
+        esc(shortLabel(m)) + "</div>" +
       '<div class="count">' + ticks + "/" + teams + "</div>" +
+      (j === t.week ? '<div class="wkflag">This week</div>' : "") +
       "</div>";
   }).join("");
+
+  var quest = document.getElementById("quest");
+  if (t.week >= 0) {
+    var label = data.milestones[t.week];
+    var loot = treasureFor(label);
+    quest.innerHTML =
+      '<div class="qchest chest found">' + chestSVG("found") + "</div>" +
+      "<div>" +
+        '<div class="qtop">This week · ' + esc(shortLabel(label)) + "</div>" +
+        '<div class="qloot">Treasure: ' + (loot ? esc(loot) : "hidden") + "</div>" +
+        (t.start >= 0 ? '<div class="qsub">Every version from ' + esc(shortLabel(data.milestones[t.start])) +
+          " on has a treasure</div>" : "") +
+      "</div>";
+    quest.style.display = "";
+  } else {
+    quest.style.display = "none";
+  }
 }
 
 function renderGrid(data) {
   var n = data.milestones.length;
+  var t = treasureInfo(data.milestones);
   function labels() {
-    return '<div class="striplab">' + data.milestones.map(function (m) {
-      return '<div class="lab">' + esc(shortLabel(m)) + "</div>";
+    return '<div class="striplab">' + data.milestones.map(function (m, j) {
+      var tr = isTreasureCol(t, j);
+      return '<div class="lab' + (tr ? " tr" : "") + (j === t.week ? " wk" : "") + '">' +
+        '<span class="mini chest pending">' + (tr ? chestSVG("pending") : "") + "</span>" +
+        esc(shortLabel(m)) + "</div>";
     }).join("") + "</div>";
   }
   var hidTotal = '<div class="teamtotal hid">0<small>/' + n + "</small></div>";
@@ -488,7 +605,8 @@ function renderGrid(data) {
   var rowsHTML = order.map(function (e, i) {
     function group(team, cells, total) {
       var strip = '<div class="strip ' + team + '">' + cells.map(function (raw, j) {
-        return cellHTML(raw, j === n - 1, data.milestones[j]);
+        return cellHTML(raw, j === n - 1, data.milestones[j],
+          (isTreasureCol(t, j) ? " tr" : "") + (j === t.week ? " wk" : ""));
       }).join("") + "</div>";
       return '<div class="teamgroup">' + strip +
         '<div class="teamtotal ' + team + '">' + total + "<small>/" + n + "</small></div></div>";
