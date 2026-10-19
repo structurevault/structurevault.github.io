@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wikipedia Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #06080e;
+    --ink: #eef1f7;
+    --dim: #7c859b;
+    --line: #1a2030;
+    --reg: #eef1f7;     /* registered editors */
+    --anon: #3df0a4;    /* unregistered / temporary accounts */
+    --bot: #b07cff;     /* bots */
+    --new: #ffd23f;     /* new accounts */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--ink); overflow: hidden; }
+  body {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    background:
+      radial-gradient(120% 60% at 50% 0%, #12182a 0%, transparent 60%),
+      radial-gradient(100% 50% at 50% 100%, #0d1322 0%, transparent 60%),
+      var(--bg);
+  }
+
+  header { padding: 4vh 6vw 1.5vh; display: flex; justify-content: space-between; align-items: flex-end; }
+  .eyebrow { font-family: "JetBrains Mono", monospace; font-size: clamp(11px, 1.3vh, 18px); letter-spacing: .25em; text-transform: uppercase; color: var(--dim); display: flex; align-items: center; gap: .7em; }
+  .live { width: .7em; height: .7em; border-radius: 50%; background: #ff3d5a; box-shadow: 0 0 12px #ff3d5a; animation: pulse 1.6s infinite; }
+  .live.off { background: var(--dim); box-shadow: none; animation: none; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  h1 { font-size: clamp(32px, 5.2vh, 84px); font-weight: 700; line-height: 1; letter-spacing: -.02em; margin-top: .25em; }
+  h1 span { color: var(--anon); }
+  .clock { font-family: "JetBrains Mono", monospace; font-size: clamp(20px, 3vh, 48px); color: var(--dim); text-align: right; }
+  .clock small { display: block; font-size: .45em; letter-spacing: .2em; text-transform: uppercase; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 1vh 6vw; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .stat { background: rgba(10,13,22,.85); padding: 1.6vh 1.4vw; }
+  .stat b { display: block; font-family: "JetBrains Mono", monospace; font-size: clamp(22px, 3.6vh, 60px); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat em { font-style: normal; font-size: clamp(10px, 1.2vh, 18px); letter-spacing: .15em; text-transform: uppercase; color: var(--dim); }
+  .spark { grid-column: 1 / -1; background: rgba(10,13,22,.85); padding: 1vh 1.4vw 1.2vh; }
+  .spark canvas { width: 100%; height: 5vh; display: block; }
+
+  main { position: relative; min-height: 0; }
+  #c { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+  .legend { position: absolute; left: 6vw; right: 6vw; top: .5vh; display: flex; flex-wrap: wrap; gap: .6em 1.6em; font-size: clamp(11px, 1.25vh, 18px); color: var(--dim); pointer-events: none; }
+  .legend i { display: inline-block; width: .9em; height: .9em; border-radius: 50%; vertical-align: -.1em; margin-right: .45em; }
+  .legend .ring { background: transparent !important; border: 2px solid var(--reg); }
+
+  .welcome { position: absolute; left: 0; right: 0; top: 42%; padding: 0 6vw; text-align: center; font-size: clamp(20px, 2.8vh, 48px); font-weight: 700; color: var(--new); text-shadow: 0 0 30px rgba(255,210,63,.5); opacity: 0; transform: translateY(10px); transition: opacity .8s, transform .8s; pointer-events: none; }
+  .welcome.show { opacity: 1; transform: none; }
+  .welcome small { display: block; font-size: .45em; font-weight: 400; color: var(--ink); opacity: .7; margin-top: .4em; }
+
+  footer { padding: 1vh 6vw 3vh; }
+  .feed-title { font-family: "JetBrains Mono", monospace; font-size: clamp(10px, 1.2vh, 16px); letter-spacing: .25em; text-transform: uppercase; color: var(--dim); margin-bottom: .8vh; }
+  #feed { list-style: none; display: flex; flex-direction: column; gap: .5vh; height: calc(7 * (clamp(15px, 1.9vh, 30px) * 1.35 + .5vh)); overflow: hidden; }
+  #feed li { display: grid; grid-template-columns: auto 1fr auto; gap: 1em; align-items: center; font-size: clamp(15px, 1.9vh, 30px); line-height: 1.35; animation: slide .5s ease-out; }
+  #feed li:nth-child(n+4) { opacity: .7; } #feed li:nth-child(n+6) { opacity: .4; }
+  #feed .dot { width: .65em; height: .65em; border-radius: 50%; }
+  #feed .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #feed .d { font-family: "JetBrains Mono", monospace; font-size: .85em; font-variant-numeric: tabular-nums; }
+  #feed .plus { color: var(--anon); } #feed .minus { color: #ff6b8a; }
+  #feed .tag { font-size: .55em; letter-spacing: .15em; text-transform: uppercase; color: var(--new); border: 1px solid currentColor; border-radius: 4px; padding: .1em .4em; margin-left: .6em; vertical-align: .2em; }
+  @keyframes slide { from { opacity: 0; transform: translateY(-8px); } }
+
+  .sound { position: fixed; right: 2vw; bottom: 1.5vh; font-family: "JetBrains Mono", monospace; font-size: clamp(10px, 1.1vh, 15px); color: var(--dim); background: rgba(20,26,40,.8); border: 1px solid var(--line); border-radius: 999px; padding: .5em 1em; cursor: pointer; }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="eyebrow"><span class="live" id="live"></span><span id="wikiName">English Wikipedia</span> · right now</div>
+      <h1>Wikipedia, <span>live</span></h1>
+    </div>
+    <div class="clock" id="clock">--:--<small>local time</small></div>
+  </header>
+
+  <section class="stats">
+    <div class="stat"><b id="sRate">0</b><em>edits / minute</em></div>
+    <div class="stat"><b id="sTotal">0</b><em>edits seen</em></div>
+    <div class="stat"><b id="sBytes">0</b><em>net bytes added</em></div>
+    <div class="spark"><canvas id="spark"></canvas></div>
+  </section>
+
+  <main>
+    <canvas id="c"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--reg)"></i>registered</span>
+      <span><i style="background:var(--anon)"></i>unregistered</span>
+      <span><i style="background:var(--bot)"></i>bot</span>
+      <span><i class="ring"></i>text removed</span>
+      <span><i style="background:var(--new)"></i>new editor</span>
+    </div>
+    <div class="welcome" id="welcome">A new editor just joined Wikipedia<small>welcome to the 120,000+ people who edit every month</small></div>
+  </main>
+
+  <footer>
+    <div class="feed-title">Latest article edits</div>
+    <ul id="feed"></ul>
+  </footer>
+
+  <button class="sound" id="soundBtn">🔇 click for sound · M to mute</button>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const WIKI = params.get('wiki') || 'enwiki';
+  const LANG_NAMES = { enwiki: 'English', dewiki: 'German', frwiki: 'French', eswiki: 'Spanish', jawiki: 'Japanese', zhwiki: 'Chinese', itwiki: 'Italian', ptwiki: 'Portuguese', ruwiki: 'Russian', arwiki: 'Arabic' };
+  document.getElementById('wikiName').textContent = (LANG_NAMES[WIKI] || WIKI) + ' Wikipedia';
+
+  const COLORS = { reg: [238, 241, 247], anon: [61, 240, 164], bot: [176, 124, 255], new: [255, 210, 63] };
+  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+
+  // ---------- canvas ----------
+  const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+  let W = 0, H = 0;
+  function resize() {
+    const dpr = window.devicePixelRatio || 1, r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sizeSpark();
+  }
+
+  const bubbles = [];
+  const waves = [];
+  const LIFE = 16;
+
+  function place(r) {
+    // try a handful of spots, keep the one farthest from existing bubbles
+    const pad = Math.max(r, 20), top = 50;
+    let best = null, bestD = -1;
+    for (let i = 0; i < 14; i++) {
+      const x = pad + Math.random() * Math.max(1, W - pad * 2);
+      const y = top + pad + Math.random() * Math.max(1, H - top - pad * 2);
+      let d = Infinity;
+      for (const b of bubbles) d = Math.min(d, Math.hypot(b.x - x, b.y - y) - b.r);
+      if (d > bestD) { bestD = d; best = { x, y }; }
+    }
+    return best;
+  }
+
+  function addBubble(ev) {
+    const scale = Math.min(W, H) / 900;
+    const r = Math.max(7, Math.min(170, Math.sqrt(Math.abs(ev.diff)) * 2.2)) * Math.max(.6, scale);
+    const p = place(r);
+    bubbles.push({ ...p, r, color: COLORS[ev.kind], add: ev.diff >= 0, title: ev.title, url: ev.url, born: performance.now() });
+    if (bubbles.length > 70) bubbles.shift();
+  }
+
+  function frame(now) {
+    ctx.clearRect(0, 0, W, H);
+
+    for (let i = waves.length - 1; i >= 0; i--) {
+      const w = waves[i], age = (now - w.born) / 1000;
+      if (age > 4) { waves.splice(i, 1); continue; }
+      const p = age / 4;
+      ctx.beginPath();
+      ctx.arc(W / 2, H / 2, p * Math.hypot(W, H) * .6, 0, Math.PI * 2);
+      ctx.strokeStyle = rgba(COLORS.new, (1 - p) * .7);
+      ctx.lineWidth = 3 + 30 * (1 - p);
+      ctx.stroke();
+    }
+
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i], age = (now - b.born) / 1000;
+      if (age > LIFE) { bubbles.splice(i, 1); continue; }
+      const g = Math.min(1, age / .7), ease = 1 - Math.pow(1 - g, 3);
+      const fade = age < LIFE - 5 ? 1 : (LIFE - age) / 5;
+      const r = b.r * ease, y = b.y - age * 3;
+
+      if (age < 2) {
+        const p = age / 2;
+        ctx.beginPath();
+        ctx.arc(b.x, y, b.r * (1 + p * 1.4), 0, Math.PI * 2);
+        ctx.strokeStyle = rgba(b.color, (1 - p) * .55);
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      ctx.arc(b.x, y, Math.max(r, .1), 0, Math.PI * 2);
+      if (b.add) {
+        const grd = ctx.createRadialGradient(b.x, y - r * .3, r * .1, b.x, y, r);
+        grd.addColorStop(0, rgba(b.color, .75 * fade));
+        grd.addColorStop(1, rgba(b.color, .28 * fade));
+        ctx.fillStyle = grd;
+        ctx.shadowColor = rgba(b.color, .6 * fade);
+        ctx.shadowBlur = 24;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.fillStyle = rgba(b.color, .06 * fade);
+        ctx.fill();
+        ctx.strokeStyle = rgba(b.color, .85 * fade);
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      }
+
+      if (age < LIFE - 2) {
+        const fs = Math.max(12, Math.min(28, 10 + b.r * .14));
+        ctx.font = `600 ${fs}px "Space Grotesk", system-ui, sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        let t = b.title;
+        const maxW = Math.min(W - 16, Math.max(180, r * 2.2));
+        while (t.length > 4 && ctx.measureText(t).width > maxW) t = t.slice(0, -2);
+        if (t !== b.title) t = t.trimEnd() + '…';
+        const ta = Math.min(1, age * 2) * Math.min(1, (LIFE - 2 - age) / 3);
+        ctx.fillStyle = `rgba(255,255,255,${.95 * ta})`;
+        ctx.shadowColor = 'rgba(0,0,0,.9)'; ctx.shadowBlur = 6;
+        const half = ctx.measureText(t).width / 2 + 8;
+        ctx.fillText(t, Math.min(W - half, Math.max(half, b.x)), y);
+        ctx.shadowBlur = 0;
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  canvas.addEventListener('click', e => {
+    const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, now = performance.now();
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i], by = b.y - (now - b.born) / 1000 * 3;
+      if (Math.hypot(b.x - x, by - y) < Math.max(b.r, 20)) { window.open(b.url, '_blank', 'noopener'); return; }
+    }
+  });
+
+  // ---------- sound ----------
+  let actx = null, master = null, muted = false, lastNote = 0;
+  const btn = document.getElementById('soundBtn');
+  function initAudio() {
+    if (actx) return;
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    master = actx.createGain(); master.gain.value = .3;
+    const delay = actx.createDelay(); delay.delayTime.value = .38;
+    const fb = actx.createGain(); fb.gain.value = .32;
+    const wet = actx.createGain(); wet.gain.value = .35;
+    master.connect(actx.destination);
+    master.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(actx.destination);
+  }
+  function updateBtn() { btn.textContent = !actx ? '🔇 click for sound · M to mute' : muted ? '🔇 muted · M to unmute' : '🔊 sound on · M to mute'; }
+  function toggleSound() {
+    if (!actx) { initAudio(); muted = false; } else { muted = !muted; }
+    if (actx.state === 'suspended') actx.resume();
+    updateBtn();
+  }
+  btn.addEventListener('click', toggleSound);
+  window.addEventListener('keydown', e => { if (e.key === 'm' || e.key === 'M') toggleSound(); });
+
+  const PENTA = [0, 2, 4, 7, 9];
+  function freqFor(diff) {
+    // bigger edits → lower notes, across ~3 octaves of a pentatonic scale
+    const s = Math.min(1, Math.log10(Math.abs(diff) + 1) / 4);
+    const step = Math.round((1 - s) * 14);
+    const semis = Math.floor(step / 5) * 12 + PENTA[step % 5];
+    return 196 * Math.pow(2, semis / 12);
+  }
+  function voice(type, f, gain, attack, decay, t) {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(gain, t + attack);
+    g.gain.exponentialRampToValueAtTime(.0001, t + attack + decay);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + attack + decay + .05);
+    return o;
+  }
+  function play(ev) {
+    if (!actx || muted) return;
+    const t = actx.currentTime;
+    if (t - lastNote < .11) return;
+    lastNote = t;
+    const f = freqFor(ev.diff);
+    if (ev.diff >= 0) {                         // bell for additions
+      voice('sine', f, .32, .005, 2.6, t);
+      voice('sine', f * 2.76, .08, .005, 1.1, t);
+    } else {                                    // soft pluck for removals
+      const o = actx.createOscillator(), filt = actx.createBiquadFilter(), g = actx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = f / 2;
+      filt.type = 'lowpass'; filt.frequency.setValueAtTime(f * 4, t); filt.frequency.exponentialRampToValueAtTime(f / 2, t + .6);
+      g.gain.setValueAtTime(.18, t); g.gain.exponentialRampToValueAtTime(.0001, t + .9);
+      o.connect(filt); filt.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 1);
+    }
+  }
+  function swell() {
+    if (!actx || muted) return;
+    const t = actx.currentTime;
+    [261.6, 329.6, 392, 523.3].forEach(f => voice('sine', f, .09, 1.4, 3.5, t));
+  }
+
+  // ---------- stats ----------
+  let total = 0, bytes = 0;
+  const recent = [];                       // timestamps for edits/minute
+  const BUCKET = 10000, NB = 36;           // 10s buckets, 6 minutes
+  const buckets = new Array(NB).fill(0);
+  let bucketStart = Date.now();
+  const sRate = document.getElementById('sRate'), sTotal = document.getElementById('sTotal'), sBytes = document.getElementById('sBytes');
+  const fmt = n => n.toLocaleString('en-AU');
+
+  function tickStats() {
+    const now = Date.now();
+    while (now - bucketStart >= BUCKET) { buckets.shift(); buckets.push(0); bucketStart += BUCKET; }
+    while (recent.length && now - recent[0] > 60000) recent.shift();
+    sRate.textContent = fmt(recent.length);
+    sTotal.textContent = fmt(total);
+    sBytes.textContent = (bytes >= 0 ? '+' : '') + fmt(bytes);
+    drawSpark();
+  }
+
+  const spark = document.getElementById('spark'), sctx = spark.getContext('2d');
+  let SW = 0, SH = 0;
+  function sizeSpark() {
+    const dpr = window.devicePixelRatio || 1, r = spark.getBoundingClientRect();
+    SW = r.width; SH = r.height; spark.width = SW * dpr; spark.height = SH * dpr;
+    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function drawSpark() {
+    sctx.clearRect(0, 0, SW, SH);
+    const max = Math.max(5, ...buckets), bw = SW / NB;
+    buckets.forEach((v, i) => {
+      const h = (v / max) * (SH - 4);
+      sctx.fillStyle = i === NB - 1 ? 'rgba(61,240,164,.95)' : `rgba(61,240,164,${.15 + .5 * i / NB})`;
+      sctx.fillRect(i * bw + 1, SH - h, bw - 2, h);
+    });
+  }
+
+  // ---------- feed ----------
+  const feed = document.getElementById('feed');
+  function addFeed(ev) {
+    const li = document.createElement('li');
+    const dot = document.createElement('span'); dot.className = 'dot';
+    dot.style.background = rgba(COLORS[ev.kind], 1);
+    if (ev.diff < 0) { dot.style.background = 'transparent'; dot.style.border = `2px solid ${rgba(COLORS[ev.kind], 1)}`; }
+    const t = document.createElement('span'); t.className = 't'; t.textContent = ev.title;
+    if (ev.isNew) { const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'new article'; t.appendChild(tag); }
+    const d = document.createElement('span'); d.className = 'd ' + (ev.diff >= 0 ? 'plus' : 'minus');
+    d.textContent = (ev.diff >= 0 ? '+' : '−') + fmt(Math.abs(ev.diff));
+    li.append(dot, t, d);
+    feed.prepend(li);
+    while (feed.children.length > 7) feed.lastChild.remove();
+  }
+
+  // ---------- welcome ----------
+  const welcome = document.getElementById('welcome');
+  let welcomeTimer;
+  function newEditor() {
+    waves.push({ born: performance.now() });
+    swell();
+    welcome.classList.add('show');
+    clearTimeout(welcomeTimer);
+    welcomeTimer = setTimeout(() => welcome.classList.remove('show'), 4500);
+  }
+
+  // ---------- stream ----------
+  const isIP = u => /^\d{1,3}(\.\d{1,3}){3}$/.test(u) || /^[0-9a-f:]+:[0-9a-f:]+$/i.test(u);
+  const live = document.getElementById('live');
+  let es;
+  function connect() {
+    es = new EventSource('https://stream.wikimedia.org/v2/stream/recentchange');
+    es.onopen = () => live.classList.remove('off');
+    es.onerror = () => live.classList.add('off');
+    es.onmessage = msg => {
+      let d; try { d = JSON.parse(msg.data); } catch { return; }
+      if (d.wiki !== WIKI) return;
+      if (d.type === 'log' && d.log_type === 'newusers') { newEditor(); return; }
+      if ((d.type !== 'edit' && d.type !== 'new') || d.namespace !== 0) return;
+      const diff = (d.length?.new || 0) - (d.length?.old || 0);
+      const user = d.user || '';
+      const kind = d.bot ? 'bot' : (isIP(user) || user.startsWith('~')) ? 'anon' : 'reg';
+      const ev = {
+        title: d.title, diff, kind, isNew: d.type === 'new',
+        url: `${d.server_url}/wiki/${encodeURIComponent(d.title.replace(/ /g, '_'))}`
+      };
+      total++; bytes += diff; recent.push(Date.now()); buckets[NB - 1]++;
+      if (document.hidden) return;
+      addBubble(ev); addFeed(ev); play(ev);
+    };
+  }
+
+  // ---------- clock ----------
+  const clock = document.getElementById('clock');
+  function tickClock() {
+    clock.firstChild.nodeValue = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  window.addEventListener('resize', resize);
+  resize(); tickClock(); tickStats(); connect();
+  setInterval(tickStats, 1000);
+  setInterval(tickClock, 5000);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
