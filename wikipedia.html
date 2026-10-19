@@ -157,7 +157,7 @@
     ctx.clearRect(0, 0, W, H);
 
     for (let i = waves.length - 1; i >= 0; i--) {
-      const w = waves[i], age = (now - w.born) / 1000;
+      const w = waves[i], age = Math.max(0, (now - w.born) / 1000);
       if (age > 4) { waves.splice(i, 1); continue; }
       const p = age / 4;
       ctx.beginPath();
@@ -168,7 +168,7 @@
     }
 
     for (let i = bubbles.length - 1; i >= 0; i--) {
-      const b = bubbles[i], age = (now - b.born) / 1000;
+      const b = bubbles[i], age = Math.max(0, (now - b.born) / 1000);
       if (age > LIFE) { bubbles.splice(i, 1); continue; }
       const g = Math.min(1, age / .7), ease = 1 - Math.pow(1 - g, 3);
       const fade = age < LIFE - 5 ? 1 : (LIFE - age) / 5;
@@ -388,7 +388,7 @@
     clock.firstChild.nodeValue = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
   }
 
-  window.addEventListener('resize', resize);
+  new ResizeObserver(resize).observe(canvas);
   resize(); tickClock(); tickStats(); connect();
   setInterval(tickStats, 1000);
   setInterval(tickClock, 5000);

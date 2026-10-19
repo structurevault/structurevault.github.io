@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Earthquakes Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<style>
+  :root {
+    --bg: #06080e;
+    --ink: #eef1f7;
+    --dim: #7c859b;
+    --line: #1a2030;
+    --m2: #5ad1ff;
+    --m3: #3df0a4;
+    --m4: #ffd23f;
+    --m5: #ff9a3d;
+    --m6: #ff3d5a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--ink); overflow: hidden; }
+  body {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto auto auto;
+    background:
+      radial-gradient(120% 60% at 50% 0%, #1a1420 0%, transparent 60%),
+      radial-gradient(100% 50% at 50% 100%, #0d1322 0%, transparent 60%),
+      var(--bg);
+  }
+
+  header { padding: 4vh 6vw 1.5vh; }
+  header .top { display: flex; justify-content: space-between; align-items: center; }
+  .eyebrow { font-family: "JetBrains Mono", monospace; font-size: clamp(11px, 1.3vh, 18px); letter-spacing: .25em; text-transform: uppercase; color: var(--dim); display: flex; align-items: center; gap: .7em; }
+  .live { width: .7em; height: .7em; border-radius: 50%; background: #ff3d5a; box-shadow: 0 0 12px #ff3d5a; animation: pulse 1.6s infinite; }
+  .live.off { background: var(--dim); box-shadow: none; animation: none; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  h1 { font-size: clamp(32px, 5.2vh, 84px); font-weight: 700; line-height: 1; letter-spacing: -.02em; margin-top: .25em; }
+  h1 span { color: var(--m5); }
+  .clock { font-family: "JetBrains Mono", monospace; font-size: clamp(16px, 2.2vh, 36px); color: var(--dim); white-space: nowrap; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 1vh 6vw; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .stat { background: rgba(10,13,22,.85); padding: 1.6vh 1.4vw; min-width: 0; }
+  .stat b { display: block; font-family: "JetBrains Mono", monospace; font-size: clamp(22px, 3.6vh, 60px); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat em { font-style: normal; font-size: clamp(10px, 1.2vh, 18px); letter-spacing: .15em; text-transform: uppercase; color: var(--dim); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  main { position: relative; min-height: 0; }
+  #globe { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .legend { position: absolute; left: 6vw; right: 6vw; top: .5vh; display: flex; flex-wrap: wrap; gap: .6em 1.4em; font-size: clamp(11px, 1.25vh, 18px); color: var(--dim); pointer-events: none; }
+  .legend i { display: inline-block; width: .9em; height: .9em; border-radius: 50%; vertical-align: -.1em; margin-right: .4em; }
+  .legend .note { flex-basis: 100%; }
+
+  .spot { margin: 0 6vw 1.5vh; padding: 1.8vh 1.6vw; border: 1px solid var(--line); border-radius: 14px; background: rgba(10,13,22,.85); display: grid; grid-template-columns: auto 1fr; gap: .4vh 1.4em; align-items: center; transition: opacity .5s; }
+  .spot.fade { opacity: 0; }
+  .spot .mag { grid-row: span 2; font-family: "JetBrains Mono", monospace; font-weight: 600; font-size: clamp(32px, 5vh, 80px); line-height: 1; }
+  .spot .mag small { display: block; font-size: .28em; letter-spacing: .2em; color: var(--dim); text-align: center; margin-top: .3em; }
+  .spot .place { font-size: clamp(18px, 2.4vh, 38px); font-weight: 600; line-height: 1.15; }
+  .spot .meta { font-family: "JetBrains Mono", monospace; font-size: clamp(11px, 1.4vh, 22px); color: var(--dim); }
+  .spot .new { color: var(--m6); border: 1px solid currentColor; border-radius: 4px; padding: .05em .4em; margin-right: .6em; letter-spacing: .15em; }
+
+  .list { padding: 0 6vw 1vh; }
+  .list-title { font-family: "JetBrains Mono", monospace; font-size: clamp(10px, 1.2vh, 16px); letter-spacing: .25em; text-transform: uppercase; color: var(--dim); margin-bottom: .8vh; }
+  #list { list-style: none; display: flex; flex-direction: column; gap: .6vh; }
+  #list li { display: grid; grid-template-columns: 3.2em 1fr auto; gap: 1em; align-items: center; font-size: clamp(14px, 1.8vh, 28px); line-height: 1.3; }
+  #list li:nth-child(n+4) { opacity: .65; }
+  #list .b { font-family: "JetBrains Mono", monospace; font-weight: 600; text-align: center; border-radius: 6px; padding: .1em 0; color: #06080e; }
+  #list .p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #list .a { font-family: "JetBrains Mono", monospace; font-size: .8em; color: var(--dim); }
+
+  .fact { margin: .5vh 6vw 3vh; font-size: clamp(14px, 1.7vh, 26px); color: var(--ink); opacity: .85; min-height: 2.6em; transition: opacity .8s; }
+  .fact.fade { opacity: 0; }
+  .fact b { color: var(--m4); font-family: "JetBrains Mono", monospace; font-size: .7em; letter-spacing: .2em; text-transform: uppercase; margin-right: .6em; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="top">
+      <div class="eyebrow"><span class="live off" id="live"></span>USGS · last 24 hours</div>
+      <div class="clock" id="clock">--:--</div>
+    </div>
+    <h1>Earthquakes, <span>live</span></h1>
+  </header>
+
+  <section class="stats">
+    <div class="stat"><b id="sCount">–</b><em>quakes in 24 h</em></div>
+    <div class="stat"><b id="sBig">–</b><em>magnitude 4.5+</em></div>
+    <div class="stat"><b id="sMax">–</b><em id="sMaxPlace">largest</em></div>
+  </section>
+
+  <main>
+    <canvas id="globe"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--m2)"></i>M&lt;3</span>
+      <span><i style="background:var(--m3)"></i>M3</span>
+      <span><i style="background:var(--m4)"></i>M4</span>
+      <span><i style="background:var(--m5)"></i>M5</span>
+      <span><i style="background:var(--m6)"></i>M6+</span>
+      <span class="note">brighter = more recent · pulsing = in the last hour</span>
+    </div>
+  </main>
+
+  <section class="spot" id="spot">
+    <div class="mag" id="spMag">–<small>MAG</small></div>
+    <div class="place" id="spPlace">Loading earthquake data…</div>
+    <div class="meta" id="spMeta"></div>
+  </section>
+
+  <section class="list">
+    <div class="list-title">Latest quakes magnitude 2.5+</div>
+    <ul id="list"></ul>
+  </section>
+
+  <div class="fact" id="fact"></div>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const HOME = {
+    lat: parseFloat(params.get('lat') ?? '-37.81'),
+    lon: parseFloat(params.get('lon') ?? '144.96'),
+    name: params.get('home') || 'Melbourne'
+  };
+  const FEED = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson';
+  const LAND = 'https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json';
+
+  const magColor = m => m >= 6 ? [255, 61, 90] : m >= 5 ? [255, 154, 61] : m >= 4 ? [255, 210, 63] : m >= 3 ? [61, 240, 164] : [90, 209, 255];
+  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+  const fmt = n => n.toLocaleString('en-AU');
+  const ago = t => {
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m} min ago`;
+    const h = Math.floor(m / 60);
+    return `${h} h ${m % 60} min ago`;
+  };
+  const kmFromHome = q => Math.round(d3.geoDistance([q.lon, q.lat], [HOME.lon, HOME.lat]) * 6371);
+
+  // ---------- globe ----------
+  const canvas = document.getElementById('globe'), ctx = canvas.getContext('2d');
+  const proj = d3.geoOrthographic().clipAngle(90).precision(.4);
+  const path = d3.geoPath(proj, ctx);
+  const grat = d3.geoGraticule10();
+  let W = 0, H = 0, R = 0, land = null;
+  const rot = { lon: HOME.lon, lat: HOME.lat }, target = { lon: HOME.lon, lat: HOME.lat };
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1, r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    R = Math.min(W, H - 40) / 2 * .9;
+    proj.scale(R).translate([W / 2, H / 2 + 20]);
+  }
+
+  let quakes = [], focus = null;
+
+  function draw(now) {
+    // ease toward the target view, drifting slowly eastward
+    target.lon += .02;
+    const dl = ((target.lon - rot.lon + 540) % 360) - 180;
+    rot.lon += dl * .04;
+    rot.lat += (target.lat - rot.lat) * .04;
+    proj.rotate([-rot.lon, -rot.lat]);
+    const [cx, cy] = proj.translate();
+
+    ctx.clearRect(0, 0, W, H);
+
+    const atm = ctx.createRadialGradient(cx, cy, R * .95, cx, cy, R * 1.18);
+    atm.addColorStop(0, 'rgba(90,150,255,.35)');
+    atm.addColorStop(1, 'rgba(90,150,255,0)');
+    ctx.fillStyle = atm;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 1.18, 0, Math.PI * 2); ctx.fill();
+
+    const sea = ctx.createRadialGradient(cx - R * .35, cy - R * .4, R * .1, cx, cy, R);
+    sea.addColorStop(0, '#173058');
+    sea.addColorStop(1, '#060d1c');
+    ctx.beginPath(); path({ type: 'Sphere' }); ctx.fillStyle = sea; ctx.fill();
+
+    ctx.beginPath(); path(grat); ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 1; ctx.stroke();
+
+    if (land) {
+      ctx.beginPath(); path(land);
+      ctx.fillStyle = '#22314a'; ctx.fill();
+      ctx.strokeStyle = 'rgba(140,180,240,.3)'; ctx.lineWidth = .8; ctx.stroke();
+    }
+
+    const center = [rot.lon, rot.lat], t = performance.now(), nowMs = Date.now();
+    const visible = p => d3.geoDistance(p, center) < Math.PI / 2 - .02;
+
+    for (const q of quakes) {
+      if (!visible([q.lon, q.lat])) continue;
+      const [x, y] = proj([q.lon, q.lat]);
+      const c = magColor(q.mag), ageH = (nowMs - q.time) / 3.6e6;
+      const alpha = Math.max(.25, 1 - ageH / 24 * .75);
+      const r = Math.max(1.6, Math.pow(Math.max(q.mag, 0), 1.7) * .9) * (R / 400);
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = rgba(c, alpha * .8);
+      ctx.shadowColor = rgba(c, alpha); ctx.shadowBlur = r * 1.5;
+      ctx.fill(); ctx.shadowBlur = 0;
+
+      if (ageH < 1) {
+        const p = ((t / 2000 + q.lon) % 1 + 1) % 1;
+        ctx.beginPath(); ctx.arc(x, y, r + p * r * 4, 0, Math.PI * 2);
+        ctx.strokeStyle = rgba(c, (1 - p) * .8); ctx.lineWidth = 2; ctx.stroke();
+      }
+      if (q.newAt && t - q.newAt < 6000) {
+        const p = Math.max(0, (t - q.newAt) / 6000);
+        ctx.beginPath(); ctx.arc(x, y, r + p * R * .6, 0, Math.PI * 2);
+        ctx.strokeStyle = rgba(c, (1 - p) * .9); ctx.lineWidth = 4 * (1 - p) + 1; ctx.stroke();
+      }
+    }
+
+    if (visible([HOME.lon, HOME.lat])) {
+      const [x, y] = proj([HOME.lon, HOME.lat]);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = '#fff'; ctx.fillRect(-4, -4, 8, 8);
+      ctx.restore();
+      ctx.font = `600 ${Math.max(12, R / 28)}px "Space Grotesk", sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(HOME.name, x + 10, y);
+    }
+
+    if (focus && visible([focus.lon, focus.lat])) {
+      const [x, y] = proj([focus.lon, focus.lat]);
+      const s = 22 + Math.sin(t / 300) * 3;
+      ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - s - 12, y); ctx.lineTo(x - s + 4, y);
+      ctx.moveTo(x + s - 4, y); ctx.lineTo(x + s + 12, y);
+      ctx.moveTo(x, y - s - 12); ctx.lineTo(x, y - s + 4);
+      ctx.moveTo(x, y + s - 4); ctx.lineTo(x, y + s + 12);
+      ctx.stroke();
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  // ---------- spotlight tour ----------
+  const spot = document.getElementById('spot');
+  let tour = [], tourIdx = -1, tourTimer;
+
+  function buildTour() {
+    const sig = quakes.filter(q => q.mag >= 2.5).sort((a, b) => b.time - a.time).slice(0, 8);
+    const biggest = quakes.reduce((m, q) => (!m || q.mag > m.mag ? q : m), null);
+    if (biggest && !sig.includes(biggest)) sig.push(biggest);
+    tour = sig;
+  }
+
+  function showQuake(q) {
+    focus = q;
+    target.lon = q.lon;
+    target.lat = Math.max(-45, Math.min(45, q.lat));
+    spot.classList.add('fade');
+    setTimeout(() => {
+      const c = magColor(q.mag);
+      const mag = document.getElementById('spMag');
+      mag.firstChild.nodeValue = q.mag.toFixed(1);
+      mag.style.color = rgba(c, 1);
+      document.getElementById('spPlace').textContent = q.place;
+      const meta = document.getElementById('spMeta');
+      meta.textContent = '';
+      if (q.newAt) { const n = document.createElement('span'); n.className = 'new'; n.textContent = 'NEW'; meta.append(n); }
+      meta.append(`${ago(q.time)} · ${Math.round(q.depth)} km deep · ${fmt(kmFromHome(q))} km from ${HOME.name}`);
+      spot.classList.remove('fade');
+    }, 450);
+  }
+
+  function nextStop() {
+    if (!tour.length) return;
+    tourIdx = (tourIdx + 1) % tour.length;
+    showQuake(tour[tourIdx]);
+  }
+  function startTour() { clearInterval(tourTimer); tourTimer = setInterval(nextStop, 10000); }
+
+  // ---------- data ----------
+  const seen = new Set();
+  let firstLoad = true;
+  const live = document.getElementById('live');
+
+  async function load() {
+    try {
+      const res = await fetch(FEED, { cache: 'no-store' });
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      const fresh = [];
+      quakes = data.features
+        .filter(f => f.properties.mag != null && f.properties.type === 'earthquake')
+        .map(f => {
+          const old = quakes.find(q => q.id === f.id);
+          const q = {
+            id: f.id, mag: f.properties.mag, place: f.properties.place || 'Unknown location',
+            time: f.properties.time, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
+            depth: f.geometry.coordinates[2], newAt: old?.newAt
+          };
+          if (!seen.has(q.id)) {
+            seen.add(q.id);
+            if (!firstLoad && q.mag >= 2.5) { q.newAt = performance.now(); fresh.push(q); }
+          }
+          return q;
+        })
+        .sort((a, b) => a.time - b.time);
+      live.classList.remove('off');
+      updateStats(); updateList(); buildTour();
+      if (fresh.length) {
+        const big = fresh.reduce((m, q) => (q.mag > m.mag ? q : m));
+        tourIdx = -1; showQuake(big); startTour();
+      } else if (firstLoad) {
+        nextStop(); startTour();
+      }
+      firstLoad = false;
+    } catch (e) {
+      live.classList.add('off');
+    }
+  }
+
+  function updateStats() {
+    document.getElementById('sCount').textContent = fmt(quakes.length);
+    document.getElementById('sBig').textContent = fmt(quakes.filter(q => q.mag >= 4.5).length);
+    const big = quakes.reduce((m, q) => (!m || q.mag > m.mag ? q : m), null);
+    if (big) {
+      const el = document.getElementById('sMax');
+      el.textContent = 'M' + big.mag.toFixed(1);
+      el.style.color = rgba(magColor(big.mag), 1);
+      document.getElementById('sMaxPlace').textContent = 'largest · ' + big.place.replace(/^.* of /, '');
+    }
+  }
+
+  function updateList() {
+    const ul = document.getElementById('list');
+    ul.textContent = '';
+    quakes.filter(q => q.mag >= 2.5).slice(-5).reverse().forEach(q => {
+      const li = document.createElement('li');
+      const b = document.createElement('span'); b.className = 'b'; b.textContent = q.mag.toFixed(1);
+      b.style.background = rgba(magColor(q.mag), 1);
+      const p = document.createElement('span'); p.className = 'p'; p.textContent = q.place;
+      const a = document.createElement('span'); a.className = 'a'; a.textContent = ago(q.time);
+      li.append(b, p, a); ul.append(li);
+    });
+  }
+
+  // ---------- facts ----------
+  const FACTS = [
+    'Earth has around 20,000 earthquakes recorded each year, which is about 55 every day.',
+    'Magnitude is logarithmic: each step up (say from 5 to 6) releases about 32 times more energy.',
+    'About 80% of the world’s largest earthquakes happen around the Pacific “Ring of Fire”.',
+    'Australia records around 100 earthquakes of magnitude 3 or more each year.',
+    'The largest earthquake ever recorded was magnitude 9.5, in Chile in 1960.',
+    'Shallow earthquakes (less than 70 km deep) usually cause the strongest shaking at the surface.',
+    'Seismometers around the world detect quakes within minutes, which is how this screen updates.'
+  ];
+  const factEl = document.getElementById('fact');
+  let factIdx = Math.floor(Math.random() * FACTS.length);
+  function nextFact() {
+    factEl.classList.add('fade');
+    setTimeout(() => {
+      factIdx = (factIdx + 1) % FACTS.length;
+      factEl.innerHTML = '<b>Did you know</b>';
+      factEl.append(FACTS[factIdx]);
+      factEl.classList.remove('fade');
+    }, 800);
+  }
+
+  // ---------- clock ----------
+  const clock = document.getElementById('clock');
+  const tickClock = () => clock.firstChild.nodeValue = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+
+  new ResizeObserver(resize).observe(canvas);
+  resize(); tickClock(); nextFact();
+  fetch(LAND).then(r => r.json()).then(w => { land = topojson.feature(w, w.objects.land); }).catch(() => {});
+  load();
+  setInterval(load, 60000);
+  setInterval(() => { updateList(); }, 30000);
+  setInterval(tickClock, 5000);
+  setInterval(nextFact, 15000);
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
