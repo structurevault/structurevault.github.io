@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minecraft Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #f4f4f4;
+    --dim: #b9b9b9;
+    --panel: rgba(12, 12, 16, .86);
+    --edge: rgba(0, 0, 0, .9);
+    --hi: rgba(255, 255, 255, .12);
+    --grass: #5fbf3a;
+    --gold: #ffd84a;
+    --java: #e0763a;
+    --bedrock: #4ab3e8;
+    --up: #6fe36f;
+    --down: #ff6b6b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: #0b0f2a; }
+  html, body { height: 100%; color: var(--ink); overflow: hidden; }
+  body {
+    font-family: "VT323", monospace;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto auto;
+    position: relative;
+  }
+  #sky { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; z-index: -1; }
+
+  .panel { background: var(--panel); border: 3px solid var(--edge); box-shadow: inset 3px 3px 0 var(--hi), inset -3px -3px 0 rgba(0,0,0,.4); }
+
+  header { padding: 4vh 6vw 1.5vh; }
+  .top { display: flex; justify-content: space-between; align-items: center; font-size: clamp(16px, 2.2vh, 36px); color: var(--ink); text-shadow: 2px 2px 0 #000; }
+  .top .live { display: inline-block; width: .55em; height: .55em; background: var(--up); margin-right: .5em; animation: blink 1.2s steps(1) infinite; }
+  .top .live.off { background: var(--dim); animation: none; }
+  @keyframes blink { 50% { opacity: .2; } }
+  h1 { font-family: "Press Start 2P", monospace; font-size: clamp(20px, 2.9vh, 48px); line-height: 1.2; margin-top: .5em; color: #fff; text-shadow: .12em .12em 0 #3f3f3f; }
+  h1 span { color: var(--gold); text-shadow: .12em .12em 0 #6b5310; }
+
+  .hero { margin: 1vh 6vw; padding: 1.4vh 3vw; text-align: center; }
+  .hero .label { font-size: clamp(16px, 2vh, 32px); color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
+  .hero .total { font-family: "Press Start 2P", monospace; font-size: clamp(32px, 5vh, 84px); color: var(--grass); text-shadow: .08em .08em 0 #1d4710; margin: .2em 0 .15em; font-variant-numeric: tabular-nums; }
+  .hero canvas { width: 100%; height: 3vh; display: block; image-rendering: pixelated; margin-top: 1vh; }
+  .hero .sub { font-size: clamp(14px, 1.7vh, 28px); color: var(--dim); }
+
+  main { min-height: 0; padding: 1vh 6vw; display: flex; flex-direction: column; }
+  .list-title { font-family: "Press Start 2P", monospace; font-size: clamp(10px, 1.2vh, 18px); color: var(--ink); text-shadow: 2px 2px 0 #000; margin-bottom: 1vh; }
+  #rows { list-style: none; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .5vh; }
+  .row { position: relative; flex: 1; min-height: 0; max-height: 5vh; display: grid; grid-template-columns: 1.4em auto 1fr auto 3.4em; gap: .6em; align-items: center; padding: 0 .7em; font-size: clamp(14px, 2vh, 34px); line-height: 1; overflow: hidden; }
+  .row .bar { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, rgba(95,191,58,.45), rgba(95,191,58,.18)); transition: width 1.2s steps(24); z-index: 0; }
+  .row > *:not(.bar) { position: relative; z-index: 1; }
+  .row .rank { color: var(--dim); text-align: right; }
+  .row img { width: 1.2em; height: 1.2em; image-rendering: pixelated; display: block; border: 2px solid #000; }
+  .row .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 2px 2px 0 #000; }
+  .row .ed { font-size: .6em; padding: 0 .35em; margin-left: .5em; border: 2px solid currentColor; vertical-align: .15em; }
+  .row .ed.java { color: var(--java); } .row .ed.bedrock { color: var(--bedrock); }
+  .row .n { font-variant-numeric: tabular-nums; text-shadow: 2px 2px 0 #000; }
+  .row .d { font-size: .75em; text-align: right; }
+  .row .d.up { color: var(--up); } .row .d.down { color: var(--down); }
+  .row.offline { opacity: .45; }
+
+  .fact { margin: 1vh 6vw; padding: 1.2vh 3vw; font-size: clamp(15px, 1.9vh, 32px); line-height: 1.15; min-height: 3.6em; transition: opacity .6s; }
+  .fact.fade { opacity: 0; }
+  .fact b { font-family: "Press Start 2P", monospace; font-weight: 400; font-size: .5em; color: var(--gold); display: block; margin-bottom: .6em; }
+  footer { padding: 0 6vw 6vh; font-size: clamp(12px, 1.4vh, 22px); color: var(--ink); opacity: .8; text-shadow: 2px 2px 0 #000; }
+</style>
+</head>
+<body>
+  <canvas id="sky"></canvas>
+
+  <header>
+    <div class="top"><span><span class="live off" id="live"></span><span id="mctime">Overworld</span></span><span id="clock">--:--</span></div>
+    <h1>Minecraft <span>live</span></h1>
+  </header>
+
+  <section class="hero panel">
+    <div class="label">Players online right now</div>
+    <div class="total" id="total">…</div>
+    <div class="sub" id="sub">across the biggest public servers</div>
+    <canvas id="hist"></canvas>
+  </section>
+
+  <main>
+    <div class="list-title">Server leaderboard</div>
+    <ul id="rows"></ul>
+  </main>
+
+  <div class="fact panel" id="fact"></div>
+  <footer>Live counts from public servers via mcstatus.io, updated every minute. Minecraft doesn't publish one worldwide total.</footer>
+
+<script>
+(() => {
+  const SERVERS = [
+    { name: 'The Hive',       host: 'geo.hivebedrock.network', ed: 'bedrock' },
+    { name: 'CubeCraft',      host: 'mco.cubecraft.net',       ed: 'bedrock' },
+    { name: 'Lifeboat',       host: 'play.lbsg.net',           ed: 'bedrock' },
+    { name: 'Galaxite',       host: 'play.galaxite.net',       ed: 'bedrock' },
+    { name: 'Minehut',        host: 'minehut.com',             ed: 'java' },
+    { name: 'Complex Gaming', host: 'hub.mc-complex.com',      ed: 'java' },
+    { name: 'ManaCube',       host: 'play.manacube.com',       ed: 'java' },
+    { name: 'Wynncraft',      host: 'play.wynncraft.com',      ed: 'java' },
+    { name: 'PikaNetwork',    host: 'play.pika-network.net',   ed: 'java' },
+    { name: 'CubeCraft',      host: 'play.cubecraft.net',      ed: 'java' },
+    { name: 'Jartex',         host: 'jartexnetwork.com',       ed: 'java' },
+    { name: 'MCC Island',     host: 'play.mccisland.net',      ed: 'java' },
+    { name: 'BlocksMC',       host: 'play.blocksmc.com',       ed: 'java' }
+  ];
+  const fmt = n => n.toLocaleString('en-AU');
+
+  // ---------- pixel sky with a 20-minute Minecraft day ----------
+  const sky = document.getElementById('sky'), sx = sky.getContext('2d');
+  const BW = 90;
+  let BH = 160, ground = null, stars = [];
+  const rnd = (seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647)(42);
+  function sizeSky() {
+    BH = Math.round(BW * innerHeight / innerWidth);
+    sky.width = BW; sky.height = BH;
+    const gh = Math.max(6, Math.round(BH * .05));
+    ground = sx.createImageData(BW, gh);
+    for (let y = 0; y < gh; y++) for (let x = 0; x < BW; x++) {
+      const i = (y * BW + x) * 4, v = rnd();
+      const grassDepth = 2 + ((x * 7) % 3 === 0 ? 1 : 0);
+      const c = y < grassDepth
+        ? [95 + v * 30, 170 + v * 40, 55 + v * 20]
+        : v < .12 ? [120, 120, 120] : [134 - v * 30, 96 - v * 25, 67 - v * 20];
+      ground.data.set([c[0], c[1], c[2], 255], i);
+    }
+    stars = Array.from({ length: 40 }, () => [Math.floor(rnd() * BW), Math.floor(rnd() * BH * .7)]);
+  }
+  const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  const css = c => `rgb(${c[0]},${c[1]},${c[2]})`;
+  function drawSky() {
+    const cycle = (Date.now() % 1200000) / 1200000;      // one Minecraft day = 20 real minutes
+    const ang = cycle * Math.PI * 2, sunY = Math.sin(ang);
+    const day = Math.min(1, Math.max(0, (sunY + .15) / .3));
+    const horizon = BH - ground.height;
+    const top = mix([8, 10, 32], [110, 160, 255], day), low = mix([22, 28, 70], [170, 205, 255], day);
+    const glow = Math.max(0, 1 - Math.abs(sunY) / .25);
+    for (let y = 0; y < horizon; y += 2) {
+      let c = mix(top, low, y / horizon);
+      if (glow) c = mix(c, [255, 140, 60], glow * Math.pow(y / horizon, 3) * .8);
+      sx.fillStyle = css(c); sx.fillRect(0, y, BW, 2);
+    }
+    sx.fillStyle = `rgba(255,255,255,${(1 - day) * .9})`;
+    for (const [x, y] of stars) if (y < horizon) sx.fillRect(x, y, 1, 1);
+
+    const cx = BW / 2, r = horizon * .8;
+    const sunX = Math.round(cx - Math.cos(ang) * BW * .55), sunYp = Math.round(horizon - sunY * r);
+    sx.fillStyle = '#fff6a8'; sx.fillRect(sunX - 4, sunYp - 4, 8, 8);
+    sx.fillStyle = '#ffe14a'; sx.fillRect(sunX - 3, sunYp - 3, 6, 6);
+    const moonX = Math.round(cx + Math.cos(ang) * BW * .55), moonY = Math.round(horizon + sunY * r);
+    sx.fillStyle = '#dfe6f0'; sx.fillRect(moonX - 3, moonY - 3, 6, 6);
+    sx.fillStyle = '#a9b4c6'; sx.fillRect(moonX - 1, moonY - 2, 2, 2); sx.fillRect(moonX + 1, moonY + 1, 1, 1);
+
+    const t = Date.now() / 1000;
+    sx.fillStyle = `rgba(255,255,255,${.35 + day * .5})`;
+    [[0, .08, 14], [40, .16, 10], [70, .28, 18], [20, .42, 12]].forEach(([o, yy, w], i) => {
+      const x = ((o + t * (.4 + i * .1)) % (BW + w)) - w;
+      sx.fillRect(Math.round(x), Math.round(BH * yy), w, 3);
+      sx.fillRect(Math.round(x) + 3, Math.round(BH * yy) - 2, w - 6, 2);
+    });
+    sx.putImageData(ground, 0, horizon);
+
+    document.getElementById('mctime').textContent =
+      sunY > .2 ? 'Daytime in the Overworld' : sunY > -.15 ? (Math.cos(ang) > 0 ? 'Sunset in the Overworld' : 'Sunrise in the Overworld') : 'Night in the Overworld';
+  }
+
+  // ---------- server icons ----------
+  const icons = {};
+  function blockIcon(s) {
+    const key = s.name + s.ed;
+    if (icons[key]) return icons[key];
+    const c = document.createElement('canvas'); c.width = c.height = 8;
+    const x = c.getContext('2d');
+    let h = 0; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const base = s.ed === 'bedrock' ? [74, 179, 232] : [95, 191, 58];
+    for (let i = 0; i < 64; i++) {
+      h = (h * 1103515245 + 12345) >>> 0;
+      const v = .65 + (h % 100) / 280;
+      x.fillStyle = `rgb(${base.map(b => Math.round(b * v)).join(',')})`;
+      x.fillRect(i % 8, i >> 3, 1, 1);
+    }
+    return (icons[key] = c.toDataURL());
+  }
+
+  // ---------- data ----------
+  const state = SERVERS.map(s => ({ ...s, key: s.ed + ':' + s.host, players: null, prev: null, icon: null, online: false }));
+  const history = [];
+  const live = document.getElementById('live');
+
+  async function poll() {
+    // stagger requests so the status API doesn't throttle us
+    const results = await Promise.allSettled(state.map((s, i) =>
+      new Promise(res => setTimeout(res, i * 250)).then(() =>
+        fetch(`https://api.mcstatus.io/v2/status/${s.ed}/${s.host}`).then(r => r.ok ? r.json() : Promise.reject(r.status)))));
+    let ok = 0;
+    results.forEach((r, i) => {
+      const s = state[i];
+      if (r.status === 'fulfilled') {
+        if (r.value.online && r.value.players) {
+          s.prev = s.players; s.players = r.value.players.online; s.online = true;
+          if (r.value.icon && r.value.icon.startsWith('data:image/')) s.icon = r.value.icon;
+        } else {
+          s.online = false;
+        }
+      }
+      // on a failed request, keep the last known count
+      if (s.online) ok++;
+    });
+    live.classList.toggle('off', ok === 0);
+    if (!ok) return;
+    const total = state.reduce((a, s) => a + (s.online ? s.players : 0), 0);
+    history.push(total); if (history.length > 60) history.shift();
+    countTo(total);
+    document.getElementById('sub').textContent = `across ${ok} of the biggest public servers`;
+    render(); drawHist();
+  }
+
+  // ---------- total counter ----------
+  const totalEl = document.getElementById('total');
+  let shown = 0, anim;
+  function countTo(n) {
+    const from = shown, start = performance.now();
+    cancelAnimationFrame(anim);
+    const step = now => {
+      const p = Math.min(1, (now - start) / 1500), e = 1 - Math.pow(1 - p, 3);
+      shown = Math.round(from + (n - from) * e);
+      totalEl.textContent = fmt(shown);
+      if (p < 1) anim = requestAnimationFrame(step);
+    };
+    anim = requestAnimationFrame(step);
+  }
+
+  // ---------- history bars ----------
+  const hist = document.getElementById('hist'), hx = hist.getContext('2d');
+  function drawHist() {
+    const cols = 60, rows = 10;
+    hist.width = cols; hist.height = rows;
+    hx.clearRect(0, 0, cols, rows);
+    if (history.length < 1) return;
+    const min = Math.min(...history) * .97, max = Math.max(...history) * 1.01;
+    history.forEach((v, i) => {
+      const h = Math.max(1, Math.round((v - min) / Math.max(1, max - min) * rows));
+      const x = cols - history.length + i;
+      hx.fillStyle = i === history.length - 1 ? '#ffd84a' : '#5fbf3a';
+      hx.fillRect(x, rows - h, 1, h);
+    });
+  }
+
+  // ---------- leaderboard (with smooth reordering) ----------
+  const rowsEl = document.getElementById('rows');
+  const rowEls = {};
+  function render() {
+    const before = {};
+    for (const k in rowEls) before[k] = rowEls[k].getBoundingClientRect().top;
+    const sorted = [...state].sort((a, b) => (b.online ? b.players : -1) - (a.online ? a.players : -1));
+    const max = Math.max(1, ...sorted.map(s => s.online ? s.players : 0));
+
+    sorted.forEach((s, i) => {
+      let li = rowEls[s.key];
+      if (!li) {
+        li = document.createElement('li'); li.className = 'row panel';
+        li.innerHTML = '<span class="bar"></span><span class="rank"></span><img alt=""><span class="name"></span><span class="n"></span><span class="d"></span>';
+        rowEls[s.key] = li;
+      }
+      li.classList.toggle('offline', !s.online);
+      li.querySelector('.rank').textContent = i + 1;
+      li.querySelector('img').src = s.icon || blockIcon(s);
+      const name = li.querySelector('.name');
+      name.textContent = s.name;
+      const tag = document.createElement('span'); tag.className = 'ed ' + s.ed; tag.textContent = s.ed === 'java' ? 'JAVA' : 'BEDROCK';
+      name.append(tag);
+      li.querySelector('.n').textContent = s.online ? fmt(s.players) : 'offline';
+      li.querySelector('.bar').style.width = (s.online ? s.players / max * 100 : 0) + '%';
+      const d = li.querySelector('.d'), diff = s.online && s.prev != null ? s.players - s.prev : 0;
+      d.className = 'd ' + (diff > 0 ? 'up' : diff < 0 ? 'down' : '');
+      d.textContent = diff > 0 ? '▲' + fmt(diff) : diff < 0 ? '▼' + fmt(-diff) : '';
+      rowsEl.appendChild(li);
+    });
+
+    for (const k in rowEls) {
+      if (before[k] == null) continue;
+      const dy = before[k] - rowEls[k].getBoundingClientRect().top;
+      if (dy) rowEls[k].animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 900, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    }
+  }
+
+  // ---------- facts ----------
+  const FACTS = [
+    'Minecraft is the best-selling video game of all time, with more than 300 million copies sold.',
+    'A full Minecraft day, from sunrise to sunrise, lasts 20 real-world minutes. Watch the sky on this screen!',
+    'The Creeper was created by accident, when a pig model was made tall instead of long.',
+    'Every Minecraft world is split into chunks that are 16 blocks wide and 16 blocks long.',
+    'Most blocks and items stack up to 64, which is 2 to the power of 6.',
+    'Since update 1.18, the Overworld goes from Y = -64 all the way up to Y = 320.',
+    'Java Edition runs on computers; Bedrock Edition runs on consoles, phones, tablets and Windows.',
+    'Minecraft was first released publicly in 2009 and officially launched in November 2011.'
+  ];
+  const factEl = document.getElementById('fact');
+  let factIdx = Math.floor(Math.random() * FACTS.length);
+  function nextFact() {
+    factEl.classList.add('fade');
+    setTimeout(() => {
+      factIdx = (factIdx + 1) % FACTS.length;
+      factEl.innerHTML = '<b>Did you know?</b>';
+      factEl.append(FACTS[factIdx]);
+      factEl.classList.remove('fade');
+    }, 600);
+  }
+
+  const clock = document.getElementById('clock');
+  const tickClock = () => clock.textContent = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+
+  new ResizeObserver(() => { sizeSky(); drawSky(); }).observe(sky);
+  sizeSky(); drawSky(); tickClock(); nextFact(); drawHist();
+  poll();
+  setInterval(poll, 60000);
+  setInterval(drawSky, 250);
+  setInterval(tickClock, 5000);
+  setInterval(nextFact, 15000);
+})();
+</script>
+</body>
+</html>
