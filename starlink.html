@@ -6,22 +6,22 @@
 <title>STARLINK // LIVE ORBITAL DISPLAY</title>
 <style>
   :root{
-    --bg-deep:#070304;
-    --bg-mid:#12060a;
-    --red-core:#ff3b30;
-    --red-hot:#ff6f61;
-    --red-dim:#7e2a26;
-    --land:#4d3236;
-    --grid:rgba(255,90,80,.07);
-    --text-hi:#ffd9d3;
-    --text-mid:#b07a74;
-    --text-lo:#6e4a48;
-    --rule:rgba(255,90,80,.16);
+    --bg-deep:#e9ecf0;
+    --bg-mid:#ffffff;
+    --red-core:#d92d20;
+    --red-hot:#c4281c;
+    --red-dim:#f0a59c;
+    --land:#8a929c;
+    --grid:rgba(30,40,60,.08);
+    --text-hi:#1f2328;
+    --text-mid:#424a53;
+    --text-lo:#6e7781;
+    --rule:rgba(217,45,32,.25);
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%;overflow:hidden}
   body{
-    background:radial-gradient(120% 65% at 50% 42%, var(--bg-mid) 0%, var(--bg-deep) 62%, #030102 100%);
+    background:radial-gradient(120% 65% at 50% 42%, var(--bg-mid) 0%, var(--bg-deep) 75%);
     color:var(--text-hi);
     font-family:"JetBrains Mono","Cascadia Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace;
     display:flex;flex-direction:column;
@@ -44,7 +44,7 @@
   .beacon{width:7px;height:7px;border-radius:50%;background:var(--red-core);box-shadow:0 0 8px var(--red-core);animation:pulse 1.6s ease-in-out infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
   .sitelink{margin-top:2px}
-  .sitedot{width:7px;height:7px;border-radius:50%;background:transparent;border:1.5px solid var(--red-hot);box-shadow:0 0 6px rgba(255,111,97,.6)}
+  .sitedot{width:7px;height:7px;border-radius:50%;background:transparent;border:1.5px solid var(--red-hot);box-shadow:0 0 6px rgba(217,45,32,.4)}
   .count{color:var(--red-hot);font-weight:700;font-variant-numeric:tabular-nums}
   .mode{padding:1px 7px;border:1px solid var(--rule);border-radius:2px;font-size:.85em;color:var(--text-lo)}
   .mode.live{color:var(--red-hot);border-color:var(--red-dim)}
@@ -293,12 +293,12 @@ function makeSprite(size, core, glow){
   g.fillRect(0,0,px,px);
   return s;
 }
-const spriteFront = makeSprite(7, '#ffe4e0', 'rgba(255,79,64,.85)');
-const spriteLink  = makeSprite(11, '#ffffff', 'rgba(255,150,120,.95)');
-const spriteBack  = makeSprite(5, 'rgba(160,45,40,.55)', 'rgba(120,30,26,.28)');
+const spriteFront = makeSprite(7, '#c4281c', 'rgba(229,57,43,.7)');
+const spriteLink  = makeSprite(11, '#8f140b', 'rgba(229,57,43,.9)');
+const spriteBack  = makeSprite(5, 'rgba(217,45,32,.35)', 'rgba(217,45,32,.15)');
 
 /* ---- render ---- */
-let lastFrame = performance.now();
+let lastFrame = performance.now(), lastHud = 0;
 function frame(){
   const nowP = performance.now();
   const dt = Math.min(100, nowP-lastFrame)/1000;
@@ -314,26 +314,31 @@ function frame(){
 
   ctx.clearRect(0,0,W,H);
 
+  // mascot satellite: back half of its orbit is drawn before the globe, front half after
+  const orb = mascotOrbit(nowP);
+  drawOrbitPath(false);
+  if(orb.z < 0) drawMascot(orb, nowP);
+
   const sT=Math.sin(tilt), cT=Math.cos(tilt);
   const sR=Math.sin(rotX), cR=Math.cos(rotX);
 
   // limb glow + sphere shading
   let g = ctx.createRadialGradient(CX,CY,R*0.55,CX,CY,R*1.18);
   g.addColorStop(0,'rgba(0,0,0,0)');
-  g.addColorStop(0.82,'rgba(255,60,48,0.05)');
-  g.addColorStop(0.92,'rgba(255,70,55,0.10)');
-  g.addColorStop(1,'rgba(255,70,55,0)');
+  g.addColorStop(0.82,'rgba(217,45,32,0.04)');
+  g.addColorStop(0.92,'rgba(217,45,32,0.08)');
+  g.addColorStop(1,'rgba(217,45,32,0)');
   ctx.fillStyle=g; ctx.fillRect(CX-R*1.3,CY-R*1.3,R*2.6,R*2.6);
 
   g = ctx.createRadialGradient(CX-R*0.25,CY-R*0.3,R*0.1,CX,CY,R);
-  g.addColorStop(0,'#1c0d10');
-  g.addColorStop(0.75,'#120709');
-  g.addColorStop(1,'#0c0406');
+  g.addColorStop(0,'#ffffff');
+  g.addColorStop(0.75,'#eef1f5');
+  g.addColorStop(1,'#d5dbe2');
   ctx.beginPath(); ctx.arc(CX,CY,R,0,7); ctx.fillStyle=g; ctx.fill();
-  ctx.strokeStyle='rgba(255,90,75,.22)'; ctx.lineWidth=1; ctx.stroke();
+  ctx.strokeStyle='rgba(217,45,32,.25)'; ctx.lineWidth=1; ctx.stroke();
 
   // graticule
-  ctx.strokeStyle = 'rgba(255,90,80,.06)';
+  ctx.strokeStyle = 'rgba(30,40,60,.08)';
   ctx.lineWidth = 1;
   for(let latd=-60; latd<=60; latd+=30){
     ctx.beginPath();
@@ -368,7 +373,7 @@ function frame(){
   const siteVisible = sitePt[2] > 0.02;
 
   // land stipple (visible hemisphere)
-  ctx.fillStyle = '#503438';
+  ctx.fillStyle = '#7d8691';
   for(let i=0;i<NL;i++){
     const x=landV[i*3], y=landV[i*3+1], z=landV[i*3+2];
     const x1 =  x*cR - z*sR;
@@ -385,7 +390,7 @@ function frame(){
 
   // link lines from Boneo to connected satellites
   if(siteVisible){
-    ctx.strokeStyle = 'rgba(255,120,95,.30)';
+    ctx.strokeStyle = 'rgba(217,45,32,.35)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     for(let i=0;i<front.length;i+=3){
@@ -407,22 +412,93 @@ function frame(){
   if(siteVisible){
     const t2 = nowP/1000;
     const ringR = 5 + 3.5*(0.5+0.5*Math.sin(t2*2.4));
-    ctx.strokeStyle = 'rgba(255,180,160,.9)';
+    ctx.strokeStyle = 'rgba(143,20,11,.9)';
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(sitePt[0], sitePt[1], 3, 0, 7); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,120,95,'+(0.7-0.5*((ringR-5)/3.5)).toFixed(2)+')';
+    ctx.strokeStyle = 'rgba(217,45,32,'+(0.7-0.5*((ringR-5)/3.5)).toFixed(2)+')';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(sitePt[0], sitePt[1], ringR, 0, 7); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,217,211,.95)';
+    ctx.fillStyle = 'rgba(31,35,40,.95)';
     ctx.font = '600 10px ui-monospace,Menlo,Consolas,monospace';
     ctx.textAlign = 'left';
     ctx.fillText('BONEO', sitePt[0]+11, sitePt[1]+3);
   }
 
+  drawOrbitPath(true);
+  if(orb.z >= 0) drawMascot(orb, nowP);
+
   // HUD updates ~2Hz
-  if((nowP|0) % 500 < 17) hud(now);
+  if(nowP - lastHud >= 500){ lastHud = nowP; hud(now); }
 
   requestAnimationFrame(frame);
+}
+
+/* ---- mascot: a little Starlink satellite circling the globe ---- */
+const ORBIT_PERIOD = 42;          // seconds per lap
+const ORBIT_TILT = 0.38;          // how much the orbit ellipse leans
+function orbitPoint(phi){
+  const ro = Math.min(R*1.3, W*0.46);
+  return {x: CX + Math.cos(phi)*ro, y: CY - Math.sin(phi)*ro*ORBIT_TILT + Math.cos(phi)*ro*0.12, z: Math.sin(phi)};
+}
+function mascotOrbit(t){
+  const phi = (reduceMotion ? 0.6 : t/1000/ORBIT_PERIOD*2*Math.PI) % (2*Math.PI);
+  const p = orbitPoint(phi), q = orbitPoint(phi + 0.01);
+  return {...p, phi, ang: Math.atan2(q.y - p.y, q.x - p.x)};
+}
+function drawOrbitPath(front){
+  ctx.save();
+  ctx.setLineDash([3, 6]);
+  ctx.strokeStyle = 'rgba(217,45,32,.28)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  let started = false;
+  for(let i=0;i<=120;i++){
+    const p = orbitPoint(i/120*2*Math.PI);
+    const show = front ? p.z >= 0 : p.z < 0;
+    // the far side is hidden where it passes behind the earth
+    if(show && (front || Math.hypot(p.x-CX, p.y-CY) > R)){ if(!started){ ctx.moveTo(p.x,p.y); started=true; } else ctx.lineTo(p.x,p.y); }
+    else started = false;
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+function drawMascot(o, t){
+  if(o.z < 0 && Math.hypot(o.x-CX, o.y-CY) < R) return;   // behind the earth
+  const s = R/140 * (0.8 + 0.25*o.z);
+  // fading trail
+  for(let k=1;k<=10;k++){
+    const p = orbitPoint(o.phi - k*0.025);
+    if(p.z < 0 && Math.hypot(p.x-CX, p.y-CY) < R) continue;
+    ctx.fillStyle = 'rgba(217,45,32,'+(0.35*(1-k/10)).toFixed(2)+')';
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.2*s*(1-k/14), 0, 7); ctx.fill();
+  }
+  ctx.save();
+  ctx.translate(o.x, o.y);
+  ctx.rotate(o.ang);
+  ctx.scale(s, s);
+  ctx.globalAlpha = o.z < 0 ? 0.55 : 1;
+  // solar array on a boom, trailing behind the flat chassis
+  ctx.strokeStyle = '#59616b'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-8,0); ctx.lineTo(-16,0); ctx.stroke();
+  ctx.fillStyle = '#24477a';
+  ctx.fillRect(-64, -7, 48, 14);
+  ctx.strokeStyle = 'rgba(160,190,235,.7)'; ctx.lineWidth = .8;
+  ctx.beginPath();
+  for(let x=-58; x<-16; x+=6){ ctx.moveTo(x,-7); ctx.lineTo(x,7); }
+  ctx.moveTo(-64,0); ctx.lineTo(-16,0);
+  ctx.stroke();
+  // glint sweeping across the panel
+  const gx = -64 + ((t/1000*18) % 70);
+  if(gx < -16){ ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(gx, -7, 3, 14); }
+  // chassis
+  ctx.fillStyle = '#3a3f47';
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-8, -6, 22, 12, 2) : ctx.rect(-8, -6, 22, 12); ctx.fill();
+  ctx.fillStyle = '#d0d6dd'; ctx.fillRect(-6, -4.5, 18, 2);
+  // blinking nav light
+  if(((t/700)|0) % 2 === 0){
+    ctx.fillStyle = '#ff3b30';
+    ctx.beginPath(); ctx.arc(14, 0, 2.2, 0, 7); ctx.fill();
+  }
+  ctx.restore();
 }
 
 function project(lat,lon,rr,sT,cT,sR,cR){
@@ -453,26 +529,43 @@ const SOURCES = [
   'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle',
   'https://celestrak.com/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle'
 ];
+/* the full catalogue is ~1.6 MB, so it's pulled once a day and kept in the browser */
+const DAY = 864e5, RETRY = 36e5, KEY = 'starlink-tle-v1';
+let fetchedAt = 0, retryAt = 0, acquiring = false;
+function loadCache(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; } }
+function saveCache(text){ try { localStorage.setItem(KEY, JSON.stringify({t: fetchedAt, text})); } catch(e){} }
+
 async function acquire(){
+  acquiring = true;
+  $('mode').textContent = 'ACQUIRING';
   for(const url of SOURCES){
     try{
       const res = await fetch(url, {mode:'cors'});
       if(!res.ok) continue;
       const text = await res.text();
       ingestTLE(text);
+      fetchedAt = Date.now(); saveCache(text);
+      acquiring = false;
       return;
     }catch(e){ /* next source */ }
   }
-  buildSim();
+  acquiring = false;
+  retryAt = Date.now() + RETRY;
+  if(!live) buildSim();
 }
 
-buildSim();            // instant picture while fetching
-$('mode').textContent = 'ACQUIRING';
-acquire();
+buildSim();            // instant picture while loading
+const cached = loadCache();
+if(cached && cached.text){
+  try { ingestTLE(cached.text); fetchedAt = cached.t; $('mode').textContent = 'LIVE TLE · CACHED'; } catch(e){}
+}
+if(Date.now() - fetchedAt >= DAY) acquire();
 requestAnimationFrame(frame);
 
-/* refresh TLEs every 2h while left running */
-setInterval(()=>{ if(navigator.onLine) acquire(); }, 2*3600*1000);
+/* no network here: once a minute, check whether a day has passed since the last pull */
+setInterval(()=>{
+  if(!acquiring && navigator.onLine && Date.now() - fetchedAt >= DAY && Date.now() >= retryAt) acquire();
+}, 60000);
 })();
 </script>
 </body>
