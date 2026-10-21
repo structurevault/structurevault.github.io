@@ -6,20 +6,20 @@
 <title>GITHUB // DAILY PULSE</title>
 <style>
   :root{
-    --bg-deep:#010409;
-    --bg-mid:#0d1117;
-    --panel:#161b22;
-    --green:#39d353;
-    --green-dim:#1f6f32;
-    --blue:#58a6ff;
-    --amber:#d29922;
-    --red:#f85149;
-    --text-hi:#f0f6fc;
-    --text-mid:#9198a1;
-    --text-lo:#5d6570;
-    --rule:rgba(57,211,83,.22);
-    --cat:#2a313c;
-    --glow:rgba(57,211,83,.55);
+    --bg-deep:#eef2f5;
+    --bg-mid:#ffffff;
+    --panel:#e6eaef;
+    --green:#1a7f37;
+    --green-dim:#4ac26b;
+    --blue:#0969da;
+    --amber:#9a6700;
+    --red:#cf222e;
+    --text-hi:#1f2328;
+    --text-mid:#424a53;
+    --text-lo:#6e7781;
+    --rule:rgba(26,127,55,.3);
+    --cat:#24292f;
+    --glow:rgba(26,127,55,.35);
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%;overflow:hidden}
@@ -50,7 +50,7 @@
   .bubble{
     flex:0 0 auto;position:relative;max-width:88%;text-align:center;
     padding:clamp(8px,1.2vh,16px) clamp(14px,2vh,26px);
-    border:1px solid var(--rule);border-radius:14px;background:rgba(22,27,34,.85);
+    border:1px solid var(--rule);border-radius:14px;background:#ffffff;box-shadow:0 4px 18px rgba(31,35,40,.08);
     font-size:clamp(13px,2vh,26px);font-weight:600;letter-spacing:.04em;
   }
   .bubble::after{content:"";position:absolute;left:50%;bottom:-9px;width:16px;height:16px;transform:translateX(-50%) rotate(45deg);
@@ -68,8 +68,8 @@
   @keyframes sway{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
   #cat .mouth{display:none}
   #cat.happy .m-happy,#cat.meh .m-meh,#cat.sad .m-sad{display:inline}
-  body.minor{--glow:rgba(210,153,34,.6);--rule:rgba(210,153,34,.3)}
-  body.major{--glow:rgba(248,81,73,.65);--rule:rgba(248,81,73,.35)}
+  body.minor{--glow:rgba(154,103,0,.45);--rule:rgba(154,103,0,.35)}
+  body.major{--glow:rgba(207,34,46,.5);--rule:rgba(207,34,46,.4)}
 
   /* sections */
   section{padding-top:clamp(8px,1.5vh,20px)}
@@ -92,9 +92,9 @@
   .cell .d.up{color:var(--green)} .cell .d.dn{color:var(--amber)}
 
   .bars{display:flex;align-items:flex-end;gap:clamp(2px,.3vh,5px);height:clamp(40px,6vh,120px)}
-  .bars i{flex:1 1 0;display:block;min-height:2px;border-radius:2px 2px 0 0;background:#0e4429}
-  .bars i.we{background:#06301c}
-  .bars i.last{background:var(--green);box-shadow:0 0 8px rgba(57,211,83,.5)}
+  .bars i{flex:1 1 0;display:block;min-height:2px;border-radius:2px 2px 0 0;background:#40c463}
+  .bars i.we{background:#9be9a8}
+  .bars i.last{background:#216e39}
   .barfoot{display:flex;justify-content:space-between;font-size:clamp(8px,1vh,11px);color:var(--text-lo);letter-spacing:.14em;margin-top:5px}
 
   .langbar{display:flex;height:clamp(6px,.9vh,12px);border-radius:6px;overflow:hidden;background:var(--panel)}
@@ -389,8 +389,8 @@
       const L = Object.entries(state.langs.counts).sort((a, b) => b[1] - a[1]);
       const rest = Math.max(0, total - L.reduce((a, l) => a + l[1], 0));
       const all = [...L, ['Other / none', rest]];
-      $('langbar').innerHTML = all.map(([n, c]) => `<span style="width:${c/total*100}%;background:${LANG[n] || '#30363d'}"></span>`).join('');
-      $('langkey').innerHTML = all.map(([n, c]) => `<span><b style="background:${LANG[n] || '#30363d'}"></b>${esc(n)} ${(c/total*100).toFixed(c/total < .1 ? 1 : 0)}%</span>`).join('');
+      $('langbar').innerHTML = all.map(([n, c]) => `<span style="width:${c/total*100}%;background:${LANG[n] || '#d0d7de'}"></span>`).join('');
+      $('langkey').innerHTML = all.map(([n, c]) => `<span><b style="background:${LANG[n] || '#d0d7de'}"></b>${esc(n)} ${(c/total*100).toFixed(c/total < .1 ? 1 : 0)}%</span>`).join('');
       $('langsum').textContent = `of ${fmt(total)}`;
     }
 
