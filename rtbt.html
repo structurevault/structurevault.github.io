@@ -301,6 +301,12 @@
   }
   .qloot { font-weight: 700; font-size: clamp(15px, 1.6vw, 32px); color: var(--bright); }
   .qsub { color: var(--muted); font-size: clamp(10px, .8vw, 15px); }
+  .qnote {
+    color: var(--gold);
+    font-size: clamp(10px, .85vw, 16px);
+    font-family: "Silkscreen", monospace;
+    margin-top: 2px;
+  }
 
   .mini { display: inline-block; width: 1.1em; height: .95em; vertical-align: -.1em; margin-right: .25em; }
   .mini svg { width: 100%; height: 100%; display: block; overflow: visible; }
@@ -388,10 +394,12 @@ var CONFIG = {
   /* TREASURE: every version from treasureFrom onward has a hidden treasure.
      Update thisWeek + add the treasure each week. */
   treasureFrom: "V1.2",
-  thisWeek: "V1.2",
+  thisWeek: "V1.3",
   treasures: {
-    "V1.2": "an IP address"
-  }
+    "V1.2": "an IP address",
+    "V1.3": "a port number"
+  },
+  sideNote: "DMZ available for testing"
 };
 
 function verKey(s) { return shortLabel(s).toUpperCase(); }
@@ -562,6 +570,7 @@ function renderRail(data) {
         '<div class="qloot">Treasure: ' + (loot ? esc(loot) : "hidden") + "</div>" +
         (t.start >= 0 ? '<div class="qsub">Every version from ' + esc(shortLabel(data.milestones[t.start])) +
           " on has a treasure</div>" : "") +
+        (CONFIG.sideNote ? '<div class="qnote">' + esc(CONFIG.sideNote) + "</div>" : "") +
       "</div>";
     quest.style.display = "";
   } else {
