@@ -50,11 +50,11 @@ changePorts();
 const raids=document.getElementById('raids'),gates={1:document.querySelector('.left-gate'),2:document.querySelector('.right-gate')};
 const TEAMS={red:{color:'#c65e4e',dir:1,ring:'.red-arrival',over:'M200 273H920',under:'M200 273C265 273 250 418 330 418H790C870 418 855 273 920 273'},blue:{color:'#4e7fc4',dir:-1,ring:'.blue-arrival',over:'M920 273H200',under:'M920 273C855 273 870 418 790 418H330C250 418 265 273 200 273'}};
 const OVER_MS=3600,UNDER_MS=6700,FOLLOW_MS=300;let raidTimer=null,active=[];
-function raidShape(team,route,lead){const t=TEAMS[team],trail=lead?`<path class="trail" d="M${-22*(route==='under'?1:t.dir)} 0H${-10*(route==='under'?1:t.dir)}"/>`:'';return route==='over'?trail+`<rect class="token" x="${lead?-10:-9}" y="${lead?-8:-7}" width="${lead?20:18}" height="${lead?16:14}" rx="4"/><path d="M-5 0l4 4 6-7" fill="none" stroke="white" stroke-width="2"/>`:trail+(lead?'<path class="token" d="M0-8l10 8-10 8-10-8z"/><path d="M0-4v5m0 2v1" stroke="white" stroke-width="2"/>':'<path class="token" d="M0-7l9 7-9 7-9-7z"/>')}
+function raidShape(team,route,lead){const t=TEAMS[team],trail=lead?`<path class="trail" d="M${-22*t.dir} 0H${-10*t.dir}"/>`:'';return route==='over'?trail+`<rect class="token" x="${lead?-10:-9}" y="${lead?-8:-7}" width="${lead?20:18}" height="${lead?16:14}" rx="4"/><path d="M-5 0l4 4 6-7" fill="none" stroke="white" stroke-width="2"/>`:trail+(lead?'<path class="token" d="M0-8l10 8-10 8-10-8z"/><path d="M0-4v5m0 2v1" stroke="white" stroke-width="2"/>':'<path class="token" d="M0-7l9 7-9 7-9-7z"/>')}
 function launch(team,route){const t=TEAMS[team],ms=route==='over'?OVER_MS:UNDER_MS;
 for(const lead of [true,false]){const g=document.createElementNS('http://www.w3.org/2000/svg','g');g.setAttribute('class','raid');g.style.color=t.color;g.style.offsetPath=`path('${t[route]}')`;
 // Underground packets follow the curve; flip blue's so its "!" stays upright.
-g.style.offsetRotate=route==='over'?'0deg':(t.dir>0?'auto':'reverse');if(route==='under'&&t.dir<0)g.style.transform='scaleX(-1)';
+g.style.offsetRotate=route==='over'?'0deg':(t.dir>0?'auto':'reverse');
 g.innerHTML=raidShape(team,route,lead);raids.appendChild(g);
 const a=g.animate([{offsetDistance:'0%',opacity:1},{offsetDistance:'100%',opacity:1}],{duration:ms,delay:lead?0:FOLLOW_MS,easing:'linear'});
 const entry={a,team,route};active.push(entry);
