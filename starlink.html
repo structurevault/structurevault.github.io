@@ -6,16 +6,16 @@
 <title>STARLINK // LIVE ORBITAL DISPLAY</title>
 <style>
   :root{
-    --bg-deep:#e9ecf0;
-    --bg-mid:#ffffff;
+    --bg-deep:#6f9fe0;
+    --bg-mid:#c2dafa;
     --red-core:#d92d20;
     --red-hot:#c4281c;
     --red-dim:#f0a59c;
     --land:#8a929c;
     --grid:rgba(30,40,60,.08);
     --text-hi:#1f2328;
-    --text-mid:#424a53;
-    --text-lo:#6e7781;
+    --text-mid:#1f2833;
+    --text-lo:#2c3644;
     --rule:rgba(217,45,32,.25);
   }
   *{margin:0;padding:0;box-sizing:border-box}
@@ -43,7 +43,7 @@
   .statusline{display:flex;align-items:center;gap:10px;font-size:clamp(10px,1.4vh,13px);letter-spacing:.14em;color:var(--text-mid)}
   .beacon{width:7px;height:7px;border-radius:50%;background:var(--red-core);box-shadow:0 0 8px var(--red-core);animation:pulse 1.6s ease-in-out infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-  .sitelink{margin-top:2px}
+  .sitelink{margin-top:2px;font-size:clamp(12px,1.8vh,16px);font-weight:600;color:var(--text-hi)}
   .sitedot{width:7px;height:7px;border-radius:50%;background:transparent;border:1.5px solid var(--red-hot);box-shadow:0 0 6px rgba(217,45,32,.4)}
   .count{color:var(--red-hot);font-weight:700;font-variant-numeric:tabular-nums}
   .mode{padding:1px 7px;border:1px solid var(--rule);border-radius:2px;font-size:.85em;color:var(--text-lo)}
@@ -418,10 +418,14 @@ function frame(){
     ctx.strokeStyle = 'rgba(217,45,32,'+(0.7-0.5*((ringR-5)/3.5)).toFixed(2)+')';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(sitePt[0], sitePt[1], ringR, 0, 7); ctx.stroke();
-    ctx.fillStyle = 'rgba(31,35,40,.95)';
-    ctx.font = '600 10px ui-monospace,Menlo,Consolas,monospace';
+    ctx.font = '700 15px ui-monospace,Menlo,Consolas,monospace';
     ctx.textAlign = 'left';
-    ctx.fillText('BONEO', sitePt[0]+11, sitePt[1]+3);
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(255,255,255,.9)';  // halo so the label reads over the dots
+    ctx.strokeText('BONEO', sitePt[0]+14, sitePt[1]+5);
+    ctx.fillStyle = '#14181d';
+    ctx.fillText('BONEO', sitePt[0]+14, sitePt[1]+5);
   }
 
   drawOrbitPath(true);
