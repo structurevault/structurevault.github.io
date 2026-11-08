@@ -1,0 +1,269 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Bitcoin — Live Mempool Network</title><style>
+:root{font-family:ui-rounded,system-ui,-apple-system,Segoe UI,sans-serif;color:#fff;background:#160b02}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;touch-action:none}
+#viewport{position:fixed;inset:0;overflow:hidden;touch-action:none;background:radial-gradient(ellipse at 50% 38%,#5a2e07,#170b02 76%)}
+#world{position:absolute;width:1900px;height:1050px;transform-origin:0 0;will-change:transform}
+.heading{position:absolute;top:26px;left:0;width:1900px;text-align:center;pointer-events:none;z-index:4}.heading h1{font-size:64px;letter-spacing:-3px;margin:0;font-weight:950}.heading h1 span{color:#ffb54d}.heading p{font-size:24px;margin:4px;color:#ffd9a8}
+.coin{height:66px;width:66px;vertical-align:middle;filter:drop-shadow(0 0 14px #ff9d1c)}
+.panel{position:absolute;z-index:4;border:2px solid #c9771c;background:linear-gradient(150deg,#6b3a0ce8,#3a1c05e8);border-radius:32px;box-shadow:0 20px 60px #0a0400aa,inset 0 1px #ffffff20;padding:18px;text-align:center}
+.panel p{font-size:19px;color:#ffe6c6;margin:7px 0}
+.red-team{border-color:#fa526f;background:linear-gradient(150deg,#672037ed,#3a1c05e8);box-shadow:0 20px 60px #0a040077,0 0 34px #ff36502c}
+.blue-team{border-color:#46a8ff;background:linear-gradient(150deg,#173e7bed,#3a1c05e8);box-shadow:0 20px 60px #0a040077,0 0 34px #3199ff2c}
+.teamlabel{display:inline-block;padding:7px 18px;margin:0 0 7px;border-radius:30px;font-size:22px;font-weight:950;letter-spacing:1px}
+.red-team .teamlabel{background:#c52346}.blue-team .teamlabel{background:#1269c5}
+.buddy{display:block;height:130px;cursor:pointer;animation:bob 3s ease-in-out infinite}.buddy svg{height:130px;width:130px;overflow:visible}.buddy.b2{animation-delay:-1.3s}
+.red-team .buddy{filter:drop-shadow(0 9px 9px #ef466a88)}.blue-team .buddy{filter:drop-shadow(0 9px 9px #398cff88)}
+.name{font-weight:900;font-size:30px}
+.pill{display:inline-block;background:#1f5fb0;color:white;border:1px solid #a5d7ff;border-radius:40px;padding:8px 18px;font-size:18px;font-weight:800;margin:7px 3px}
+.keycard{display:inline-block;border:2px solid #f0a54a;border-radius:16px;padding:10px 13px;font-size:18px;margin:6px 3px;cursor:pointer;touch-action:manipulation;background:#7a420f;font-weight:800}
+.keycard.secretkey{background:#742362;border-color:#ef9bd8}
+.keycard em{font-size:14px;display:block;font-style:normal;color:#ffe3c2;margin-top:3px}
+.keyexample{display:block;font:700 13px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;max-width:265px;margin:6px auto 2px;padding:7px;border-radius:10px;background:#2b1503;border:1px solid #d88b34;color:#fff1de}
+.keycard.secretkey .keyexample{background:#3b143a;border-color:#e7a0d4}
+.action{border:2px solid #ffb4c3;background:#cb3454;color:white;border-radius:22px;padding:14px 22px;font-weight:900;font-size:22px;cursor:pointer;box-shadow:0 7px 0 #76152d;touch-action:manipulation}
+.action:active{transform:translateY(5px);box-shadow:0 2px 0 #76152d}
+.blue-team .action{background:#277ad7;box-shadow:0 7px 0 #12457c;border-color:#a5d7ff}
+.smallaction{font-size:18px;padding:10px 15px}
+.feepick{display:flex;gap:6px;justify-content:center;margin:8px 0 12px}
+.feepick button{flex:1;border:2px solid #f0a54a;background:#4a2607;color:#ffe6c6;border-radius:14px;padding:7px 4px;font-weight:850;font-size:15px;cursor:pointer;line-height:1.2;touch-action:manipulation}
+.feepick button b{display:block;font-size:20px}
+.feepick button.on{background:#f7931a;color:#2a1300;border-color:#ffe0b0;box-shadow:0 0 18px #f7931a99}
+.feelabel{font-size:16px;color:#ffd9a8;font-weight:800;margin-top:6px}
+
+/* blocks strip */
+.block{position:absolute;z-index:3;width:115px;height:115px;border-radius:6px;padding:8px 6px;text-align:center;font-weight:800;cursor:pointer;transition:left .9s cubic-bezier(.4,1.4,.5,1),box-shadow .3s;overflow:visible}
+.block::before{content:'';position:absolute;left:8px;right:-8px;top:-10px;height:10px;transform:skewX(-40deg);background:inherit;filter:brightness(1.35);border-radius:3px 3px 0 0}
+.block::after{content:'';position:absolute;right:-10px;top:-5px;bottom:5px;width:10px;transform:skewY(-50deg);background:inherit;filter:brightness(.7);border-radius:0 3px 3px 0}
+.block.pending{background:linear-gradient(0deg,#7a3bd4 var(--fill,60%),#3c2370 var(--fill,60%))}
+.block.mined{background:linear-gradient(160deg,#f7a43a,#b85d0a)}
+.block .big{font-size:20px;display:block}.block .sm{font-size:13px;display:block;color:#fff1de;opacity:.92;margin-top:2px}.block .tiny{font-size:12px;display:block;opacity:.8}
+.block.flash{box-shadow:0 0 0 6px #ffe0a855,0 0 60px #ffb54d}
+.block.picked{box-shadow:0 0 0 6px #ff7d9555,0 0 60px #ff4d6d}
+.blocklabel{position:absolute;z-index:3;top:350px;font-size:17px;font-weight:850;color:#ffcf8f;width:400px;text-align:center;pointer-events:none}
+.divider{position:absolute;z-index:3;left:948px;top:200px;width:4px;height:150px;background:repeating-linear-gradient(#ffcf8f 0 8px,transparent 8px 16px);opacity:.7}
+
+/* the pool */
+#pool{position:absolute;z-index:2;left:425px;top:388px;width:1050px;height:412px;border-radius:40px;border:3px solid #f0a54a;background:radial-gradient(ellipse at 50% 120%,#a5560fcc,#45230580 70%),linear-gradient(#3a1d05cc,#1e0e02cc);box-shadow:inset 0 0 60px #0008,0 0 50px #f7931a33;cursor:pointer}
+#pool .pooltitle{position:absolute;left:24px;top:14px;font-size:26px;font-weight:950;letter-spacing:.5px;pointer-events:none}
+#pool .poolsub{position:absolute;left:24px;top:48px;font-size:16px;color:#ffd9a8;pointer-events:none}
+#live{position:absolute;right:22px;top:16px;font-size:16px;font-weight:900;padding:6px 14px;border-radius:30px;background:#2b1503;border:1px solid #d88b34;pointer-events:none}
+#live i{display:inline-block;width:11px;height:11px;border-radius:50%;background:#999;margin-right:7px;vertical-align:-1px}
+#live.on i{background:#4be27a;box-shadow:0 0 10px #4be27a;animation:blink 1.4s infinite}#live.sim i{background:#ffcf4d}
+.legend{position:absolute;right:22px;top:54px;display:flex;gap:5px;font-size:13px;font-weight:800;pointer-events:none}
+.legend span{padding:3px 8px;border-radius:10px;color:#1b0c00}
+#fx{position:absolute;z-index:3;left:410px;top:190px;width:1080px;height:620px;pointer-events:none}
+
+.stats{position:absolute;z-index:4;left:425px;top:820px;width:1050px;display:flex;gap:12px}
+.stat{flex:1;background:#2b1503d9;border:2px solid #b8681a;border-radius:20px;padding:9px 6px;text-align:center}
+.stat b{display:block;font-size:27px;font-weight:950;color:#ffcf8f}.stat small{font-size:14px;color:#ffe3c2;font-weight:700}
+.stat.mono b{font:900 18px/1.6 ui-monospace,Consolas,monospace}
+
+.bubble{position:absolute;z-index:8;left:740px;top:560px;width:420px;padding:18px;border-radius:24px;background:#ffe9cc;color:#4a2300;font-size:22px;font-weight:850;text-align:center;box-shadow:0 10px 32px #0006;opacity:0;transition:opacity .25s;pointer-events:none}
+.bubble.show{opacity:1}.bubble a{color:#b04a00;pointer-events:auto}
+.packet{position:absolute;z-index:7;background:#ffd79e;border:3px solid white;color:#4a2300;border-radius:20px;padding:10px 16px;font-size:23px;font-weight:900;box-shadow:0 0 45px #ffb54d;pointer-events:none;opacity:0;transform:translate(-50%,-50%);white-space:nowrap}
+.packet.visible{opacity:1}
+.banner{position:absolute;z-index:5;top:912px;left:425px;width:1050px;text-align:center;font-size:24px;font-weight:850;min-height:40px;color:#fff1de}
+.hint{position:absolute;z-index:5;top:995px;width:1900px;text-align:center;color:#ffcf8f;font-size:19px;pointer-events:none}
+.line{position:absolute;inset:0;pointer-events:none;z-index:1}
+.line path{fill:none;stroke:#f7931a;stroke-width:4;opacity:.4;stroke-linecap:round;stroke-dasharray:9 12;animation:wireflow 1.7s linear infinite}
+.toolbar{position:fixed;bottom:16px;right:18px;display:flex;gap:9px;z-index:20;touch-action:manipulation}
+.toolbar button{border:1px solid #f0a54a;border-radius:15px;background:#4a2607e8;color:white;padding:11px 16px;font-size:19px;font-weight:800;cursor:pointer;touch-action:manipulation}
+.corner{position:fixed;left:18px;bottom:18px;color:#ffd9a8;font-size:14px;opacity:.85;pointer-events:none;max-width:60vw}
+@keyframes bob{50%{transform:translateY(-11px) rotate(2deg)}}@keyframes wireflow{to{stroke-dashoffset:-42}}@keyframes blink{50%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.line path,.buddy{animation:none}}
+</style></head><body><div id="viewport"><div id="world">
+<div class="heading"><h1><svg class="coin" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#f7931a"/><circle cx="32" cy="32" r="25" fill="none" stroke="#ffd08a" stroke-width="2"/><text x="32" y="44" text-anchor="middle" font-size="34" font-weight="900" fill="#fff" font-family="system-ui">₿</text></svg> The <span>BITCOIN</span> Mempool</h1><p>One person pays • Transactions wait in the mempool • Miners pack them into blocks</p></div>
+
+<svg class="line" width="1900" height="1050" viewBox="0 0 1900 1050"><path d="M365 560 Q400 590 440 600"/><path d="M365 420 Q420 330 425 272"/><path d="M1475 272 Q1510 340 1535 430"/><path d="M1475 600 Q1505 560 1535 520"/></svg>
+
+<div class="panel red-team" style="left:30px;top:200px;width:335px;height:720px"><div class="buddy" id="ruby"></div><div class="teamlabel">🔴 RED TEAM</div><div class="name">Ruby the Spender</div><p>Signs a payment to Blake</p>
+<div class="keycard" id="addr" role="button" tabindex="0">📬 BITCOIN ADDRESS<em>Safe to share</em><span class="keyexample">bc1qr8xk5m2v7t4w9p3s6y8z2n5c7d4f9g3h6j2k8l</span></div>
+<div class="keycard secretkey" id="priv" role="button" tabindex="0">🔐 PRIVATE KEY<em>Keep it secret!</em><span class="keyexample">L4rK9mQ2••••••••••••<br>••••••••••••••••••••<br>••••••••••8xTz</span></div>
+<div class="feelabel">Pick a fee (sats per vbyte):</div>
+<div class="feepick" id="feepick"><button data-k="low">🐢<b id="fLow">2</b>Low</button><button data-k="med" class="on">🚶<b id="fMed">5</b>Medium</button><button data-k="high">🚀<b id="fHigh">10</b>High</button></div>
+<button class="action" id="send">₿ SEND BITCOIN</button></div>
+
+<div class="divider"></div>
+<div class="blocklabel" style="left:540px">⏳ Next blocks (waiting)</div><div class="blocklabel" style="left:960px">✅ Just mined (on the chain)</div>
+<div id="blocks"></div>
+
+<div id="pool"><div class="pooltitle">🫧 THE MEMPOOL</div><div class="poolsub">Every bubble is a real transaction waiting for a miner. Bigger = more data. Tap one!</div><div id="live"><i></i><span>Connecting…</span></div>
+<div class="legend"><span style="background:#4fc97f">1–2</span><span style="background:#a6dc52">3–5</span><span style="background:#f5d04c">6–10</span><span style="background:#f7931a">11–20</span><span style="background:#f0605d">21–50</span><span style="background:#c58cf0">50+ sat/vB</span></div></div>
+<canvas id="fx" width="2160" height="1240"></canvas>
+
+<div class="stats"><div class="stat"><b id="sCount">–</b><small>transactions waiting</small></div><div class="stat"><b id="sFee">–</b><small>sat/vB to get in next block</small></div><div class="stat"><b id="sHeight">–</b><small>block height</small></div><div class="stat"><b id="sAgo">–</b><small>since last block</small></div><div class="stat mono"><b id="sLast">–</b><small>newest transaction</small></div></div>
+
+<div class="panel blue-team" style="left:1535px;top:200px;width:335px;height:600px"><div class="buddy b2" id="blake"></div><div class="teamlabel">🔵 BLUE TEAM</div><div class="name">Blake the Receiver</div><p>Waits for Ruby's bitcoin</p><div class="pill">📬 bc1qb7…m4e2</div><p id="received" style="font-weight:850;min-height:90px;font-size:21px">Waiting for a payment…</p><button class="action smallaction" id="verify">🔍 CHECK CONFIRMATIONS</button></div>
+
+<div class="bubble" id="bubble" aria-live="polite"></div><div class="packet" id="packet">₿ 0.001 → Blake</div>
+<div class="banner" id="status">Pick a fee, then tap SEND BITCOIN to follow a transaction!</div>
+<div class="hint">👆 Tap a bubble, block, key or person • Drag to move • Pinch to zoom • The mempool is LIVE from the real Bitcoin network</div>
+</div></div>
+<div class="corner">CLASSROOM DEMO • Mempool and blocks: live from mempool.space • Ruby's payment and keys are pretend • No wallet needed</div>
+<div class="toolbar"><button id="minus">−</button><button id="reset">⟲ Reset</button><button id="plus">+</button><button id="fullscreen">⛶ Full screen</button></div>
+<script>
+// ---------- helpers & characters ----------
+const $=id=>document.getElementById(id);
+function buddySVG(body,dark,light){return `<svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Coin character"><path d="M60 128 L54 150 M100 128 L106 150 M54 150 L42 153 M106 150 L118 153" stroke="${light}" stroke-width="7" stroke-linecap="round" fill="none"/><path d="M28 82 Q8 70 14 52 M132 82 Q152 70 146 52" stroke="${light}" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="80" cy="80" r="56" fill="${body}"/><circle cx="80" cy="80" r="46" fill="none" stroke="${light}" stroke-width="4" stroke-dasharray="6 7"/><circle cx="64" cy="70" r="7" fill="#1b0c00"/><circle cx="96" cy="70" r="7" fill="#1b0c00"/><circle cx="66" cy="67" r="2.4" fill="#fff"/><circle cx="98" cy="67" r="2.4" fill="#fff"/><path d="M62 94 Q80 110 98 94" stroke="#1b0c00" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="50" cy="90" r="7" fill="${dark}" opacity=".45"/><circle cx="110" cy="90" r="7" fill="${dark}" opacity=".45"/><text x="80" y="44" text-anchor="middle" font-size="22" font-weight="900" fill="${light}" font-family="system-ui">₿</text></svg>`}
+$('ruby').innerHTML=buddySVG('#e54860','#7a1026','#ffd0d7');$('blake').innerHTML=buddySVG('#3297f2','#0c3c78','#cdeeff');
+
+const vp=$('viewport'),world=$('world'),packet=$('packet'),status=$('status'),bubbleEl=$('bubble'),received=$('received');
+let scale=1,tx=0,ty=0,seq=0,timers=[],pointers=new Map(),drag=null,pinch=null;const W=1900,H=1050;
+function fit(){scale=Math.min(innerWidth/W,innerHeight/H)*.96;tx=(innerWidth-W*scale)/2;ty=(innerHeight-H*scale)/2;draw()}
+function draw(){world.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`}
+function zoom(f,x=innerWidth/2,y=innerHeight/2){let ns=Math.max(.25,Math.min(4,scale*f)),wx=(x-tx)/scale,wy=(y-ty)/scale;tx=x-wx*ns;ty=y-wy*ns;scale=ns;draw()}
+function say(html,ms=4200){bubbleEl.innerHTML=html;bubbleEl.classList.add('show');clearTimeout(say.t);say.t=setTimeout(()=>bubbleEl.classList.remove('show'),ms)}
+function wait(ms,fn){timers.push(setTimeout(fn,ms))}
+function move(a,b,duration,done){let token=seq,start=performance.now();packet.classList.add('visible');function frame(now){if(token!==seq)return;let t=Math.min(1,(now-start)/duration),e=t*t*(3-2*t);packet.style.left=(a[0]+(b[0]-a[0])*e)+'px';packet.style.top=(a[1]+(b[1]-a[1])*e)+'px';if(t<1)requestAnimationFrame(frame);else if(done)done()}requestAnimationFrame(frame)}
+const fmt=n=>n.toLocaleString('en-AU');const f1=r=>{r=+r||0;return r<10?(Math.round(r*10)/10).toString():Math.round(r).toString()};
+function feeColor(r){return r<2.5?'#4fc97f':r<5.5?'#a6dc52':r<10.5?'#f5d04c':r<20.5?'#f7931a':r<50.5?'#f0605d':'#c58cf0'}
+function ago(ts){let s=Math.max(0,Date.now()/1000-ts);if(s<60)return Math.floor(s)+' s';let m=Math.floor(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' m'}
+
+// ---------- live state ----------
+const state={pending:[],mined:[],fees:{fastestFee:10,halfHourFee:5,hourFee:3,economyFee:2},count:null,mode:'connecting'};
+const BLOCK_Y=215,DIV=950;
+function blockLeft(kind,i){return kind==='pending'?DIV-20-130*(i+1)+15:DIV+20+130*i}
+function renderBlocks(newHeight){
+ const wrap=$('blocks');const keep={};wrap.querySelectorAll('.block').forEach(b=>keep[b.dataset.key]=b);const used=new Set();
+ state.pending.slice(0,4).forEach((b,i)=>{const key='p'+i;let el=keep[key]||document.createElement('div');el.className='block pending';el.dataset.key=key;el.dataset.kind='pending';el.dataset.i=i;
+  const fill=Math.min(100,Math.round((b.blockVSize||0)/1e6*100));el.style.setProperty('--fill',fill+'%');el.style.left=blockLeft('pending',i)+'px';el.style.top=BLOCK_Y+'px';
+  const fr=b.feeRange||[];el.innerHTML=`<span class="big">~${f1(b.medianFee)}</span><span class="tiny">sat/vB</span><span class="sm">${f1(fr[0])}–${f1(fr[fr.length-1])} sat/vB</span><span class="sm">${fmt(b.nTx||0)} txs</span><span class="tiny">in ~${(i+1)*10} min</span>`;
+  if(!el.parentNode)wrap.appendChild(el);used.add(key)});
+ state.mined.slice(0,4).forEach((b,i)=>{const key='m'+b.height;let el=keep[key]||document.createElement('div');const isNew=!keep[key]&&newHeight===b.height;el.className='block mined';el.dataset.key=key;el.dataset.kind='mined';el.dataset.i=i;
+  if(isNew)el.style.left=(DIV-20-115)+'px';el.style.top=BLOCK_Y+'px';
+  el.innerHTML=`<span class="big">${fmt(b.height)}</span><span class="sm">~${f1(b.extras?.medianFee)} sat/vB</span><span class="sm">${fmt(b.tx_count||0)} txs</span><span class="tiny" data-ts="${b.timestamp}">${ago(b.timestamp)} ago</span><span class="tiny">${(b.extras?.pool?.name||'').slice(0,14)}</span>`;
+  if(!el.parentNode)wrap.appendChild(el);used.add(key);
+  if(isNew){requestAnimationFrame(()=>requestAnimationFrame(()=>{el.style.left=blockLeft('mined',i)+'px';el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),2500)}))}else el.style.left=blockLeft('mined',i)+'px'});
+ Object.entries(keep).forEach(([k,el])=>{if(!used.has(k))el.remove()});
+ if(state.mined[0]){$('sHeight').textContent=fmt(state.mined[0].height)}
+ if(state.pending[0])$('sFee').textContent='~'+f1(state.pending[0].medianFee);
+}
+function updateFees(){const f=state.fees;$('fLow').textContent=f1(f.economyFee||f.hourFee||1);$('fMed').textContent=f1(f.halfHourFee||2);$('fHigh').textContent=f1(f.fastestFee||3)}
+function setMode(m){state.mode=m;const l=$('live');l.className=m==='live'?'on':m==='sim'?'sim':'';l.querySelector('span').textContent=m==='live'?'LIVE':m==='sim'?'SIMULATED (offline)':'Connecting…'}
+setInterval(()=>{document.querySelectorAll('[data-ts]').forEach(e=>e.textContent=ago(+e.dataset.ts)+' ago');if(state.mined[0])$('sAgo').textContent=ago(state.mined[0].timestamp)},1000);
+
+// ---------- bubble pool (canvas) ----------
+const cv=$('fx'),ctx=cv.getContext('2d');const CW=1080,CH=620;ctx.scale(2,2);
+const POOL={x0:15+18,x1:15+1050-18,y0:198+86,y1:198+412-16};// in canvas coords (canvas origin = world 410,190)
+let bubbles=[],queue=[],seen=new Set(),flyers=[],lastTxTime=0;
+const MAXB=320;
+function radiusFor(vsize){return Math.max(4,Math.min(30,Math.sqrt(vsize||200)*.95))}
+function addTx(t){if(!t||!t.txid||seen.has(t.txid))return;seen.add(t.txid);if(seen.size>5000){seen=new Set([...seen].slice(-2500))}queue.push(t)}
+function spawn(t,opts={}){const r=opts.r||radiusFor(t.vsize);const rate=t.rate||(t.fee&&t.vsize?t.fee/t.vsize:1);
+ const b={t,r,rate,color:opts.color||feeColor(rate),x:opts.x??(POOL.x0+r+Math.random()*(POOL.x1-POOL.x0-2*r)),y:opts.y??(POOL.y0-30),vx:(Math.random()-.5)*.3,vy:1.8+Math.random(),born:performance.now(),alpha:0,special:!!opts.special,label:opts.label};
+ bubbles.push(b);while(bubbles.length>MAXB){const i=bubbles.findIndex(x=>!x.special);if(i<0)break;const old=bubbles.splice(i,1)[0];flyers.push({...old,fade:1,tx:old.x,ty:old.y,mode:'fade'})}
+ if(!b.special){$('sLast').textContent=t.txid.slice(0,6)+'…'+t.txid.slice(-4);lastTxTime=performance.now()}
+ return b}
+// release queued txs steadily so arrivals feel continuous
+setInterval(()=>{if(queue.length){spawn(queue.shift())}},Math.max(60,180));
+let lastFrame=performance.now();
+function step(now=performance.now()){
+ // time-based: run several physics ticks if frames are slow (old tablets, background tabs)
+ const ticks=Math.max(1,Math.min(90,Math.round((now-lastFrame)/16.7)));lastFrame=now;
+ for(let k=0;k<ticks;k++)physics();
+ ctx.clearRect(0,0,CW,CH);
+ for(const b of bubbles)drawBubble(b,b.alpha);
+ flyers=flyers.filter(f=>{if(f.fade<=0)return false;drawBubble(f,Math.max(0,f.fade));return true});
+ requestAnimationFrame(step)}
+function physics(){
+ for(const b of bubbles){
+  b.alpha=Math.min(1,b.alpha+.05);
+  if(b.target){b.x+=(b.target[0]-b.x)*.08;b.y+=(b.target[1]-b.y)*.08}
+  else{b.vy+=.07;// gentle sink then settle
+   b.vx+=(Math.random()-.5)*.06;b.vy+=(Math.random()-.5)*.06;b.vx*=.97;b.vy*=.96;b.x+=b.vx;b.y+=b.vy;
+   if(b.x<POOL.x0+b.r){b.x=POOL.x0+b.r;b.vx=Math.abs(b.vx)}if(b.x>POOL.x1-b.r){b.x=POOL.x1-b.r;b.vx=-Math.abs(b.vx)}
+   if(b.y>POOL.y1-b.r){b.y=POOL.y1-b.r;b.vy=-Math.abs(b.vy)*.4}if(b.y<POOL.y0+b.r&&performance.now()-b.born>900){b.y=POOL.y0+b.r;b.vy=Math.abs(b.vy)}}
+ }
+ // cheap collision relaxation
+ for(let k=0;k<2;k++)for(let i=0;i<bubbles.length;i++){const a=bubbles[i];if(a.target)continue;for(let j=i+1;j<bubbles.length;j++){const c=bubbles[j];if(c.target)continue;const dx=c.x-a.x,dy=c.y-a.y,d2=dx*dx+dy*dy,m=a.r+c.r+1;if(d2<m*m&&d2>.01){const d=Math.sqrt(d2),p=(m-d)/2,ux=dx/d,uy=dy/d;const wa=a.special?.15:.5,wc=c.special?.15:.5;a.x-=ux*p*wa*2;a.y-=uy*p*wa*2;c.x+=ux*p*wc*2;c.y+=uy*p*wc*2}}}
+ for(const f of flyers){if(f.mode==='fly'){f.x+=(f.tx-f.x)*f.k;f.y+=(f.ty-f.y)*f.k;f.r*=.985;if(Math.hypot(f.tx-f.x,f.ty-f.y)<8)f.fade-=.12}else f.fade-=.04}
+}
+function drawBubble(b,a){ctx.globalAlpha=a;const g=ctx.createRadialGradient(b.x-b.r*.35,b.y-b.r*.4,b.r*.1,b.x,b.y,b.r);g.addColorStop(0,'#ffffffcc');g.addColorStop(.25,b.color);g.addColorStop(1,shade(b.color));ctx.fillStyle=g;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.fill();
+ if(b.special){ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.stroke();ctx.lineWidth=2;ctx.strokeStyle='#ff4d6d';ctx.beginPath();ctx.arc(b.x,b.y,b.r+6+Math.sin(performance.now()/180)*3,0,7);ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='900 15px system-ui';ctx.textAlign='center';ctx.fillText(b.label||'',b.x,b.y-b.r-12);ctx.font='900 18px system-ui';ctx.fillStyle='#4a0010';ctx.fillText('₿',b.x,b.y+6)}
+ ctx.globalAlpha=1}
+const shadeCache={};function shade(hex){if(shadeCache[hex])return shadeCache[hex];const n=parseInt(hex.slice(1),16),r=(n>>16)*.55|0,g=(n>>8&255)*.55|0,bl=(n&255)*.55|0;return shadeCache[hex]=`rgb(${r},${g},${bl})`}
+requestAnimationFrame(step);
+
+// a new block: the highest-fee bubbles fly up into the newly mined block
+function mineAnimation(nTx){const target=[DIV+20+57-410,BLOCK_Y+57-190];const sorted=bubbles.filter(b=>!b.special).sort((a,b)=>b.rate-a.rate);const take=Math.max(10,Math.floor(sorted.length*.55));const gone=new Set(sorted.slice(0,take));
+ bubbles=bubbles.filter(b=>{if(gone.has(b)){flyers.push({...b,mode:'fly',tx:target[0]+(Math.random()-.5)*40,ty:target[1]+(Math.random()-.5)*40,k:.03+Math.random()*.04,fade:1});return false}return true})}
+
+// ---------- data sources ----------
+let ws,wsOk=false,lastData=0,pollTimer=null,simTimer=null;
+function handle(d){lastData=Date.now();if(state.mode!=='live'){setMode('live');stopSim()}
+ if(d.mempoolInfo){state.count=d.mempoolInfo.size;$('sCount').textContent=fmt(state.count)}
+ if(d.fees){state.fees=d.fees;updateFees()}
+ if(d['mempool-blocks']){state.pending=d['mempool-blocks'];renderBlocks()}
+ if(d.blocks&&Array.isArray(d.blocks)){state.mined=d.blocks.slice().sort((a,b)=>b.height-a.height);renderBlocks()}
+ if(d.block){const b=d.block;if(!state.mined.find(x=>x.height===b.height)){state.mined.unshift(b);state.mined=state.mined.slice(0,8);mineAnimation(b.tx_count);renderBlocks(b.height);say(`⛏️ A real block was just mined!<br>Block ${fmt(b.height)} took ${fmt(b.tx_count||0)} transactions out of the mempool${b.extras?.pool?.name?' (miner: '+b.extras.pool.name+')':''}.`,6500)}}
+ if(Array.isArray(d.transactions))d.transactions.forEach(addTx);
+}
+function connect(){try{ws=new WebSocket('wss://mempool.space/api/v1/ws')}catch(e){startPoll();return}
+ ws.onopen=()=>{wsOk=true;ws.send(JSON.stringify({action:'init'}));ws.send(JSON.stringify({action:'want',data:['blocks','stats','mempool-blocks']}))};
+ ws.onmessage=e=>{try{handle(JSON.parse(e.data))}catch(_){}};
+ ws.onclose=()=>{wsOk=false;setTimeout(connect,4000)};ws.onerror=()=>{try{ws.close()}catch(_){}}}
+async function getJSON(u){const r=await fetch('https://mempool.space/api'+u);if(!r.ok)throw 0;return r.json()}
+async function poll(){try{const [recent,info,fees,mb]=await Promise.all([getJSON('/mempool/recent'),getJSON('/mempool'),getJSON('/v1/fees/recommended'),getJSON('/v1/fees/mempool-blocks')]);
+  const d={transactions:recent,mempoolInfo:{size:info.count},fees,'mempool-blocks':mb};if(!state.mined.length){d.blocks=await getJSON('/v1/blocks')}else{const h=await getJSON('/blocks/tip/height');if(h>state.mined[0].height){const bl=await getJSON('/v1/blocks');d.block=bl.sort((a,b)=>b.height-a.height)[0]}}
+  handle(d)}catch(e){if(Date.now()-lastData>15000)startSim()}}
+function startPoll(){if(!pollTimer){poll();pollTimer=setInterval(poll,5000)}}
+// if the websocket goes quiet, poll the REST API as well
+setInterval(()=>{if(Date.now()-lastData>9000||performance.now()-lastTxTime>15000&&queue.length===0)startPoll();else if(pollTimer&&wsOk&&performance.now()-lastTxTime<6000){clearInterval(pollTimer);pollTimer=null}},3000);
+// offline fallback: a believable simulation, clearly labelled
+function startSim(){if(simTimer)return;setMode('sim');let h=state.mined[0]?.height||900000;
+ if(!state.mined.length){const now=Date.now()/1000;state.mined=[0,1,2,3].map(i=>({height:h-i,tx_count:2500+Math.random()*2000|0,timestamp:now-(i*600+120),extras:{medianFee:3+Math.random()*4,pool:{name:'Example Pool'}}}))}
+ const mk=()=>state.pending=[0,1,2,3].map(i=>({medianFee:8-i*1.6,feeRange:[6-i*1.5>1?6-i*1.5:1,30-i*6],nTx:3000+Math.random()*900|0,blockVSize:1e6*(i<3?1:.4+Math.random()*.5)}));mk();
+ state.count=state.count||45000;renderBlocks();let tick=0;
+ simTimer=setInterval(()=>{tick++;const rate=Math.max(1,Math.round(Math.exp(Math.random()*3.5)));const vsize=110+Math.random()*Math.random()*900|0;
+  addTx({txid:[...crypto.getRandomValues(new Uint8Array(32))].map(x=>x.toString(16).padStart(2,'0')).join(''),vsize,fee:rate*vsize,value:Math.random()*5e7|0});
+  state.count+=1;$('sCount').textContent=fmt(state.count);
+  if(tick%300===0){h=state.mined[0].height+1;const b={height:h,tx_count:3000+Math.random()*1500|0,timestamp:Date.now()/1000,extras:{medianFee:state.pending[0].medianFee,pool:{name:'Example Pool'}}};state.count=Math.max(5000,state.count-b.tx_count);handle2(b);mk()}},320)}function handle2(b){state.mined.unshift(b);mineAnimation();renderBlocks(b.height);say(`⛏️ Block ${fmt(b.height)} mined (simulated)!`)}
+function stopSim(){if(simTimer){clearInterval(simTimer);simTimer=null}}
+connect();getJSON('/mempool/recent').then(a=>a.forEach(addTx)).catch(()=>{});setTimeout(()=>{if(!lastData)startPoll()},5000);
+
+// ---------- Ruby's demo transaction ----------
+let feeKey='med',delivered=false,demoBubble=null;
+$('feepick').querySelectorAll('button').forEach(b=>b.onclick=()=>{feeKey=b.dataset.k;$('feepick').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+ say({low:'🐢 A low fee is cheap, but miners pick bigger fees first — you may wait hours!',med:'🚶 A medium fee usually gets into a block within about half an hour.',high:'🚀 A high fee jumps the queue — miners grab it for the very next block!'}[feeKey])});
+function stop(){seq++;timers.forEach(clearTimeout);timers=[];packet.classList.remove('visible');if(demoBubble){bubbles=bubbles.filter(b=>b!==demoBubble);demoBubble=null}document.querySelectorAll('.block.picked').forEach(e=>e.classList.remove('picked'))}
+function send(){stop();delivered=false;received.textContent='Waiting for a payment…';
+ const rate=+$({low:'fLow',med:'fMed',high:'fHigh'}[feeKey]).textContent;const waitMs={low:9000,med:5500,high:2600}[feeKey];
+ status.textContent='1. Ruby signs the payment with her PRIVATE key ✍️';say('I sign with my secret key. That proves the bitcoin is mine to spend!');
+ const from=[365,700];packet.textContent='₿ 0.001 → Blake';packet.style.left=from[0]+'px';packet.style.top=from[1]+'px';packet.classList.add('visible');
+ wait(1500,()=>{status.textContent='2. The transaction is broadcast to the network 📡';move(from,[470,620],900,()=>{packet.classList.remove('visible');
+  demoBubble=spawn({txid:'ruby-demo',vsize:250,fee:rate*250},{special:true,r:24,color:'#ff6b81',x:470-410,y:620-190,label:'RUBY → BLAKE • '+rate+' sat/vB'});demoBubble.vy=-1;
+  status.textContent=`3. Waiting in the mempool, paying ${rate} sat/vB… miners pick the highest fees first`;
+  say(feeKey==='high'?'My fee is high — a miner will want this one soon!':feeKey==='low'?'Low fee… lots of others paid more. Real life could take hours (we will speed it up!).':'Medium fee — somewhere in the middle of the queue.',3800);
+  wait(waitMs,()=>{const blk=document.querySelector('.block.pending[data-i="0"]');if(blk)blk.classList.add('picked');status.textContent='4. A miner packs Ruby\'s transaction into the next block ⛏️';
+   demoBubble.target=[blockLeft('pending',0)+57-410,BLOCK_Y+57-190];
+   wait(1600,()=>{bubbles=bubbles.filter(b=>b!==demoBubble);demoBubble=null;if(blk)blk.classList.remove('picked');
+    status.textContent='5. The block is added to the chain — Blake can see the payment!';
+    const a=[blockLeft('mined',0)+57,BLOCK_Y+57];packet.textContent='₿ 0.001 ✅';move([blockLeft('pending',0)+57,BLOCK_Y+57],a,700,()=>move(a,[1535,470],1100,()=>{packet.classList.remove('visible');delivered=true;received.innerHTML='₿ 0.001 received<br>from Ruby!';status.textContent='6. Tap CHECK CONFIRMATIONS to see how safe it is';say('Every new block on top adds another confirmation. Six is very safe!')}))})})})})}
+function verify(){if(!delivered){say('Ask Ruby to send some bitcoin first!');return}received.innerHTML='✅ 1 confirmation<br><small style="font-weight:700">(pretend) — each new block adds one more</small>';status.textContent='✅ Blake\'s payment is in a block on the chain';say('Blake doesn\'t need Ruby\'s secret key — anyone can check the signature with her public key!')}
+$('send').onclick=send;$('verify').onclick=verify;
+$('addr').onclick=()=>say('Bitcoin addresses often start with bc1. Share it so people can pay you! (This one is an example.)');
+$('priv').onclick=()=>say('A private key controls the bitcoin. The middle is hidden — NEVER share yours!');
+$('ruby').onclick=()=>say('Ruby signs payments with her private key.');$('blake').onclick=()=>say('Blake watches for his payment to be confirmed in a block.');
+document.querySelectorAll('.keycard').forEach(e=>e.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();e.click()}});
+$('blocks').addEventListener('click',e=>{const b=e.target.closest('.block');if(!b)return;const i=+b.dataset.i;
+ if(b.dataset.kind==='pending'){const p=state.pending[i];if(p)say(`⏳ Projected block #${i+1}<br>${fmt(p.nTx)} transactions paying about ${Math.round(p.medianFee)} sat/vB.<br>Not mined yet — it's a guess at what miners will pick.`)}
+ else{const m=state.mined[i];if(m)say(`✅ Block ${fmt(m.height)}<br>${fmt(m.tx_count)} transactions, mined ${ago(m.timestamp)} ago${m.extras?.pool?.name?' by '+m.extras.pool.name:''}.<br><a href="https://mempool.space/block/${m.id||m.height}" target="_blank" rel="noopener">See it on mempool.space ↗</a>`,6500)}});
+// tap a bubble in the pool
+$('pool').addEventListener('click',e=>{const r=$('fx').getBoundingClientRect();const x=(e.clientX-r.left)/r.width*CW,y=(e.clientY-r.top)/r.height*CH;
+ let hit=null;for(let i=bubbles.length-1;i>=0;i--){const b=bubbles[i];if(Math.hypot(b.x-x,b.y-y)<=b.r+3){hit=b;break}}
+ if(!hit){say('Tap a bubble to look inside a real transaction!');return}
+ if(hit.special){say('That\'s Ruby\'s pretend payment, waiting for a miner!');return}
+ const t=hit.t,live=state.mode==='live';say(`🫧 ${live?'Real':'Simulated'} transaction<br><span style="font:800 15px ui-monospace,monospace">${t.txid.slice(0,10)}…${t.txid.slice(-6)}</span><br>Moving ${(t.value/1e8).toFixed(5)} BTC • fee ${Math.round(hit.rate*10)/10} sat/vB • ${fmt(t.vsize)} vbytes${live?`<br><a href="https://mempool.space/tx/${t.txid}" target="_blank" rel="noopener">Open on mempool.space ↗</a>`:''}`,7000)});
+
+// ---------- pan / zoom (same as Nostr page) ----------
+$('plus').onclick=()=>zoom(1.25);$('minus').onclick=()=>zoom(.8);
+$('reset').onclick=()=>{stop();delivered=false;received.textContent='Waiting for a payment…';status.textContent='Pick a fee, then tap SEND BITCOIN to follow a transaction!';bubbleEl.classList.remove('show');fit()};
+$('fullscreen').onclick=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()};
+function pos(e){return {x:e.clientX,y:e.clientY}}function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+vp.addEventListener('pointerdown',e=>{if(e.target.closest('button,.keycard,.block,.buddy,#pool,a'))return;vp.setPointerCapture(e.pointerId);pointers.set(e.pointerId,pos(e));if(pointers.size===1){drag={x:e.clientX,y:e.clientY,tx,ty};pinch=null}else if(pointers.size===2){let [a,b]=[...pointers.values()];pinch={d:dist(a,b),s:scale,wx:((a.x+b.x)/2-tx)/scale,wy:((a.y+b.y)/2-ty)/scale};drag=null}});
+vp.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,pos(e));if(pointers.size===2&&pinch){let [a,b]=[...pointers.values()],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;scale=Math.max(.25,Math.min(4,pinch.s*dist(a,b)/pinch.d));tx=cx-pinch.wx*scale;ty=cy-pinch.wy*scale;draw()}else if(pointers.size===1&&drag){tx=drag.tx+e.clientX-drag.x;ty=drag.ty+e.clientY-drag.y;draw()}});
+function up(e){pointers.delete(e.pointerId);pinch=null;drag=null;if(pointers.size===1){let a=[...pointers.values()][0];drag={x:a.x,y:a.y,tx,ty}}}
+vp.addEventListener('pointerup',up);vp.addEventListener('pointercancel',up);
+vp.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.12:.89,e.clientX,e.clientY)},{passive:false});
+window.addEventListener('resize',fit);fit();updateFees();
+</script></body></html>
