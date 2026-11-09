@@ -1,0 +1,235 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IP and Port</title><style>
+:root{--bg:#10051f;--panel:#2a104d;--line:#8b4cc7;--text:#fff;--soft:#e3c7ff;--ip:#4cc3ff;--colon:#ffd23f;--port:#ff6fb5;--nostr:#9b5cff;--ok:#5dff9a;font-family:ui-rounded,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg)}
+body{background:radial-gradient(ellipse at 50% 0%,#3a1468,#10051f 70%) fixed;padding:84px 16px 28px}
+.wrap{max-width:1280px;margin:0 auto}
+h1{margin:0;text-align:center;font-size:clamp(30px,4.4vw,54px);letter-spacing:-1.5px;font-weight:950;line-height:1.05}
+h1 .ip{color:var(--ip)}h1 .port{color:var(--port)}h1 .n{color:#d9a5ff}
+.sub{text-align:center;color:var(--soft);font-size:clamp(16px,1.8vw,21px);margin:8px 0 18px}
+/* Recipe */
+.recipe{display:flex;justify-content:center;align-items:stretch;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.part{border-radius:20px;padding:12px 18px;text-align:center;border:3px solid;background:#1b0a33;min-width:150px;transition:transform .2s,box-shadow .2s}
+.part b{display:block;font:900 clamp(26px,3.4vw,40px)/1.1 ui-monospace,Consolas,monospace}
+.part span{display:block;font-size:15px;font-weight:900;letter-spacing:1px;margin-top:4px}
+.part small{display:block;font-size:14px;color:var(--soft);margin-top:2px}
+.part.ip{border-color:var(--ip)}.part.ip b,.part.ip span{color:var(--ip)}
+.part.colon{border-color:var(--colon);min-width:110px}.part.colon b,.part.colon span{color:var(--colon)}
+.part.port{border-color:var(--port)}.part.port b,.part.port span{color:var(--port)}
+.part.done{box-shadow:0 0 0 4px #ffffff22,0 0 30px currentColor;transform:translateY(-3px)}
+@media(max-width:600px){.recipe{gap:5px;flex-wrap:nowrap}.part{min-width:0;padding:8px 6px;border-radius:14px}.part.colon{min-width:0;flex:none;width:52px}.part b{font-size:17px}.part span{font-size:10px;letter-spacing:0}.part small{font-size:10px}.plus{display:none}.navbtn{display:none}#addr{padding:8px 10px;font-size:17px}#go{padding:10px 12px}body{padding-top:76px}.part.ip{flex:1.6}.part.port{flex:1}}
+.plus{align-self:center;font-size:30px;font-weight:950;color:var(--soft)}
+.sayit{text-align:center;color:var(--soft);font-size:16px;margin:4px 0 18px}.sayit b{color:#fff}
+/* Main grid */
+.grid{display:grid;grid-template-columns:1.65fr 1fr;gap:18px;align-items:stretch}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+/* Mini browser */
+.browser{background:#e9e4f3;border-radius:16px;overflow:hidden;box-shadow:0 20px 50px #0009;border:2px solid #b994e8;display:flex;flex-direction:column;min-height:400px;color:#241040}
+.chrome{background:#cfc5e2;padding:8px 10px 0;display:flex;align-items:flex-end;gap:10px}
+.dots{display:flex;gap:6px;padding-bottom:10px}.dots i{width:13px;height:13px;border-radius:50%;background:#ff5f57;display:block}.dots i:nth-child(2){background:#febc2e}.dots i:nth-child(3){background:#28c840}
+.tab{background:#e9e4f3;border-radius:10px 10px 0 0;padding:8px 16px;font-size:14px;font-weight:800;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{display:flex;gap:8px;align-items:center;padding:9px 10px;background:#e9e4f3;border-bottom:1px solid #cbbfe0}
+.navbtn{width:34px;height:34px;border-radius:50%;border:0;background:#d8cfea;color:#4b2a74;font-size:17px;font-weight:900;flex:none}
+.addrwrap{flex:1;position:relative;min-width:0}
+#addr{width:100%;border:3px solid #9b6ad8;border-radius:22px;padding:9px 16px;font:800 clamp(18px,2.2vw,24px) ui-monospace,Consolas,monospace;color:#241040;background:#fff;outline:none}
+#addr:focus{border-color:var(--nostr);box-shadow:0 0 0 4px #9b5cff44}
+#go{border:0;border-radius:20px;background:var(--nostr);color:#fff;font-weight:900;font-size:17px;padding:10px 16px;cursor:pointer;flex:none;font-family:inherit}
+.breakdown{padding:6px 16px 8px;background:#e9e4f3;font:800 15px ui-monospace,Consolas,monospace;min-height:30px;color:#6b5a88;border-bottom:1px solid #cbbfe0;display:flex;gap:2px;flex-wrap:wrap;align-items:center}
+.breakdown .seg{padding:2px 6px;border-radius:7px;color:#fff}.seg.ip{background:#1b8fc7}.seg.colon{background:#c99a00}.seg.port{background:#d63f8c}.seg.scheme{background:#7d7395}.seg.bad{background:#c93030}
+.breakdown .lbl{font:800 12px ui-rounded,system-ui,sans-serif;color:#6b5a88;margin-left:8px}
+.page{flex:1;padding:22px;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;background:#fbf9ff}
+.page h2{margin:6px 0;font-size:clamp(22px,2.6vw,30px)}.page p{margin:6px auto;font-size:17px;max-width:520px;color:#4b3a66}
+.big{font-size:54px;line-height:1}
+.load{width:min(380px,90%);height:12px;border-radius:8px;background:#e2d8f3;overflow:hidden;margin:14px auto}.load i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ip),var(--port),var(--nostr));animation:fill 1.6s ease-in-out forwards}
+@keyframes fill{to{width:100%}}
+.steps{font:700 15px ui-monospace,Consolas,monospace;color:#5b4a78;text-align:left;display:inline-block}.steps div{opacity:0;animation:appear .3s forwards}
+@keyframes appear{to{opacity:1}}
+.profile{background:linear-gradient(150deg,#482071,#2a104d);color:#fff;border-radius:22px;padding:18px 20px;max-width:560px;width:100%;box-shadow:0 14px 34px #3a116655;animation:pop .4s ease-out}
+.profile .who{display:flex;align-items:center;gap:12px;justify-content:center}.profile .who svg{width:110px;height:118px}
+.profile h2{color:#fff}.profile p{color:#e7d2ff}
+.npub{font:800 clamp(13px,1.5vw,16px)/1.4 ui-monospace,Consolas,monospace;background:#170830;border:2px solid #b47cf0;border-radius:12px;padding:10px 12px;overflow-wrap:anywhere;margin:10px 0;color:#f4e7ff}
+.npub b{color:#d9a5ff}
+.copy{border:2px solid #efc7ff;background:var(--nostr);color:#fff;border-radius:16px;padding:9px 16px;font:900 16px inherit;font-family:inherit;cursor:pointer}
+.note{font-size:13px!important;color:#c9b1ea!important}
+@keyframes pop{from{transform:scale(.85);opacity:0}}
+/* Building = the computer at the IP */
+.building{background:linear-gradient(150deg,#482071e8,#2a104de8);border:2px solid var(--line);border-radius:24px;padding:16px;text-align:center;display:flex;flex-direction:column}
+.building h3{margin:0 0 4px;font-size:20px}.building .sign{display:inline-block;font:900 clamp(20px,2.4vw,26px) ui-monospace,Consolas,monospace;color:var(--ip);background:#0b2236;border:3px solid var(--ip);border-radius:12px;padding:5px 14px;margin:4px auto 48px}
+.house{flex:1;position:relative;background:linear-gradient(#5b3a8c,#3c2166);border-radius:10px 10px 6px 6px;border:3px solid #b994e8;padding:28px 12px 0;display:flex;justify-content:space-around;align-items:flex-end;gap:8px;min-height:230px}
+.house::before{content:"";position:absolute;left:-14px;right:-14px;top:-36px;height:36px;background:#7a4cc0;clip-path:polygon(8% 100%,50% 0,92% 100%);}
+.house .win{position:absolute;top:22px;width:34px;height:26px;background:#ffe9a8;border-radius:4px;box-shadow:0 0 14px #ffd76a}
+.door{width:30%;max-width:96px;position:relative;text-align:center}
+.door .frame{position:relative;height:130px;background:#130722;border-radius:40px 40px 0 0;overflow:hidden;perspective:300px;display:flex;align-items:center;justify-content:center;font-size:34px}
+.door .frame svg{width:80px;height:86px}
+.door .leaf{position:absolute;inset:0;border-radius:40px 40px 0 0;background:linear-gradient(90deg,#8a5a2b,#a8703a);border:3px solid #5d3a17;transform-origin:left center;transition:transform .6s;display:flex;align-items:center;justify-content:flex-end;padding-right:9px}
+.door .leaf::after{content:"";width:9px;height:9px;border-radius:50%;background:#ffd23f}
+.door .plate{display:inline-block;margin-top:6px;font:900 clamp(16px,1.8vw,20px) ui-monospace,Consolas,monospace;color:#fff;background:var(--port);border-radius:9px;padding:2px 9px}
+.door small{display:block;font-size:13px;color:var(--soft);margin:3px 0 8px;font-weight:800}
+.door.open .leaf{transform:rotateY(-75deg)}
+.door.open .frame{box-shadow:0 0 30px var(--ok)}
+.door.knock .leaf{animation:knock .45s ease-in-out 2}
+@keyframes knock{30%{transform:translateX(-3px)}60%{transform:translateX(3px)}}
+.house.nope{animation:nope .5s}@keyframes nope{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.legend{font-size:14px;color:var(--soft);margin-top:10px}
+/* Keyboard */
+.kbpanel{margin-top:18px;background:#1b0a33;border:2px solid var(--line);border-radius:24px;padding:14px}
+.hintrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+#hint{font-size:clamp(17px,2vw,22px);font-weight:900;min-height:30px}#hint kbd{font:900 .95em ui-monospace,Consolas,monospace;background:#fff;color:#241040;border-radius:7px;padding:1px 8px;box-shadow:0 3px 0 #9a86b8}
+.ctl{display:flex;gap:8px;flex-wrap:wrap}.ctl button{border:2px solid #b87cec;border-radius:16px;background:#411b67;color:#fff;padding:9px 14px;font:900 16px inherit;font-family:inherit;cursor:pointer}
+.ctl .main{background:var(--nostr);border-color:#efc7ff}
+.kb{display:flex;flex-direction:column;gap:6px;user-select:none}
+.row{display:flex;gap:6px}
+.key{flex:1 1 0;min-width:0;height:clamp(42px,5.4vw,60px);border-radius:10px;border:0;background:#f1ecfa;color:#241040;box-shadow:0 4px 0 #8f7bb0;font:900 clamp(13px,1.7vw,20px) ui-monospace,Consolas,monospace;cursor:pointer;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;padding:0;touch-action:manipulation;transition:background .12s}
+.key .top{font-size:.72em;color:#7a6699}
+.key.wide{font-family:ui-rounded,system-ui,sans-serif;font-size:clamp(11px,1.4vw,16px)}
+.key.w15{flex-grow:1.5}.key.w2{flex-grow:2}.key.w25{flex-grow:2.4}.key.space{flex-grow:7}
+.key.pressed,.key:active{transform:translateY(3px);box-shadow:0 1px 0 #8f7bb0;background:#d9c6ff}
+.key.next{background:var(--colon);box-shadow:0 4px 0 #a07a00,0 0 0 4px #ffd23f66,0 0 22px #ffd23f;animation:glow 1s ease-in-out infinite}
+.key.next.ipk{background:var(--ip);box-shadow:0 4px 0 #13628a,0 0 0 4px #4cc3ff66,0 0 22px #4cc3ff}
+.key.next.portk{background:var(--port);box-shadow:0 4px 0 #8f2257,0 0 0 4px #ff6fb566,0 0 22px #ff6fb5}
+.key.next.go{background:var(--ok);box-shadow:0 4px 0 #1f8a4a,0 0 0 4px #5dff9a66,0 0 22px #5dff9a}
+.key.next.fix{background:#ff8a7a;box-shadow:0 4px 0 #9a2d20,0 0 22px #ff6a5a}
+.key.locked{background:#ffe68a}
+.key.next .top,.key.next{color:#1a0a2e}
+@keyframes glow{50%{transform:translateY(-2px)}}
+.foot{text-align:center;color:#bfa3e6;font-size:14px;margin-top:14px}
+/* Nostrich animation */
+.ostrich{--dur:.7s}.ostrich .near{color:#9b5cff}.ostrich .far{color:#7139d0}
+.ostrich .thigh,.ostrich .shin{transform-origin:0 0}
+.ostrich .thigh{animation:thigh var(--dur) linear infinite}.ostrich .shin{animation:shin var(--dur) linear infinite}
+.ostrich .far .thigh,.ostrich .far .shin{animation-delay:calc(var(--dur) * -.5)}
+.ostrich .runner{animation:stride calc(var(--dur) / 2) ease-in-out infinite}
+.ostrich .tail{transform-box:fill-box;transform-origin:100% 15%;animation:tail var(--dur) ease-in-out infinite}
+@keyframes thigh{0%{transform:rotate(-30deg)}40%{transform:rotate(38deg)}60%{transform:rotate(20deg)}80%{transform:rotate(-20deg)}100%{transform:rotate(-30deg)}}
+@keyframes shin{0%{transform:rotate(-12deg)}40%{transform:rotate(6deg)}60%{transform:rotate(-105deg)}80%{transform:rotate(-80deg)}100%{transform:rotate(-12deg)}}
+@keyframes stride{50%{transform:translateY(-14px)}}@keyframes tail{50%{transform:rotate(-10deg)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body><div class="wrap">
+<h1><span class="ip">IP Address</span> + <span class="port">Port</span> = <span class="n">Nostrich!</span></h1>
+<p class="sub">An IP address finds the computer. A port picks the door. Type both to find Nelly’s npub.</p>
+<div class="recipe">
+ <div class="part ip" id="pIP"><b>192.168.1.42</b><span>IP ADDRESS</span><small>Which computer? (the building)</small></div>
+ <div class="plus">+</div>
+ <div class="part colon" id="pColon"><b>:</b><span>COLON</span><small>“…and then door…”</small></div>
+ <div class="plus">+</div>
+ <div class="part port" id="pPort"><b>7777</b><span>PORT</span><small>Which program? (the door)</small></div>
+</div>
+<p class="sayit">Say it: <b>one-nine-two dot one-six-eight dot one dot forty-two</b>, <b>colon</b>, <b>seven-seven-seven-seven</b></p>
+
+<div class="grid">
+ <div class="browser">
+  <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="tab" id="tabTitle">New Tab</div></div>
+  <form class="bar" id="form" autocomplete="off"><button type="button" class="navbtn" id="back" title="Back">←</button><button type="button" class="navbtn" id="reload" title="Reload">⟳</button><div class="addrwrap"><input id="addr" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="Type an address…" aria-label="Address bar"></div><button id="go" type="submit">Go ⏎</button></form>
+  <div class="breakdown" id="breakdown"></div>
+  <div class="page" id="page"></div>
+ </div>
+ <div class="building">
+  <h3>The computer at this IP address</h3>
+  <div class="sign">192.168.1.42</div>
+  <div class="house" id="house"><div class="win" style="left:18%"></div><div class="win" style="left:44%"></div><div class="win" style="right:18%"></div>
+   <div class="door" id="d22"><div class="frame">🔒<div class="leaf"></div></div><span class="plate">22</span><small>Secure login</small></div>
+   <div class="door" id="d80"><div class="frame">🌐<div class="leaf"></div></div><span class="plate">80</span><small>Web page</small></div>
+   <div class="door" id="d7777"><div class="frame" id="nostDoor"><div class="leaf"></div></div><span class="plate">7777</span><small>Nostr</small></div>
+  </div>
+  <div class="legend">One computer, many doors. Each <b style="color:var(--port)">port</b> number is a different program listening.</div>
+ </div>
+</div>
+
+<div class="kbpanel">
+ <div class="hintrow"><div id="hint" aria-live="polite"></div><div class="ctl"><button class="main" id="demo">▶ Show me</button><button id="clear">⌫ Clear</button><button data-try="192.168.1.42:80">Try door 80</button><button data-try="192.168.1.42:22">Try door 22</button></div></div>
+ <div class="kb" id="kb"></div>
+</div>
+<p class="foot">Classroom demo • 192.168.x.x is a private home/school network address • Example npub, not a real account • Real Nostr apps connect to relays like <b>wss://relay.example.com:443</b></p>
+</div><script>
+const IP='192.168.1.42',TARGET=IP+':7777',NPUB='npub1q8m7k2s4v9p6t3w5x8y2z7r4n6c9d5f3g8h2j4k7l9m5p2q6s8t4u3v';
+const addr=document.getElementById('addr'),page=document.getElementById('page'),hint=document.getElementById('hint'),bd=document.getElementById('breakdown'),tabTitle=document.getElementById('tabTitle'),house=document.getElementById('house');
+// ---- Nostrich (purple running silhouette) ----
+function leg(cls,x,y){return `<g class="${cls}" transform="translate(${x} ${y})"><g class="thigh"><path d="M0 0 L0 74" stroke="currentColor" stroke-width="24" stroke-linecap="round"/><g transform="translate(0 74)"><g class="shin"><circle r="15" fill="currentColor"/><path d="M0 0 L0 118" stroke="currentColor" stroke-width="12" stroke-linecap="round"/><path d="M0 118 L34 116 M0 118 L24 132 M0 118 L-12 124" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></g></g></g></g>`}
+function nostrich(){return `<svg class="ostrich" viewBox="0 0 500 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Running purple nostrich"><g transform="translate(-330 -100)"><g class="runner">${leg('far',565,412)}<g class="near" fill="currentColor"><path class="tail" d="M445 318 C402 316 360 334 346 372 C352 378 358 376 362 370 L366 400 L382 378 L390 408 L404 386 L420 402 L440 392 Z"/><path d="M432 314 C480 312 540 268 610 263 C660 260 690 278 712 290 C722 296 732 300 740 300 L770 330 C760 340 745 345 735 345 C728 372 742 398 712 414 C680 432 630 436 595 432 C560 442 510 425 470 400 C445 392 420 402 405 400 C380 396 372 360 395 340 Z"/><path d="M705 292 C735 296 762 290 772 268 C780 245 772 228 752 210 C728 190 716 172 722 148 C726 128 748 122 768 138 L805 150 L790 155 L805 161 L772 161 C760 163 752 170 758 184 C770 205 802 222 803 256 C804 296 772 326 735 346 Z"/><circle cx="749" cy="143" r="4.5" fill="#2a0f4d"/></g>${leg('near',605,418)}</g></g></svg>`}
+document.getElementById('nostDoor').insertAdjacentHTML('afterbegin',nostrich());
+
+// ---- Keyboard ----
+const ROWS=[
+ [['`','~'],['1','!'],['2','@'],['3','#'],['4','$'],['5','%'],['6','^'],['7','&'],['8','*'],['9','('],['0',')'],['-','_'],['=','+'],{c:'Backspace',l:'⌫ Back',w:'w2'}],
+ [{c:'Tab',l:'Tab',w:'w15'},...'qwertyuiop'.split('').map(k=>[k,k.toUpperCase()]),['[','{'],[']','}'],['\\','|']],
+ [{c:'CapsLock',l:'Caps',w:'w2'},...'asdfghjkl'.split('').map(k=>[k,k.toUpperCase()]),[';',':'],["'",'"'],{c:'Enter',l:'Enter ⏎',w:'w2'}],
+ [{c:'Shift',l:'⇧ Shift',w:'w25'},...'zxcvbnm'.split('').map(k=>[k,k.toUpperCase()]),[',','<'],['.','>'],['/','?'],{c:'Shift',l:'⇧ Shift',w:'w25'}],
+ [{c:' ',l:'Space',w:'space'}]];
+const kb=document.getElementById('kb'),byChar={},byCmd={};let shiftOn=false,busy=false;
+ROWS.forEach(r=>{const row=document.createElement('div');row.className='row';r.forEach(k=>{const b=document.createElement('button');b.type='button';b.tabIndex=-1;b.className='key';
+ if(Array.isArray(k)){const [base,sh]=k;b.dataset.k=base;b.dataset.s=sh;b.innerHTML=/[a-z]/.test(base)?base.toUpperCase():`<span class="top">${sh.replace('<','&lt;').replace('>','&gt;')}</span>${base}`;byChar[base]={el:b,shift:false};if(!(sh in byChar))byChar[sh]={el:b,shift:true}}
+ else{b.dataset.cmd=k.c;b.textContent=k.l;b.classList.add('wide',k.w);(byCmd[k.c]=byCmd[k.c]||[]).push(b)}
+ b.addEventListener('mousedown',e=>e.preventDefault());b.onclick=()=>{if(!busy)press(b)};row.appendChild(b)});kb.appendChild(row)});
+function flash(el){el.classList.add('pressed');setTimeout(()=>el.classList.remove('pressed'),160)}
+function setShift(on){shiftOn=on;byCmd.Shift.forEach(b=>b.classList.toggle('locked',on))}
+function press(b){flash(b);const c=b.dataset.cmd;
+ if(c==='Shift'){setShift(!shiftOn)}else if(c==='Backspace'){addr.value=addr.value.slice(0,-1)}else if(c==='Enter'){go();return}else if(c===' '){addr.value+=' '}else if(c){}
+ else{addr.value+=shiftOn?b.dataset.s:b.dataset.k;setShift(false)}
+ update()}
+// Light up on-screen keys when a real keyboard is used
+addEventListener('keydown',e=>{const k=e.key==='Shift'||e.key==='Backspace'||e.key==='Enter'||e.key==='Tab'||e.key==='CapsLock'||e.key===' '?byCmd[e.key]:byChar[e.key]&&[byChar[e.key].el];(k||[]).forEach(flash);if(byChar[e.key]&&byChar[e.key].shift)byCmd.Shift.forEach(flash)});
+addr.addEventListener('input',update);
+
+// ---- Guide + live breakdown ----
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const FULL=/^(?:([a-z]+):\/\/)?(\d{1,3}(?:\.\d{1,3}){3})(?::(\d{1,6}))?\/?$/i;
+function breakdown(v){if(!v){bd.innerHTML='<span class="lbl">The address bar splits into parts as you type…</span>';return}
+ let html='',rest=v,m=v.match(/^[a-z]+:\/\//i);if(m){html+=`<span class="seg scheme">${esc(m[0])}</span>`;rest=v.slice(m[0].length)}
+ const i=rest.indexOf(':');const ipPart=i<0?rest:rest.slice(0,i);
+ if(ipPart)html+=`<span class="seg ${/^[\d.]*$/.test(ipPart)?'ip':'bad'}">${esc(ipPart)}</span>`;
+ if(i>=0){html+=`<span class="seg colon">:</span>`;const p=rest.slice(i+1);if(p)html+=`<span class="seg ${/^\d*\/?$/.test(p)?'port':'bad'}">${esc(p)}</span>`}
+ html+=`<span class="lbl">${i<0?'IP address':'IP address : port'}</span>`;bd.innerHTML=html}
+function mark(el,cls){el.classList.add('next',...(cls?[cls]:[]))}
+function update(){const v=addr.value;breakdown(v);
+ document.getElementById('pIP').classList.toggle('done',v.startsWith(IP)||TARGET.startsWith(v)&&v.length>=IP.length);
+ document.getElementById('pColon').classList.toggle('done',v.startsWith(IP+':'));
+ document.getElementById('pPort').classList.toggle('done',v===TARGET);
+ document.querySelectorAll('.key.next').forEach(k=>k.className=k.className.replace(/\b(next|ipk|portk|go|fix)\b/g,'').trim());
+ if(busy)return;
+ if(visited!==null&&v.trim()===visited){hint.innerHTML=v.trim()===TARGET?'🎉 You found Nelly’s npub! Now try another port, like <kbd>:80</kbd> or <kbd>:22</kbd>':'Try changing the <span style="color:var(--port)">port</span> number, or press <kbd>⌫ Clear</kbd> to start again';return}
+ if(v===TARGET){byCmd.Enter.forEach(b=>mark(b,'go'));hint.innerHTML='All typed! Now press <kbd>Enter ⏎</kbd> to go';return}
+ if(TARGET.startsWith(v)){const ch=TARGET[v.length],k=byChar[ch];
+  if(ch===':'){mark(k.el);if(!shiftOn)byCmd.Shift.forEach(b=>mark(b));hint.innerHTML=shiftOn?'Now press <kbd>;</kbd> to make a colon <kbd>:</kbd>':'Colon time! Hold <kbd>⇧ Shift</kbd> and press <kbd>;</kbd> to make <kbd>:</kbd>';return}
+  const inIP=v.length<IP.length;mark(k.el,inIP?'ipk':'portk');
+  hint.innerHTML=(inIP?'<span style="color:var(--ip)">IP address:</span> ':'<span style="color:var(--port)">Port:</span> ')+(v===''?'start with ':'press ')+`<kbd>${ch}</kbd>`+(ch==='.'?' (the dot key, next to comma)':'');return}
+ if(FULL.test(v.trim())){byCmd.Enter.forEach(b=>mark(b,'go'));hint.innerHTML='Press <kbd>Enter ⏎</kbd> to visit that address';return}
+ byCmd.Backspace.forEach(b=>mark(b,'fix'));hint.innerHTML='Oops, that doesn’t match. Press <kbd>⌫ Back</kbd> to fix it';}
+
+// ---- Browsing ----
+const doors={22:'d22',80:'d80',7777:'d7777'};let navTimer,visited=null;
+function resetDoors(){Object.values(doors).forEach(id=>document.getElementById(id).classList.remove('open','knock'))}
+function show(title,html){tabTitle.textContent=title;page.innerHTML=`<div>${html}</div>`}
+function home(){visited=null;show('New Tab',`<div class="big">🧭</div><h2>Where do you want to go?</h2><p>Type <b style="color:#1b8fc7">${IP}</b><b style="color:#c99a00">:</b><b style="color:#d63f8c">7777</b> in the address bar, using the keyboard below or your real one.</p>`)}
+function go(){clearTimeout(navTimer);resetDoors();const v=addr.value.trim();visited=v||null;const m=v.match(FULL);
+ if(!v){show('New Tab','<div class="big">⌨️</div><h2>The address bar is empty</h2><p>Type an IP address first.</p>');return}
+ if(!m){show('Error','<div class="big">🤔</div><h2>That doesn’t look like an IP address</h2><p>An IP address is <b>4 numbers with dots</b> between them, like <b>192.168.1.42</b>. Then a <b>colon</b> and a <b>port</b>, like <b>:7777</b>.</p>');return}
+ const ip=m[2],portTyped=m[3],port=portTyped?+portTyped:80;
+ if(ip.split('.').some(n=>+n>255)){show('Error','<div class="big">🔢</div><h2>Number too big!</h2><p>Each part of an IP address goes from <b>0 to 255</b>.</p>');return}
+ if(port<1||port>65535){show('Error',`<div class="big">🚪</div><h2>There’s no door ${port}</h2><p>Port numbers go from <b>1 to 65535</b>.</p>`);return}
+ busy=true;update();
+ show('Loading…',`<div class="big">📡</div><h2>Connecting…</h2><div class="load"><i></i></div><div class="steps"><div>→ Finding computer <b style="color:#1b8fc7">${ip}</b>…</div><div style="animation-delay:.5s">→ Knocking on door <b style="color:#d63f8c">${port}</b>…${portTyped?'':' (no port typed, so the browser uses 80)'}</div><div style="animation-delay:1s">→ Waiting for an answer…</div></div>`);
+ if(ip===IP){const d=doors[port];if(d)document.getElementById(d).classList.add('knock');else{house.classList.remove('nope');void house.offsetWidth;house.classList.add('nope')}}
+ navTimer=setTimeout(()=>{busy=false;result(ip,port);update()},1800)}
+function result(ip,port){
+ if(ip!==IP){show('Can’t reach',`<div class="big">📭</div><h2>No computer answered at ${ip}</h2><p>The <b>IP address</b> is like the street address of a building. Check every number: it should be <b>${IP}</b>.</p>`);return}
+ const d=doors[port];if(d)document.getElementById(d).classList.add('open');
+ if(port===7777){show('Nelly the Nostrich',`<div class="profile"><div class="who">${nostrich()}<div><h2>Nelly the Nostrich</h2><p>Found at door 7777 🎉</p></div></div><div class="npub"><b>npub</b>${NPUB.slice(4)}</div><button class="copy" id="copy">📋 Copy npub</button><p>This is Nelly’s <b>npub</b>, her Nostr <b>public key</b>. It’s safe to share, so friends can find and follow her.</p></div>`);
+  document.getElementById('copy').onclick=async e=>{try{await navigator.clipboard.writeText(NPUB);e.target.textContent='✅ Copied!'}catch{e.target.textContent='Select the npub to copy it'}};return}
+ if(port===80){show('School Web Server',`<div class="big">🌐</div><h2>It works! This is door 80</h2><p>Port <b>80</b> is the usual door for <b>web pages</b>. Right building, wrong door for Nelly. Try port <b>7777</b>.</p>`);return}
+ if(port===22){show('Secure Login',`<div class="big">🔒</div><h2>Door 22: admins only</h2><p>Port <b>22</b> is for <b>SSH</b>, a secure way for admins to log in to the computer. No nostriches here. Try port <b>7777</b>.</p>`);return}
+ show('Can’t connect',`<div class="big">🚪</div><h2>Door ${port} is closed</h2><p>You found the right <b>computer</b>, but no program is listening on port <b>${port}</b>. The nostrich is at door <b>7777</b>.</p>`)}
+document.getElementById('form').onsubmit=e=>{e.preventDefault();if(!busy)go()};
+document.getElementById('reload').onclick=()=>{if(!busy&&addr.value)go()};
+document.getElementById('back').onclick=()=>{if(busy)return;resetDoors();home()};
+document.getElementById('clear').onclick=()=>{if(busy)return;clearTimeout(navTimer);addr.value='';setShift(false);resetDoors();home();update()};
+document.querySelectorAll('[data-try]').forEach(b=>b.onclick=()=>{if(busy)return;addr.value=b.dataset.try;update();go()});
+
+// ---- "Show me": types the address key by key ----
+document.getElementById('demo').onclick=async()=>{if(busy)return;busy=true;clearTimeout(navTimer);addr.value='';setShift(false);resetDoors();home();
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms)),tap=el=>{flash(el);el.classList.add('next');setTimeout(()=>el.classList.remove('next'),260)};
+ for(const ch of TARGET){const k=byChar[ch];
+  if(ch===':'){hint.innerHTML='Hold <kbd>⇧ Shift</kbd> + press <kbd>;</kbd> = <kbd>:</kbd>';byCmd.Shift.forEach(b=>b.classList.add('locked'));tap(byCmd.Shift[0]);await sleep(650);tap(k.el);addr.value+=':';byCmd.Shift.forEach(b=>b.classList.remove('locked'));breakdown(addr.value);await sleep(800);continue}
+  hint.innerHTML=(addr.value.length<IP.length?'<span style="color:var(--ip)">IP address:</span> ':'<span style="color:var(--port)">Port:</span> ')+`<kbd>${ch}</kbd>`;
+  tap(k.el);addr.value+=ch;breakdown(addr.value);await sleep(380)}
+ hint.innerHTML='Press <kbd>Enter ⏎</kbd>';tap(byCmd.Enter[0]);await sleep(450);busy=false;go()};
+home();update();
+</script></body></html>
