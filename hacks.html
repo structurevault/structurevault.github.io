@@ -1,0 +1,63 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Hack Watch — Videos</title><meta name="description" content="Short videos about real cyber attacks happening now, with questions to talk about."><style>
+:root{font-family:ui-rounded,system-ui,-apple-system,Segoe UI,sans-serif;color:#eafff2;--g:#38f28a;--r:#ff4d6a;--panel:#0e1a17}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:#050b0a}
+body{background:radial-gradient(ellipse at 50% -20%,#0f3a2a,#050b0a 65%) fixed;user-select:none}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,#ffffff06 0 1px,transparent 1px 4px);z-index:0}
+.wrap{position:relative;z-index:1;max-width:1800px;margin:0 auto;padding:26px 40px 60px 40px}
+header{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;padding-left:150px;min-height:70px}
+h1{margin:0;font-size:clamp(34px,4vw,64px);font-weight:950;letter-spacing:-2px;line-height:1}
+h1 .alert{color:var(--r);text-shadow:0 0 24px #ff4d6a88}h1 .cur{color:var(--g);animation:blink 1s steps(1) infinite}
+header p{margin:0 0 6px;font-size:clamp(16px,1.4vw,22px);color:#9fd8b8}
+.stage{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(300px,1fr);gap:24px;margin-top:24px}
+.player{background:#000;border:3px solid var(--g);border-radius:26px;overflow:hidden;box-shadow:0 0 50px #38f28a33;position:relative;align-self:start}
+.player video{display:block;width:100%;aspect-ratio:16/9;background:#000}
+.side{background:linear-gradient(160deg,#10241e,#0a1412);border:2px solid #1f5a43;border-radius:26px;padding:24px;display:flex;flex-direction:column;gap:14px}
+.tag{align-self:flex-start;font-weight:950;font-size:14px;letter-spacing:1.5px;padding:6px 12px;border-radius:20px;background:#3a0d16;border:1px solid var(--r);color:#ffb3c0}
+.side h2{margin:0;font-size:clamp(26px,2.2vw,40px);font-weight:950;line-height:1.05}
+.side .sum{margin:0;font-size:clamp(17px,1.3vw,22px);line-height:1.4;color:#cdeedd}
+.side h3{margin:8px 0 0;font-size:18px;letter-spacing:1px;color:var(--g)}
+.qs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.qs li{background:#0b1a16;border:2px solid #1f5a43;border-radius:18px;padding:14px 16px;font-size:clamp(16px,1.2vw,20px);font-weight:750;line-height:1.3;cursor:pointer;touch-action:manipulation}
+.qs li::before{content:'💬 '}.qs li.on{background:var(--g);color:#04140c;border-color:var(--g)}
+.controls{display:flex;gap:12px;margin-top:auto;flex-wrap:wrap}
+.btn{flex:1;min-width:130px;border:2px solid var(--g);background:#0b2a1d;color:#eafff2;font-family:inherit;font-weight:900;font-size:20px;padding:16px 14px;border-radius:18px;cursor:pointer;touch-action:manipulation}
+.btn:active{transform:scale(.96)}
+.shelf{margin-top:34px}.shelf h3{margin:0 0 14px;font-size:clamp(20px,1.6vw,28px);font-weight:950}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(240px,18vw,330px),1fr));gap:20px}
+.card{background:#0b1613;border:3px solid #1f5a43;border-radius:22px;overflow:hidden;cursor:pointer;touch-action:manipulation;transition:transform .12s}
+.card:active{transform:scale(.96)}.card.on{border-color:var(--g);box-shadow:0 0 30px #38f28a55}
+.card video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#000;pointer-events:none}
+.card .t{padding:12px 16px 16px}.card b{display:block;font-size:21px;font-weight:900}.card small{color:#9fd8b8;font-size:15px;font-weight:700}
+.card.soon{display:flex;align-items:center;justify-content:center;min-height:200px;border-style:dashed;color:#6fae8d;font-size:20px;font-weight:850;text-align:center;padding:20px;cursor:default}
+.note{margin-top:28px;color:#6fae8d;font-size:15px}
+@keyframes blink{50%{opacity:0}}
+@media(max-width:1000px){.stage{grid-template-columns:1fr}header{padding-left:0}.wrap{padding:84px 16px 40px}}
+</style></head><body><div class="wrap">
+<header><h1><span class="alert">⚠</span> HACK WATCH<span class="cur">_</span></h1><p>Real cyber attacks in the news — watch, then talk about it.</p></header>
+<section class="stage">
+ <div class="player"><video id="main" controls playsinline preload="metadata"></video></div>
+ <aside class="side"><span class="tag" id="tag">🚨 IN THE NEWS</span><h2 id="title"></h2><p class="sum" id="sum"></p><h3>TALK ABOUT IT</h3><ul class="qs" id="qs"></ul>
+  <div class="controls"><button class="btn" id="play">▶ Play</button><button class="btn" id="restart">⟲ Start again</button></div></aside>
+</section>
+<section class="shelf"><h3>📼 All videos</h3><div class="grid" id="grid"></div></section>
+<p class="note">Videos are for classroom discussion. Never try hacking anything you don't own or have permission to test.</p>
+</div><script>
+// ── ADD A VIDEO: drop the .mp4 in the site folder, then add one entry here (newest first). ──
+const VIDEOS=[
+ {file:'fridges.mp4',title:'Empty Fridges',date:'November 2026',tag:'🚨 IN THE NEWS',
+  summary:'Supermarket fridges sitting empty. When computer systems are attacked, deliveries and ordering can stop — and it shows up on the shelves.',
+  questions:['What do you think happened to make the shelves go empty?','Which computers does a supermarket need to get food onto the shelves?','Who is affected when a company gets hacked?','How could the company get back up and running?']},
+];
+const main=document.getElementById('main'),grid=document.getElementById('grid'),playBtn=document.getElementById('play');let cur=0;
+function load(i,autoplay){cur=i;const v=VIDEOS[i];main.src=v.file;
+ document.getElementById('title').textContent=v.title;document.getElementById('sum').textContent=v.summary;document.getElementById('tag').textContent=(v.tag||'🚨 IN THE NEWS')+(v.date?' • '+v.date:'');
+ const qs=document.getElementById('qs');qs.innerHTML='';(v.questions||[]).forEach(q=>{const li=document.createElement('li');li.textContent=q;li.onclick=()=>{qs.querySelectorAll('li').forEach(x=>x.classList.toggle('on',x===li&&!li.classList.contains('on')))};qs.appendChild(li)});
+ grid.querySelectorAll('.card').forEach((c,n)=>c.classList.toggle('on',n===i));if(autoplay)main.play().catch(()=>{})}
+VIDEOS.forEach((v,i)=>{const c=document.createElement('div');c.className='card';c.innerHTML=`<video src="${v.file}#t=3" muted preload="metadata"></video><div class="t"><b>${v.title}</b><small>${v.date||''}</small></div>`;c.onclick=()=>{load(i,true);scrollTo({top:0,behavior:'smooth'})};grid.appendChild(c)});
+const soon=document.createElement('div');soon.className='card soon';soon.textContent='🔜 More hacks coming soon';grid.appendChild(soon);
+playBtn.onclick=()=>main.paused?main.play():main.pause();
+document.getElementById('restart').onclick=()=>{main.currentTime=0;main.play()};
+main.onplay=()=>playBtn.textContent='⏸ Pause';main.onpause=()=>playBtn.textContent='▶ Play';
+load(0,false);
+</script></body></html>
