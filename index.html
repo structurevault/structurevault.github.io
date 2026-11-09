@@ -88,11 +88,6 @@ home.onclick=()=>close();
 addEventListener('popstate',()=>{const h=location.hash.slice(1);h?open(h+'.html',false):close(false)});
 if(location.hash){const f=location.hash.slice(1)+'.html';if(PAGES.some(p=>p.f===f))open(f,false)}
 
-// go back to the tiles after 5 minutes with nobody touching the screen
-let idle=Date.now();const poke=()=>idle=Date.now();['pointerdown','keydown','wheel'].forEach(ev=>addEventListener(ev,poke,true));
-frame.addEventListener('load',()=>{try{['pointerdown','keydown','wheel'].forEach(ev=>frame.contentWindow.addEventListener(ev,poke,true))}catch(e){}});
-setInterval(()=>{if(viewer.classList.contains('open')&&Date.now()-idle>5*60*1000)close()},10000);
-
 document.getElementById('fs').onclick=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()};
 const clock=document.getElementById('clock');function tick(){const d=new Date();clock.innerHTML=d.toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'})+'<small>'+d.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'})+'</small>'}tick();setInterval(tick,10000);
 </script></body></html>
