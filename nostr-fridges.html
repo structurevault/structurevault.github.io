@@ -1,0 +1,188 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Nostr Fridge Network</title><style>
+:root{font-family:ui-rounded,system-ui,-apple-system,Segoe UI,sans-serif;color:#fff;background:#10051f}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;touch-action:none;background:#10051f}
+#viewport{position:fixed;inset:0;overflow:hidden;touch-action:none;background:radial-gradient(ellipse at 50% 35%,#381366,#11051f 76%)}
+#world{position:absolute;width:1900px;height:1050px;transform-origin:0 0;will-change:transform}
+.heading{position:absolute;top:30px;left:0;width:1900px;text-align:center;pointer-events:none;z-index:4}.heading h1{font-size:64px;letter-spacing:-3px;margin:0;font-weight:950}.heading h1 span{color:#d9a5ff}.heading p{font-size:24px;margin:4px;color:#d9c1fa}
+.panel{position:absolute;z-index:4;border:2px solid #8b4cc7;background:linear-gradient(150deg,#482071e8,#2a104de8);border-radius:32px;box-shadow:0 20px 60px #08020f77,inset 0 1px #ffffff20;padding:18px;text-align:center}
+.panel p{font-size:19px;color:#e7d2ff;margin:7px 0}.name{font-weight:900;font-size:30px}
+.pill{display:inline-block;background:#a45be9;color:white;border:1px solid #e0baff;border-radius:40px;padding:8px 18px;font-size:19px;font-weight:800;margin:7px 3px}
+.action{border:2px solid #efc7ff;background:#9d4dea;color:white;border-radius:22px;padding:15px 22px;font-weight:900;font-size:22px;cursor:pointer;box-shadow:0 7px 0 #54217c;touch-action:manipulation;font-family:inherit}.action:active{transform:translateY(5px);box-shadow:0 2px 0 #54217c}.smallaction{font-size:18px;padding:10px 15px}
+.keycard{display:inline-block;border:2px solid #b77beb;border-radius:16px;padding:12px 15px;font-size:19px;margin:8px 3px;cursor:pointer;touch-action:manipulation;background:#5e288a;font-weight:800}.keycard.secretkey{background:#742362;border-color:#ef9bd8}
+.keyexample{display:block;font:700 13px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;max-width:265px;margin:8px auto 2px;padding:8px 7px;border-radius:10px;background:#240e40;border:1px solid #aa76dd;color:#f4e7ff}.keycard.secretkey .keyexample{background:#3b143a;border-color:#e7a0d4}.keycard em{font-size:15px;display:block;font-style:normal;color:#eed5ff;margin-top:4px}
+.feather{height:70px;width:60px;vertical-align:middle;filter:drop-shadow(0 0 12px #b973ff)}
+.bubble{position:absolute;z-index:9;left:770px;top:800px;width:380px;padding:18px;border-radius:24px;background:#eed6ff;color:#38105d;font-size:22px;font-weight:850;text-align:center;box-shadow:0 10px 32px #0005;opacity:0;transition:opacity .25s;pointer-events:none}.bubble.show{opacity:1}
+.hint{position:absolute;top:991px;width:1900px;text-align:center;color:#d9b7ff;font-size:19px;pointer-events:none;z-index:5}
+.banner{position:absolute;top:880px;left:590px;width:720px;text-align:center;font-size:24px;font-weight:800;min-height:54px;color:#f4e2ff;z-index:5}
+.news{position:absolute;top:790px;left:560px;width:780px;text-align:center;font-size:18px;color:#e3c7ff;z-index:5;line-height:1.4}.news b{color:#ffb3a6}
+.hackbar{position:absolute;top:712px;left:590px;width:720px;display:flex;gap:14px;justify-content:center;z-index:5}
+.hackbar .action{font-size:19px;padding:11px 18px}#hack{background:#d1452f;border-color:#ffc0b0;box-shadow:0 7px 0 #7a1d10}#fix{background:#2c8c8a;border-color:#a8f1ec;box-shadow:0 7px 0 #135150}
+.toolbar{position:fixed;bottom:16px;right:18px;display:flex;gap:9px;z-index:20;touch-action:manipulation}.toolbar button{border:1px solid #b87cec;border-radius:15px;background:#411b67e8;color:white;padding:11px 16px;font-size:19px;font-weight:800;cursor:pointer;font-family:inherit}
+.corner{position:fixed;left:18px;bottom:18px;color:#e0c5ff;font-size:14px;opacity:.8;pointer-events:none}
+.line{position:absolute;inset:0;pointer-events:none}
+
+/* Teams */
+.red-team{border-color:#fa526f;background:linear-gradient(150deg,#672037ed,#2a104de8);box-shadow:0 20px 60px #08020f77,0 0 34px #ff36502c}
+.blue-team{border-color:#46a8ff;background:linear-gradient(150deg,#173e7bed,#2a104de8);box-shadow:0 20px 60px #08020f77,0 0 34px #3199ff2c}
+.teamlabel{display:inline-block;padding:7px 18px;margin:0 0 7px;border-radius:30px;font-size:22px;font-weight:950;letter-spacing:1px}
+.red-team .teamlabel{background:#c52346}.blue-team .teamlabel{background:#1269c5}
+.red-team .action{background:#cb3454;box-shadow:0 7px 0 #76152d;border-color:#ffb4c3}
+.blue-team .action{background:#277ad7;box-shadow:0 7px 0 #12457c;border-color:#a5d7ff}
+
+/* Running nostriches (purple silhouette) */
+.bird{height:150px;display:flex;justify-content:center;cursor:pointer}
+.bird svg{height:150px;width:140px;overflow:visible}
+.red-team .bird{filter:drop-shadow(0 6px 10px #ef466a99)}.blue-team .bird{filter:drop-shadow(0 6px 10px #398cff99)}
+.bird.left svg{transform:scaleX(-1)}
+.ostrich{--dur:.9s}.bird.fast .ostrich{--dur:.38s}
+.ostrich .near{color:#9b5cff}.ostrich .far{color:#7139d0}
+.ostrich .thigh,.ostrich .shin{transform-origin:0 0}
+.ostrich .thigh{animation:thigh var(--dur) linear infinite}
+.ostrich .shin{animation:shin var(--dur) linear infinite}
+.ostrich .far .thigh,.ostrich .far .shin{animation-delay:calc(var(--dur) * -.5)}
+.ostrich .runner{animation:stride calc(var(--dur) / 2) ease-in-out infinite}
+.ostrich .neck{transform-box:fill-box;transform-origin:30% 100%;animation:neck calc(var(--dur) / 2) ease-in-out infinite}
+.ostrich .tail{transform-box:fill-box;transform-origin:100% 15%;animation:tail var(--dur) ease-in-out infinite}
+@keyframes thigh{0%{transform:rotate(-30deg)}40%{transform:rotate(38deg)}60%{transform:rotate(20deg)}80%{transform:rotate(-20deg)}100%{transform:rotate(-30deg)}}
+@keyframes shin{0%{transform:rotate(-12deg)}40%{transform:rotate(6deg)}60%{transform:rotate(-105deg)}80%{transform:rotate(-80deg)}100%{transform:rotate(-12deg)}}
+@keyframes stride{50%{transform:translateY(-14px)}}
+@keyframes neck{50%{transform:rotate(-3deg)}}
+@keyframes tail{50%{transform:rotate(-10deg)}}
+
+/* Supermarket fridges = relays */
+.fridge{position:absolute;z-index:3;width:160px;height:210px;padding:7px;border-radius:18px 18px 10px 10px;background:linear-gradient(90deg,#cbbbe6,#f4eeff 45%,#bba7dd);border:3px solid #b47cf0;color:#2b0f4b;display:flex;flex-direction:column;cursor:pointer;user-select:none;touch-action:none;box-shadow:0 12px 30px #10051f99;transition:box-shadow .2s,border-color .3s,background .4s;animation:hum 3.8s ease-in-out infinite}
+.fridge:nth-of-type(3n){animation-delay:-1.3s}.fridge:nth-of-type(4n){animation-delay:-2.5s}
+.fhead{font-size:15px;font-weight:950;text-align:center;white-space:nowrap;overflow:hidden;padding:1px 0 4px}.fhead .wifi{font-size:12px}
+.door{flex:1;position:relative;border-radius:8px;border:3px solid #8c86a8;background:linear-gradient(170deg,#1f5c86,#0e2547);box-shadow:inset 0 0 22px #7fd8ff88;transform-origin:left center;transition:transform .35s,background .5s,box-shadow .5s;display:flex;flex-direction:column;padding:2px 14px 2px 4px}
+.door::before{content:"";position:absolute;inset:0;border-radius:5px;background:linear-gradient(115deg,transparent 30%,#ffffff2a 38%,transparent 46%);pointer-events:none}
+.door::after{content:"";position:absolute;right:3px;top:18%;height:64%;width:5px;border-radius:4px;background:#e6e1f2;box-shadow:0 0 4px #0008}
+.shelf{flex:1;display:flex;align-items:center;justify-content:center;font-size:23px;border-bottom:3px solid #a9e3ff55;line-height:1}.shelf.mail{border-bottom:0;font-size:20px;gap:2px}
+.fbase{display:flex;justify-content:space-between;align-items:center;padding-top:5px}
+.led{font:800 15px/1 ui-monospace,Consolas,monospace;background:#071a0c;color:#5dff7a;padding:4px 7px;border-radius:6px;min-width:62px;text-align:center;text-shadow:0 0 6px #5dff7a}
+.fbase small{font-size:13px;font-weight:800;color:#4b2a74}
+.fridge.active{border-color:#fff;box-shadow:0 0 0 7px #e3b6ff55,0 0 60px #b16bff}
+.fridge.open .door{transform:perspective(380px) rotateY(-32deg)}
+.fridge.hacked{border-color:#ff4d5e;background:linear-gradient(90deg,#e39a8e,#ffd9cc 45%,#d77f74);animation:shake .5s ease-in-out infinite}
+.fridge.hacked .door{background:linear-gradient(170deg,#8a2a14,#3d0d0a);box-shadow:inset 0 0 26px #ff8a3acc}
+.fridge.hacked .led{color:#ff5050;background:#220606;text-shadow:0 0 8px #ff3030;animation:blink .8s steps(2) infinite}
+.fridge.hacked .shelf{border-color:#ffb18055}
+.fridge .tag{position:absolute;top:-30px;left:50%;transform:translateX(-50%);background:#c41d2e;color:#fff;font-size:13px;font-weight:900;padding:3px 9px;border-radius:10px;white-space:nowrap;opacity:0;transition:opacity .3s;border:1px solid #ffb0b8}
+.fridge.hacked .tag{opacity:1}
+.fridge .heat{position:absolute;inset:-14px -10px auto;height:30px;pointer-events:none;opacity:0;font-size:20px;text-align:center;letter-spacing:6px}
+.fridge.hacked .heat{opacity:1;animation:rise 1.2s ease-in infinite}
+@keyframes hum{50%{box-shadow:0 10px 32px #12021f,0 0 27px #9d47ec88}}
+@keyframes shake{25%{transform:translateX(-1.5px) rotate(-.4deg)}75%{transform:translateX(1.5px) rotate(.4deg)}}
+@keyframes blink{50%{opacity:.35}}
+@keyframes rise{from{transform:translateY(0);opacity:.9}to{transform:translateY(-26px);opacity:0}}
+
+/* Message copies */
+.pkt{position:absolute;z-index:7;background:#efd9ff;border:2px solid #fff;color:#39135c;border-radius:14px;padding:4px 9px;font-weight:900;font-size:20px;transform:translate(-50%,-50%);box-shadow:0 0 22px #e8b6ff;pointer-events:none;white-space:nowrap}
+.pkt.bad{background:#ffc0b8;color:#6b0d0d;box-shadow:0 0 24px #ff4d4d;border-color:#ffe0dc}
+.preview{display:inline-block;margin:4px 0 10px;background:#efd9ff;color:#39135c;border-radius:14px;padding:6px 12px;font-weight:900;font-size:18px}
+.inbox{min-height:76px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-content:center;margin:6px 0}
+.chip{width:46px;height:32px;border-radius:9px;background:#efd9ff;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid #fff;animation:pop .3s ease-out}
+.chip.bad{background:#ffc0b8;border-color:#ffe0dc}.chip.ok.checked{background:#9cf0b4}.chip.bad.checked{background:#5c1a1a;border-color:#ff6d6d}
+@keyframes pop{from{transform:scale(.2)}}
+#networkFX{position:absolute;inset:0;width:1900px;height:1050px;pointer-events:none;z-index:2;overflow:visible}
+#networkFX .wire{fill:none;stroke:#b66aff;stroke-width:3;opacity:.28;stroke-linecap:round;stroke-dasharray:7 13;animation:wireflow 1.7s linear infinite}
+#networkFX .wire.hot{stroke:#e6b8ff;opacity:.6;stroke-width:4}
+#networkFX .spark{filter:drop-shadow(0 0 7px #f2d4ff)}
+#networkFX .halo{fill:#9fe0ff;opacity:.14}
+@keyframes wireflow{to{stroke-dashoffset:-40}}
+@media(prefers-reduced-motion:reduce){.wire,.fridge,.ostrich *{animation:none!important}}
+</style></head><body><div id="viewport"><div id="world">
+<div class="heading"><h1><svg class="feather" viewBox="0 0 90 110" xmlns="http://www.w3.org/2000/svg" aria-label="Purple feather"><path d="M15 100 Q-3 34 69 5 Q102 64 15 100Z" fill="#aa15ff"/><path d="M15 100 Q35 58 69 5" stroke="#eed2ff" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M27 77 L12 53 M38 56 L20 31 M43 56 L67 62 M56 30 L76 37" stroke="#df9bff" stroke-width="3" fill="none"/></svg> The <span>NOSTR</span> Fridge Network</h1><p>One nostrich signs • Ten supermarket fridges relay • Another nostrich checks</p></div>
+<svg class="line" width="1900" height="1050" viewBox="0 0 1900 1050"></svg>
+<div class="panel red-team" style="left:30px;top:225px;width:335px;height:760px"><div class="bird" id="nelly"></div><div class="teamlabel">🔴 RED TEAM</div><div class="name">Nelly the Nostrich</div><p>Signs a message and sends it to the fridges</p><div class="preview">✉️ Hello, Oscar!</div><div class="keycard" id="pub" role="button" tabindex="0">🔓 PUBLIC KEY<em>Safe to share</em><span class="keyexample">npub1q8m7k2s4v9p6t3w5x8y2z7r4n6c9d5f3g8h2j4k7l9m5p2q6s8t4u3v</span></div><div class="keycard secretkey" id="priv" role="button" tabindex="0">🔐 PRIVATE KEY<em>Keep it secret!</em><span class="keyexample">nsec1q8m7k2s4v9p6t3w5x<br>••••••••••••••••••••<br>6s8t4u3v</span></div><button class="action" id="send">✉️ SEND MESSAGE</button></div>
+<div class="panel blue-team" style="left:1530px;top:225px;width:340px;height:760px"><div class="bird left" id="oscar"></div><div class="teamlabel">🔵 BLUE TEAM</div><div class="name">Oscar the Nostrich</div><p>Collects copies from the fridges</p><div class="pill">🔓 Nelly's public key</div><div class="inbox" id="inbox"></div><p id="verified" style="font-weight:850;min-height:80px">Waiting for a message…</p><button class="action smallaction" id="verify">🔍 CHECK SIGNATURES</button></div>
+<div class="hackbar"><button class="action" id="hack">🔥 HACK A FRIDGE</button><button class="action" id="fix">🔧 FIX ALL FRIDGES</button></div>
+<div class="news">🧊 <b>Real news:</b> in late 2026, hackers turned up the heat on internet-connected supermarket fridges across Europe. Many were still using their <b>default passwords</b>.</div>
+<div class="bubble" id="bubble" aria-live="polite"></div><div class="banner" id="status">Tap SEND MESSAGE to watch the fridges relay it!</div><div class="hint">👆 Tap a nostrich, key or fridge • Hack a fridge, then send again • Drag to move • Pinch to zoom</div>
+</div></div><div class="corner">CLASSROOM DEMO • Example keys and fridge relays • Inspired by the 2026 European supermarket fridge hacks</div><div class="toolbar"><button id="minus">−</button><button id="reset">⟲ Reset</button><button id="plus">+</button><button id="fullscreen">⛶ Full screen</button></div><script>
+// ---------- Nostrich: purple running silhouette (faces right; .left flips it) ----------
+function leg(cls,x,y){return `<g class="${cls}" transform="translate(${x} ${y})"><g class="thigh"><path d="M0 0 L0 74" stroke="currentColor" stroke-width="24" stroke-linecap="round"/><g transform="translate(0 74)"><g class="shin"><circle r="15" fill="currentColor"/><path d="M0 0 L0 118" stroke="currentColor" stroke-width="12" stroke-linecap="round"/><path d="M0 118 L34 116 M0 118 L24 132 M0 118 L-12 124" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></g></g></g></g>`}
+function nostrich(){return `<svg class="ostrich" viewBox="0 0 500 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Running purple nostrich"><g transform="translate(-330 -100)"><g class="runner">
+${leg('far',565,412)}
+<g class="near" fill="currentColor">
+<path class="tail" d="M445 318 C402 316 360 334 346 372 C352 378 358 376 362 370 L366 400 L382 378 L390 408 L404 386 L420 402 L440 392 Z"/>
+<path d="M432 314 C480 312 540 268 610 263 C660 260 690 278 712 290 C722 296 732 300 740 300 L770 330 C760 340 745 345 735 345 C728 372 742 398 712 414 C680 432 630 436 595 432 C560 442 510 425 470 400 C445 392 420 402 405 400 C380 396 372 360 395 340 Z"/>
+<path class="neck" d="M705 292 C735 296 762 290 772 268 C780 245 772 228 752 210 C728 190 716 172 722 148 C726 128 748 122 768 138 L805 150 L790 155 L805 161 L772 161 C760 163 752 170 758 184 C770 205 802 222 803 256 C804 296 772 326 735 346 Z"/>
+<circle cx="749" cy="143" r="4.5" fill="#2a0f4d"/>
+</g>
+${leg('near',605,418)}
+</g></g></svg>`}
+document.getElementById('nelly').innerHTML=nostrich();document.getElementById('oscar').innerHTML=nostrich();
+const nelly=document.getElementById('nelly'),oscar=document.getElementById('oscar');
+
+// ---------- Fridges ----------
+const FR=[["Dairy Aisle","🥛🧀","🥚🧈"],["Ice Cream Isle","🍦🍨","🧊🍧"],["Cheese Corner","🧀🍇","🍞🥖"],["Yoghurt Yard","🥛🍓","🍒🍑"],["Frozen Veg","🥦🌽","🥕🍄"],["Juice Junction","🧃🍊","🍎🍇"],["Butter Bay","🧈🥐","🥞🍯"],["Fish Counter","🐟🦐","🍣🦀"],["Salad Stop","🥗🥬","🥒🍅"],["Gelato Gate","🍨🍫","🍓🍋"]];
+const world=document.getElementById('world'),beforeEl=document.querySelector('.hackbar');
+const relays=FR.map(([name,a,b],i)=>{const d=document.createElement('div');d.className='relay fridge';d.id='r'+i;d.style.left=(460+(i%5)*205)+'px';d.style.top=(255+Math.floor(i/5)*240)+'px';d.dataset.name=name;d.innerHTML=`<div class="tag">🔓 password: admin</div><div class="heat">♨️🔥♨️</div><div class="fhead"><span class="wifi">📶</span> ${name}</div><div class="door"><div class="shelf s1">${a}</div><div class="shelf s2">${b}</div><div class="shelf mail"></div></div><div class="fbase"><span class="led">3°C</span><small>Relay ${i+1}</small></div>`;world.insertBefore(d,beforeEl);return d});
+const center=i=>[relays[i].offsetLeft+80,relays[i].offsetTop+105];
+const NELLY=[300,320],OSCAR=[1595,320];
+const hacked=new Set(),temps=FR.map(()=>3),heatAnim=[];
+function setTemp(i,t){temps[i]=t;relays[i].querySelector('.led').textContent=Math.round(t)+'°C'}
+function hackFridge(i){hacked.add(i);const r=relays[i];r.classList.add('hacked');r.querySelector('.s1').textContent='🫠💧';r.querySelector('.s2').textContent='💧🧀';const target=50+Math.floor(Math.random()*31),start=performance.now(),from=temps[i];cancelAnimationFrame(heatAnim[i]);(function f(now){const t=Math.min(1,(now-start)/1600);setTemp(i,from+(target-from)*t);if(t<1)heatAnim[i]=requestAnimationFrame(f)})(start);return target}
+function fixFridge(i){hacked.delete(i);cancelAnimationFrame(heatAnim[i]);const r=relays[i];r.classList.remove('hacked');r.querySelector('.s1').textContent=FR[i][1];r.querySelector('.s2').textContent=FR[i][2];setTemp(i,3)}
+
+// ---------- Pan / zoom / UI ----------
+const vp=document.getElementById('viewport'),status=document.getElementById('status'),bubble=document.getElementById('bubble'),verified=document.getElementById('verified'),inbox=document.getElementById('inbox');
+let scale=1,tx=0,ty=0,seq=0,delivered=false,timers=[],packets=[],copies=[],pointers=new Map(),drag=null,pinch=null;const W=1900,H=1050;
+function fit(){scale=Math.min(innerWidth/W,innerHeight/H)*.96;tx=(innerWidth-W*scale)/2;ty=(innerHeight-H*scale)/2;draw()}
+function draw(){world.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`}
+function zoom(f,x=innerWidth/2,y=innerHeight/2){let ns=Math.max(.25,Math.min(4,scale*f)),wx=(x-tx)/scale,wy=(y-ty)/scale;tx=x-wx*ns;ty=y-wy*ns;scale=ns;draw()}
+function say(t,ms=4200){bubble.textContent=t;bubble.classList.add('show');clearTimeout(say.timer);say.timer=setTimeout(()=>bubble.classList.remove('show'),ms)}
+function wait(ms,fn){timers.push(setTimeout(fn,ms))}
+function fly(a,b,dur,label,bad,done){const token=seq,el=document.createElement('div');el.className='pkt'+(bad?' bad':'');el.textContent=label;world.appendChild(el);packets.push(el);const start=performance.now();(function frame(now){if(token!==seq)return;const t=Math.min(1,(now-start)/dur),e=t*t*(3-2*t);el.style.left=(a[0]+(b[0]-a[0])*e)+'px';el.style.top=(a[1]+(b[1]-a[1])*e-70*Math.sin(Math.PI*e))+'px';if(t<1)requestAnimationFrame(frame);else{el.remove();done&&done()}})(start)}
+function stop(){seq++;timers.forEach(clearTimeout);timers=[];packets.forEach(p=>p.remove());packets=[];relays.forEach(r=>{r.classList.remove('active','open');r.querySelector('.mail').textContent=''});nelly.classList.remove('fast');oscar.classList.remove('fast')}
+function blinkFridge(i){const r=relays[i];r.classList.add('active','open');wait(450,()=>r.classList.remove('active','open'))}
+function send(){stop();delivered=false;copies=[];inbox.innerHTML='';verified.textContent='Waiting for a message…';
+ status.textContent='1. Nelly signs with her PRIVATE key ✍️';say('I sign my message with my secret key. I never share it!');nelly.classList.add('fast');
+ wait(1300,()=>{status.textContent='2. Nelly puts a copy in every fridge 🧊';
+  relays.forEach((r,i)=>wait(i*110,()=>fly(NELLY,center(i),750,'✉️',false,()=>{blinkFridge(i);const bad=hacked.has(i);copies[i]=!bad;r.querySelector('.mail').textContent=bad?'😈':'✉️';if(bad)say(`🔥 Hacked fridge ${r.dataset.name} swapped the message for a fake!`,2200)})));
+ });
+ wait(3300,()=>{nelly.classList.remove('fast');oscar.classList.add('fast');status.textContent='3. Oscar collects copies from the fridges 📥';
+  relays.forEach((r,i)=>wait(i*110,()=>{blinkFridge(i);const bad=!copies[i];fly(center(i),OSCAR,800,bad?'😈 Give me your snacks!':'✉️',bad,()=>{const c=document.createElement('span');c.className='chip '+(bad?'bad':'ok');c.textContent=bad?'😈':'✉️';c.title=(bad?'Fake: "Give me your snacks!"':'"Hello, Oscar!"')+' from '+r.dataset.name;inbox.appendChild(c)})}));
+ });
+ wait(5300,()=>{oscar.classList.remove('fast');delivered=true;verified.textContent='📬 10 copies arrived! Which ones are really from Nelly?';status.textContent='4. Tap CHECK SIGNATURES to spot the fakes';});
+}
+function verify(){if(!delivered){say('Send a message first, then check the signatures!');return}
+ const chips=[...inbox.children];chips.forEach((c,i)=>{c.classList.add('checked');c.textContent=c.classList.contains('bad')?'❌':'✅'});
+ const good=copies.filter(Boolean).length,bad=copies.length-good;
+ if(good){verified.innerHTML=`✅ “Hello, Oscar!” — signed by Nelly`+(bad?`<br><span style="color:#ffb3a6">❌ ${bad} fake cop${bad==1?'y':'ies'} thrown out</span>`:'');status.textContent='✅ Nelly’s PUBLIC key checks every copy';say(bad?'Hacked fridges can change a message, but they can’t fake Nelly’s signature. Oscar just ignores the fakes!':'Every copy matches Nelly’s signature. No fridge messed with it!')}
+ else{verified.innerHTML='❌ Every copy was faked!';status.textContent='❌ No real copy got through';say('Every fridge was hacked! Fix the fridges or use more relays and the real message gets through.')}
+}
+document.getElementById('send').onclick=send;document.getElementById('verify').onclick=verify;
+document.getElementById('hack').onclick=()=>{const ok=relays.map((r,i)=>i).filter(i=>!hacked.has(i));if(!ok.length){say('Every fridge is already hacked! 😱 Tap FIX ALL FRIDGES.');return}const i=ok[Math.floor(Math.random()*ok.length)],t=hackFridge(i);say(`${FR[i][0]} still used the factory password “admin” 🔓 Hackers turned it up to ${t}°C!`);status.textContent=`🔥 ${hacked.size} fridge${hacked.size>1?'s':''} hacked. Send a message to see what happens!`};
+document.getElementById('fix').onclick=()=>{if(!hacked.size){say('All the fridges are cool and safe already ❄️');return}[...hacked].forEach(fixFridge);say('🔧 New passwords, updated software, fridges back to 3°C ❄️');status.textContent='All fridges fixed! Tap SEND MESSAGE.'};
+document.getElementById('pub').onclick=()=>say('Public keys often start with npub1. Share it so people can check your messages!');
+document.getElementById('priv').onclick=()=>say('Private keys often start with nsec1. The middle is hidden. Never share it, not even with a fridge!');
+relays.forEach((r,i)=>r.onclick=()=>say(hacked.has(i)?`${r.dataset.name} is hacked and running at ${Math.round(temps[i])}°C! It can swap or lose messages, but it can’t forge a signature.`:`${r.dataset.name} is relay ${i+1}: an internet-connected fridge that keeps a copy of messages and hands them on.`));
+nelly.onclick=()=>say('Nelly signs her message with her private key, then runs it to the fridges!');
+oscar.onclick=()=>say('Oscar grabs copies from many fridges and checks each signature!');
+document.querySelectorAll('.keycard').forEach(e=>e.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();e.click()}});
+document.getElementById('plus').onclick=()=>zoom(1.25);document.getElementById('minus').onclick=()=>zoom(.8);
+document.getElementById('reset').onclick=()=>{stop();delivered=false;copies=[];inbox.innerHTML='';[...hacked].forEach(fixFridge);verified.textContent='Waiting for a message…';status.textContent='Tap SEND MESSAGE to watch the fridges relay it!';bubble.classList.remove('show');fit()};
+document.getElementById('fullscreen').onclick=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()};
+function pos(e){return {x:e.clientX,y:e.clientY}}function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+vp.addEventListener('pointerdown',e=>{if(e.target.closest('button,.keycard,.relay,.bird'))return;vp.setPointerCapture(e.pointerId);pointers.set(e.pointerId,pos(e));if(pointers.size===1){drag={x:e.clientX,y:e.clientY,tx,ty};pinch=null}else if(pointers.size===2){let [a,b]=[...pointers.values()];pinch={d:dist(a,b),s:scale,wx:((a.x+b.x)/2-tx)/scale,wy:((a.y+b.y)/2-ty)/scale};drag=null}});
+vp.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,pos(e));if(pointers.size===2&&pinch){let [a,b]=[...pointers.values()],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;scale=Math.max(.25,Math.min(4,pinch.s*dist(a,b)/pinch.d));tx=cx-pinch.wx*scale;ty=cy-pinch.wy*scale;draw()}else if(pointers.size===1&&drag){tx=drag.tx+e.clientX-drag.x;ty=drag.ty+e.clientY-drag.y;draw()}});
+function up(e){pointers.delete(e.pointerId);pinch=null;drag=null;if(pointers.size===1){let a=[...pointers.values()][0];drag={x:a.x,y:a.y,tx,ty}}}
+vp.addEventListener('pointerup',up);vp.addEventListener('pointercancel',up);vp.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.12:.89,e.clientX,e.clientY)},{passive:false});
+
+// ---------- Ambient chatter between fridges ----------
+(function networkAnimation(){
+ const NS='http://www.w3.org/2000/svg',fx=document.createElementNS(NS,'svg');fx.id='networkFX';fx.setAttribute('viewBox','0 0 1900 1050');fx.setAttribute('aria-hidden','true');
+ const centers=relays.map((r,i)=>center(i)),edges=[];
+ for(let row=0;row<2;row++)for(let col=0;col<4;col++)edges.push([row*5+col,row*5+col+1]);
+ for(let col=0;col<5;col++)edges.push([col,col+5]);
+ for(let col=0;col<4;col++){edges.push([col,col+6]);edges.push([col+1,col+5])}
+ edges.push([-1,0],[-1,5],[-1,2],[-1,7],[4,-2],[9,-2],[2,-2],[7,-2]);
+ const point=i=>i===-1?[365,500]:i===-2?[1530,500]:centers[i];
+ const add=(tag,attrs,parent=fx)=>{const e=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);parent.appendChild(e);return e};
+ edges.forEach(([a,b],i)=>{const [x1,y1]=point(a),[x2,y2]=point(b),bend=(i%3-1)*14,d=`M ${x1} ${y1} Q ${(x1+x2)/2} ${(y1+y2)/2+bend} ${x2} ${y2}`;add('path',{d,class:'wire'+(i%5===0?' hot':'')});
+  for(let j=0;j<2;j++){const rev=j===1,dot=add('circle',{r:(i%4===0?6:4),fill:rev?'#b16cff':'#f6dcff',class:'spark'});add('animateMotion',{dur:(2.3+(i%7)*.43+j*.5)+'s',repeatCount:'indefinite',begin:(-((i*1.11+j*2.2)%6))+'s',keyPoints:rev?'1;0':'0;1',keyTimes:'0;1',calcMode:'linear',path:d},dot);add('animate',{attributeName:'opacity',values:'.15;1;.15',dur:'2.4s',repeatCount:'indefinite',begin:(-i*.4)+'s'},dot)}});
+ centers.forEach(([x,y],i)=>{const h=add('circle',{cx:x,cy:y,r:27,class:'halo'}),dur=(2.5+(i%4)*.5)+'s',b=(-i*.35)+'s';add('animate',{attributeName:'r',values:'30;60;30',dur,begin:b,repeatCount:'indefinite'},h);add('animate',{attributeName:'opacity',values:'.03;.22;.03',dur,begin:b,repeatCount:'indefinite'},h)});
+ document.querySelector('svg.line').insertAdjacentElement('afterend',fx);
+})();
+window.addEventListener('resize',fit);fit();
+</script></body></html>
