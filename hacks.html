@@ -16,10 +16,14 @@ header p{margin:0 0 6px;font-size:clamp(16px,1.4vw,22px);color:#9fd8b8}
 .tag{align-self:flex-start;font-weight:950;font-size:14px;letter-spacing:1.5px;padding:6px 12px;border-radius:20px;background:#3a0d16;border:1px solid var(--r);color:#ffb3c0}
 .side h2{margin:0;font-size:clamp(26px,2.2vw,40px);font-weight:950;line-height:1.05}
 .side .sum{margin:0;font-size:clamp(17px,1.3vw,22px);line-height:1.4;color:#cdeedd}
-.side h3{margin:8px 0 0;font-size:18px;letter-spacing:1px;color:var(--g)}
-.qs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
-.qs li{background:#0b1a16;border:2px solid #1f5a43;border-radius:18px;padding:14px 16px;font-size:clamp(16px,1.2vw,20px);font-weight:750;line-height:1.3;cursor:pointer;touch-action:manipulation}
-.qs li::before{content:'💬 '}.qs li.on{background:var(--g);color:#04140c;border-color:var(--g)}
+.term{flex:1;min-height:260px;display:flex;flex-direction:column;background:#020604;border:2px solid #1f5a43;border-radius:16px;overflow:hidden;box-shadow:inset 0 0 30px #38f28a14}
+.tbar{display:flex;align-items:center;gap:7px;padding:8px 12px;background:#0b1a16;border-bottom:1px solid #1f5a43;font:700 13px ui-monospace,Consolas,monospace;color:#6fae8d}
+.tbar i{width:11px;height:11px;border-radius:50%;background:#ff5f57}.tbar i:nth-child(2){background:#febc2e}.tbar i:nth-child(3){background:#28c840;margin-right:6px}
+.tout{flex:1;position:relative;overflow:hidden;padding:10px 14px;font:600 clamp(12px,.85vw,15px)/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;color:#7dffb2;text-shadow:0 0 6px #38f28a66}
+.tout .in{position:absolute;left:14px;right:14px;bottom:10px}
+.tout div div{white-space:pre-wrap;word-break:break-all}
+.tout .p{color:#eafff2}.tout .p b{color:var(--g)}.tout .w{color:#ffd166}.tout .e{color:var(--r);text-shadow:0 0 8px #ff4d6a88}.tout .d{color:#3f8f66}.tout .ok{color:#5cf2ff}
+.tout .caret{display:inline-block;width:.6em;height:1.1em;background:var(--g);vertical-align:-.2em;animation:blink 1s steps(1) infinite}
 .controls{display:flex;gap:12px;margin-top:auto;flex-wrap:wrap}
 .btn{flex:1;min-width:130px;border:2px solid var(--g);background:#0b2a1d;color:#eafff2;font-family:inherit;font-weight:900;font-size:20px;padding:16px 14px;border-radius:18px;cursor:pointer;touch-action:manipulation}
 .btn:active{transform:scale(.96)}
@@ -37,7 +41,7 @@ header p{margin:0 0 6px;font-size:clamp(16px,1.4vw,22px);color:#9fd8b8}
 <header><h1><span class="alert">⚠</span> HACK WATCH<span class="cur">_</span></h1><p>Real cyber attacks in the news — watch, then talk about it.</p></header>
 <section class="stage">
  <div class="player"><video id="main" controls playsinline preload="metadata"></video></div>
- <aside class="side"><span class="tag" id="tag">🚨 IN THE NEWS</span><h2 id="title"></h2><p class="sum" id="sum"></p><h3>TALK ABOUT IT</h3><ul class="qs" id="qs"></ul>
+ <aside class="side"><span class="tag" id="tag">🚨 IN THE NEWS</span><h2 id="title"></h2><p class="sum" id="sum"></p><div class="term"><div class="tbar"><i></i><i></i><i></i><span>root@hackwatch:~</span></div><div class="tout" id="term"></div></div>
   <div class="controls"><button class="btn" id="play">▶ Play</button><button class="btn" id="restart">⟲ Start again</button></div></aside>
 </section>
 <section class="shelf"><h3>📼 All videos</h3><div class="grid" id="grid"></div></section>
@@ -46,13 +50,11 @@ header p{margin:0 0 6px;font-size:clamp(16px,1.4vw,22px);color:#9fd8b8}
 // ── ADD A VIDEO: drop the .mp4 in the site folder, then add one entry here (newest first). ──
 const VIDEOS=[
  {file:'fridges.mp4',title:'Empty Fridges',date:'November 2026',tag:'🚨 IN THE NEWS',
-  summary:'Supermarket fridges sitting empty. When computer systems are attacked, deliveries and ordering can stop — and it shows up on the shelves.',
-  questions:['What do you think happened to make the shelves go empty?','Which computers does a supermarket need to get food onto the shelves?','Who is affected when a company gets hacked?','How could the company get back up and running?']},
+  summary:'Supermarket fridges sitting empty. When computer systems are attacked, deliveries and ordering can stop — and it shows up on the shelves.'},
 ];
 const main=document.getElementById('main'),grid=document.getElementById('grid'),playBtn=document.getElementById('play');let cur=0;
 function load(i,autoplay){cur=i;const v=VIDEOS[i];main.src=v.file;
  document.getElementById('title').textContent=v.title;document.getElementById('sum').textContent=v.summary;document.getElementById('tag').textContent=(v.tag||'🚨 IN THE NEWS')+(v.date?' • '+v.date:'');
- const qs=document.getElementById('qs');qs.innerHTML='';(v.questions||[]).forEach(q=>{const li=document.createElement('li');li.textContent=q;li.onclick=()=>{qs.querySelectorAll('li').forEach(x=>x.classList.toggle('on',x===li&&!li.classList.contains('on')))};qs.appendChild(li)});
  grid.querySelectorAll('.card').forEach((c,n)=>c.classList.toggle('on',n===i));if(autoplay)main.play().catch(()=>{})}
 VIDEOS.forEach((v,i)=>{const c=document.createElement('div');c.className='card';c.innerHTML=`<video src="${v.file}#t=3" muted preload="metadata"></video><div class="t"><b>${v.title}</b><small>${v.date||''}</small></div>`;c.onclick=()=>{load(i,true);scrollTo({top:0,behavior:'smooth'})};grid.appendChild(c)});
 const soon=document.createElement('div');soon.className='card soon';soon.textContent='🔜 More hacks coming soon';grid.appendChild(soon);
@@ -60,4 +62,30 @@ playBtn.onclick=()=>main.paused?main.play():main.pause();
 document.getElementById('restart').onclick=()=>{main.currentTime=0;main.play()};
 main.onplay=()=>playBtn.textContent='⏸ Pause';main.onpause=()=>playBtn.textContent='▶ Play';
 load(0,false);
+
+// ── Decorative terminal: made-up output on a loop, for looks only (nothing real is scanned or run). ──
+(function terminal(){
+ const out=document.getElementById('term'),inner=document.createElement('div');inner.className='in';out.appendChild(inner);
+ const R=n=>Math.floor(Math.random()*n),hex=n=>[...Array(n)].map(()=>'0123456789abcdef'[R(16)]).join(''),ip=()=>`10.${R(255)}.${R(255)}.${R(254)+1}`,pad=(s,n)=>(s+' '.repeat(n)).slice(0,n);
+ const SCRIPTS=[
+  ()=>[['p','trace --route warehouse-07'],...[1,2,3,4,5].map(i=>['',`  ${i}  ${pad(ip(),16)} ${(R(400)/10+1).toFixed(1)} ms`]),['ok','  route complete ✓']],
+  ()=>[['p','tail -f /var/log/orders.log'],...[0,1,2,3].map(()=>['',`[${new Date().toTimeString().slice(0,8)}] ORDER #${R(90000)+10000} → depot ${R(40)+1}`]),['e','[ERROR] order system not responding'],['e','[ERROR] delivery queue stalled — 0 trucks dispatched'],['w','[WARN]  fridge restock delayed']],
+  ()=>[['p','firewall --watch'],...[0,1,2,3,4].map(()=>R(3)?['d',`  ALLOW  ${pad(ip(),16)} :443  https`]:['e',`  BLOCK  ${pad(ip(),16)} :${[22,3389,445,23][R(4)]}  suspicious`]),['ok','  ' + (R(200)+40) + ' packets inspected']],
+  ()=>[['p','hash --check backups/*.tar'],...['mon','tue','wed','thu'].map(d=>['',`  sha256 ${hex(24)}…  backup-${d}.tar  `+(d==='thu'?'':'OK')]),['w','  backup-thu.tar  ENCRYPTED BY UNKNOWN KEY'],['ok','  restoring from backup-wed.tar …']],
+  ()=>[['p','ransom-note --inspect README.txt'],['e','  !!! YOUR FILES ARE LOCKED !!!'],['d','  payment: bitcoin  •  wallet: bc1q'+hex(10)+'…'],['w','  advice: do NOT pay — call the cyber response team'],['ok','  incident reported ✓']],
+  ()=>[['p','scan --systems store-'+(R(900)+100)],...['tills','scales','fridges-temp','stock-db','email'].map(s=>{const bad=!R(3);return [bad?'e':'ok',`  ${pad(s,14)} ${bad?'OFFLINE':'online'}`]})],
+  ()=>[['p','decode --hex'],...[0,1,2,3].map(()=>['d','  '+hex(8)+' '+hex(8)+' '+hex(8)+' '+hex(8)]),['ok','  > "patch your software"']],
+  ()=>[['p','whoami'],['','  defender'],['p','mfa --status'],['ok','  multi-factor login: ON ✓'],['p','passwords --audit'],['w','  12 staff using "password123"'],['ok','  forcing reset …done']],
+ ];
+ let lines=[];const MAX=60;
+ function add(cls,text){const d=document.createElement('div');if(cls==='p'){d.className='p';d.innerHTML='<b>$</b> ';d.appendChild(document.createTextNode(''))}else{d.className=cls;d.textContent=''}inner.appendChild(d);lines.push(d);while(lines.length>MAX)lines.shift().remove();return d}
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+ const caret=document.createElement('span');caret.className='caret';
+ async function run(){let last=-1;for(;;){let i;do{i=R(SCRIPTS.length)}while(i===last&&SCRIPTS.length>1);last=i;
+  for(const [cls,text] of SCRIPTS[i]()){const d=add(cls,'');
+   if(cls==='p'){const t=d.lastChild;d.appendChild(caret);for(const ch of text){t.data+=ch;await sleep(35+R(70))}await sleep(350);caret.remove()}
+   else{d.textContent=text;await sleep(90+R(220))}}
+  add('','');await sleep(900+R(900))}}
+ run();
+})();
 </script></body></html>

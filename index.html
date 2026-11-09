@@ -40,6 +40,7 @@ footer{position:fixed;left:40px;bottom:24px;color:#8f88c0;font-size:15px;pointer
 <script>
 // To add a page: add one line here. cat = filter group, live = shows a LIVE badge.
 const PAGES=[
+ {f:'hacks.html',t:'Hacks',d:'Videos about real cyber attacks in the news',i:'🚨',cat:'Networks & Security',a:'#1fae63',b:'#3a0d16'},
  {f:'bitcoin.html',t:'Bitcoin Mempool',d:'Watch real transactions wait for miners',i:'₿',cat:'Bitcoin & Nostr',live:1,a:'#f7931a',b:'#7a3a05'},
  {f:'mempool.html',t:'Block Flow',d:'Bitcoin blocks stacking up the chain',i:'🧱',cat:'Bitcoin & Nostr',live:1,a:'#8a3bd8',b:'#2e39d1'},
  {f:'clock.html',t:'Debt Clock',d:'Australia’s debt ticking + BTC converter',i:'⏱️',cat:'Bitcoin & Nostr',live:1,a:'#e0a21a',b:'#5c3b00'},
@@ -58,7 +59,6 @@ const PAGES=[
  {f:'wikipedia.html',t:'Wikipedia Pulse',d:'Edits flowing in from everywhere',i:'📚',cat:'Live Data',live:1,a:'#7d8796',b:'#1e2430'},
  {f:'heartbeat.html',t:'GitHub Pulse',d:'Code being shared around the world',i:'🐙',cat:'Live Data',live:1,a:'#3f4a5c',b:'#0d1117'},
  {f:'hb.html',t:'Internet Heartbeat',d:'BGP routes that hold the internet together',i:'💓',cat:'Live Data',live:1,a:'#e8335a',b:'#2a0614'},
- {f:'hacks.html',t:'Hack Watch',d:'Videos about real cyber attacks in the news',i:'🚨',cat:'Networks & Security',a:'#1fae63',b:'#3a0d16'},
  {f:'network.html',t:'Network Map',d:'How the SPARK Centre is connected',i:'🗺️',cat:'Networks & Security',a:'#19b3a6',b:'#0b3d4a'},
  {f:'network-big.html',t:'Network Map (Big)',d:'The network map for the big screen',i:'🖥️',cat:'Networks & Security',a:'#1a8fb3',b:'#082c4a'},
  {f:'dmz.html',t:'DMZ Castle',d:'Firewalls, allowed traffic and gaps',i:'🛡️',cat:'Networks & Security',a:'#c9473a',b:'#3a1410'},
@@ -71,7 +71,8 @@ const PAGES=[
  {f:'tpe.html',t:'Think · Puzzle · Explore',d:'The live wall of big questions',i:'💡',cat:'School',live:1,a:'#f5c935',b:'#c4511e'},
 ];
 const grid=document.getElementById('grid'),filters=document.getElementById('filters');
-const cats=['All',...new Set(PAGES.map(p=>p.cat))];let cat='All';
+const ORDER=['Bitcoin & Nostr','Minecraft','Games','Live Data','Networks & Security','School'];
+const cats=['All',...new Set([...ORDER,...PAGES.map(p=>p.cat)].filter(c=>PAGES.some(p=>p.cat===c)))];let cat='All';
 cats.forEach(c=>{const b=document.createElement('button');b.textContent=c;b.onclick=()=>{cat=c;render();try{sessionStorage.setItem('cat',c)}catch(e){}};filters.appendChild(b)});
 PAGES.forEach((p,n)=>{const a=document.createElement('a');a.className='tile';a.href=p.f;a.dataset.cat=p.cat;a.style.setProperty('--a',p.a);a.style.setProperty('--b',p.b);a.style.animationDelay=(n*25)+'ms';
  a.innerHTML=`${p.live?'<span class="badge live">LIVE</span>':''}<span class="ic">${p.i}</span><h2>${p.t}</h2><p>${p.d}</p>`;
