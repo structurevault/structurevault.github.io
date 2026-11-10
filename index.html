@@ -92,4 +92,6 @@ if(location.hash){const f=location.hash.slice(1)+'.html';if(PAGES.some(p=>p.f===
 
 document.getElementById('fs').onclick=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()};
 const clock=document.getElementById('clock');function tick(){const d=new Date();clock.innerHTML=d.toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'})+'<small>'+d.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'})+'</small>'}tick();setInterval(tick,10000);
+// USB copy: the launcher on the stick writes spark-version.js with when it last updated
+if(location.protocol==='file:'){const s=document.createElement('script');s.src='spark-version.js';s.onload=()=>{const u=window.SPARK_USB;if(u&&u.status){const b=document.createElement('span');b.style.cssText='display:inline-block;margin-left:10px;padding:2px 12px;border-radius:20px;background:#2a2457;border:1px solid #6d63c9;font-size:.8em;color:#e6e1ff';b.textContent='💾 USB copy · '+u.status;document.querySelector('header p').appendChild(b)}};document.head.appendChild(s)}
 </script></body></html>

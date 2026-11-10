@@ -69,15 +69,58 @@
 .toolbar button{border:1px solid #f0a54a;border-radius:15px;background:#4a2607e8;color:white;padding:11px 16px;font-size:19px;font-weight:800;cursor:pointer;touch-action:manipulation}
 .corner{position:fixed;left:18px;bottom:18px;color:#ffd9a8;font-size:14px;opacity:.85;pointer-events:none;max-width:60vw}
 @keyframes bob{50%{transform:translateY(-11px) rotate(2deg)}}@keyframes wireflow{to{stroke-dashoffset:-42}}@keyframes blink{50%{opacity:.35}}
-@media(prefers-reduced-motion:reduce){.line path,.buddy{animation:none}}
+.buddy .spin{transform-box:fill-box;transform-origin:center;animation:coinspin 4.5s ease-in-out infinite}.buddy.b2 .spin{animation-delay:-2.2s}
+@keyframes coinspin{0%,70%,100%{transform:scaleX(1)}78%{transform:scaleX(.06)}86%{transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){.line path,.buddy,.buddy .spin{animation:none}}
+
+/* 12-word seed explainer */
+.seedbtn{display:block;margin:2px auto 6px;border:2px solid #9be7a0;background:#1f6b35;color:#fff;border-radius:18px;padding:8px 14px;font-weight:900;font-size:18px;cursor:pointer;box-shadow:0 5px 0 #0e3a1b;touch-action:manipulation;font-family:inherit}
+.seedbtn:active{transform:translateY(4px);box-shadow:0 1px 0 #0e3a1b}
+#seed{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:16px;background:#0d0601d9;backdrop-filter:blur(4px);touch-action:auto}
+#seed.open{display:flex}
+.sbox{position:relative;width:min(1100px,100%);max-height:100%;overflow:auto;background:linear-gradient(160deg,#4a2607,#1e0e02);border:3px solid #f0a54a;border-radius:28px;box-shadow:0 30px 80px #000c,0 0 60px #f7931a44;padding:22px clamp(14px,3vw,34px) 18px;color:#fff1de}
+.sbox h2{margin:0 44px 4px 0;font-size:clamp(24px,3vw,38px);font-weight:950;letter-spacing:-1px}.sbox h2 span{color:#9be7a0}
+.sclose{position:absolute;top:14px;right:14px;width:46px;height:46px;border-radius:50%;border:2px solid #f0a54a;background:#2b1503;color:#fff;font-size:24px;font-weight:900;cursor:pointer}
+.demo{display:inline-block;background:#742362;border:1px solid #ef9bd8;color:#ffe3f4;border-radius:12px;padding:4px 12px;font-size:14px;font-weight:850;margin:2px 0 10px}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 14px}
+.steps button{flex:1 1 120px;border:2px solid #b8681a;background:#2b1503;color:#ffd9a8;border-radius:14px;padding:8px 6px;font:850 15px inherit;font-family:inherit;cursor:pointer}
+.steps button.on{background:#f7931a;color:#2a1300;border-color:#ffe0b0}
+.steps button b{display:block;font-size:20px}
+.spage{display:none;min-height:330px}.spage.on{display:block;animation:sfade .3s}
+@keyframes sfade{from{opacity:0;transform:translateY(6px)}}
+.spage h3{margin:0 0 6px;font-size:clamp(20px,2.4vw,28px)}.spage p{font-size:clamp(15px,1.7vw,19px);line-height:1.45;margin:6px 0;color:#ffe6c6}.spage p b{color:#fff}
+.bits{display:grid;grid-template-columns:repeat(16,1fr);gap:4px;margin:12px auto;max-width:560px;font:900 clamp(12px,1.6vw,18px) ui-monospace,Consolas,monospace}
+.bit{aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#3a1c05;border:2px solid #7a420f;color:#7a420f;transition:background .2s}
+.bit.b0{background:#2a5ea8;border-color:#8cc4ff;color:#fff}.bit.b1{background:#f7931a;border-color:#ffe0b0;color:#2a1300}
+.bit.flip{animation:flip .35s}@keyframes flip{50%{transform:rotateY(90deg)}}
+.groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin:12px 0}
+.grp{border-radius:14px;padding:8px 10px;background:#2b1503;border:2px solid var(--g);text-align:center}
+.grp code{display:block;font:800 clamp(13px,1.4vw,16px) ui-monospace,Consolas,monospace;letter-spacing:1px;overflow-wrap:anywhere}
+.grp code i{font-style:normal;background:#9be7a0;color:#0e3a1b;border-radius:4px;padding:0 2px}
+.grp small{display:block;color:#ffd9a8;font-size:13px;margin-top:3px}.grp .num{font-size:22px;font-weight:950;color:var(--g)}
+.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:12px 0}
+.word{background:#fff1de;color:#3a1c05;border-radius:14px;padding:8px 10px;font-weight:950;font-size:clamp(18px,2vw,24px);display:flex;align-items:baseline;gap:8px;box-shadow:0 4px 0 #b8681a;animation:sfade .3s backwards}
+.word small{font-size:13px;color:#a0601a;font-weight:850}.word em{font-style:normal;font-size:12px;color:#8a6a4a;margin-left:auto}
+.flow{display:flex;align-items:stretch;gap:6px;flex-wrap:wrap;margin:12px 0}
+.fnode{flex:1 1 150px;background:#2b1503;border:2px solid #b8681a;border-radius:16px;padding:10px;text-align:center}
+.fnode b{display:block;font-size:17px}.fnode code{display:block;font:700 12px/1.35 ui-monospace,Consolas,monospace;overflow-wrap:anywhere;color:#ffd9a8;margin-top:5px}
+.farrow{align-self:center;font-size:26px;font-weight:950;color:#9be7a0;flex:none}
+.farrow small{display:block;font-size:11px;color:#ffd9a8;text-align:center}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:12px 0}
+.rule{border-radius:16px;padding:12px;background:#2b1503;border:2px solid #4fc97f;font-size:17px;font-weight:800}.rule.no{border-color:#f0605d}
+.snav{display:flex;justify-content:space-between;gap:10px;margin-top:14px}
+.snav button,.sgo{border:2px solid #ffe0b0;background:#f7931a;color:#2a1300;border-radius:18px;padding:11px 18px;font:900 18px inherit;font-family:inherit;cursor:pointer;box-shadow:0 5px 0 #8a4a08}
+.snav button:disabled{opacity:.35;cursor:default}
+.sgo{background:#1f6b35;color:#fff;border-color:#9be7a0;box-shadow:0 5px 0 #0e3a1b}
 </style></head><body><div id="viewport"><div id="world">
 <div class="heading"><h1><svg class="coin" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#f7931a"/><circle cx="32" cy="32" r="25" fill="none" stroke="#ffd08a" stroke-width="2"/><text x="32" y="44" text-anchor="middle" font-size="34" font-weight="900" fill="#fff" font-family="system-ui">₿</text></svg> The <span>BITCOIN</span> Mempool</h1><p>One person pays • Transactions wait in the mempool • Miners pack them into blocks</p></div>
 
 <svg class="line" width="1900" height="1050" viewBox="0 0 1900 1050"><path d="M365 560 Q400 590 440 600"/><path d="M365 420 Q420 330 425 272"/><path d="M1475 272 Q1510 340 1535 430"/><path d="M1475 600 Q1505 560 1535 520"/></svg>
 
-<div class="panel red-team" style="left:30px;top:200px;width:335px;height:720px"><div class="buddy" id="ruby"></div><div class="teamlabel">🔴 RED TEAM</div><div class="name">Ruby the Spender</div><p>Signs a payment to Blake</p>
+<div class="panel red-team" style="left:30px;top:190px;width:335px;height:850px"><div class="buddy" id="nelly"></div><div class="teamlabel">🔴 RED TEAM</div><div class="name">Nelly the Spender</div><p>Signs a payment to Oscar</p>
 <div class="keycard" id="addr" role="button" tabindex="0">📬 BITCOIN ADDRESS<em>Safe to share</em><span class="keyexample">bc1qr8xk5m2v7t4w9p3s6y8z2n5c7d4f9g3h6j2k8l</span></div>
 <div class="keycard secretkey" id="priv" role="button" tabindex="0">🔐 PRIVATE KEY<em>Keep it secret!</em><span class="keyexample">L4rK9mQ2••••••••••••<br>••••••••••••••••••••<br>••••••••••8xTz</span></div>
+<button class="seedbtn" id="seedOpen">🌱 How was this wallet made?</button>
 <div class="feelabel">Pick a fee (sats per vbyte):</div>
 <div class="feepick" id="feepick"><button data-k="low">🐢<b id="fLow">2</b>Low</button><button data-k="med" class="on">🚶<b id="fMed">5</b>Medium</button><button data-k="high">🚀<b id="fHigh">10</b>High</button></div>
 <button class="action" id="send">₿ SEND BITCOIN</button></div>
@@ -92,19 +135,95 @@
 
 <div class="stats"><div class="stat"><b id="sCount">–</b><small>transactions waiting</small></div><div class="stat"><b id="sFee">–</b><small>sat/vB to get in next block</small></div><div class="stat"><b id="sHeight">–</b><small>block height</small></div><div class="stat"><b id="sAgo">–</b><small>since last block</small></div><div class="stat mono"><b id="sLast">–</b><small>newest transaction</small></div></div>
 
-<div class="panel blue-team" style="left:1535px;top:200px;width:335px;height:600px"><div class="buddy b2" id="blake"></div><div class="teamlabel">🔵 BLUE TEAM</div><div class="name">Blake the Receiver</div><p>Waits for Ruby's bitcoin</p><div class="pill">📬 bc1qb7…m4e2</div><p id="received" style="font-weight:850;min-height:90px;font-size:21px">Waiting for a payment…</p><button class="action smallaction" id="verify">🔍 CHECK CONFIRMATIONS</button></div>
+<div class="panel blue-team" style="left:1535px;top:200px;width:335px;height:600px"><div class="buddy b2" id="oscar"></div><div class="teamlabel">🔵 BLUE TEAM</div><div class="name">Oscar the Receiver</div><p>Waits for Nelly's bitcoin</p><div class="pill">📬 bc1qb7…m4e2</div><p id="received" style="font-weight:850;min-height:90px;font-size:21px">Waiting for a payment…</p><button class="action smallaction" id="verify">🔍 CHECK CONFIRMATIONS</button></div>
 
-<div class="bubble" id="bubble" aria-live="polite"></div><div class="packet" id="packet">₿ 0.001 → Blake</div>
+<div class="bubble" id="bubble" aria-live="polite"></div><div class="packet" id="packet">₿ 0.001 → Oscar</div>
 <div class="banner" id="status">Pick a fee, then tap SEND BITCOIN to follow a transaction!</div>
 <div class="hint">👆 Tap a bubble, block, key or person • Drag to move • Pinch to zoom • The mempool is LIVE from the real Bitcoin network</div>
 </div></div>
-<div class="corner">CLASSROOM DEMO • Mempool and blocks: live from mempool.space • Ruby's payment and keys are pretend • No wallet needed</div>
+<div class="corner">CLASSROOM DEMO • Mempool and blocks: live from mempool.space • Nelly's payment and keys are pretend • No wallet needed</div>
 <div class="toolbar"><button id="minus">−</button><button id="reset">⟲ Reset</button><button id="plus">+</button><button id="fullscreen">⛶ Full screen</button></div>
+<div id="seed" role="dialog" aria-modal="true" aria-labelledby="seedTitle"><div class="sbox">
+<button class="sclose" id="seedClose" aria-label="Close">✕</button>
+<h2 id="seedTitle">🌱 How a wallet is born: <span>12 secret words</span></h2>
+<div class="demo">⚠ DEMO ONLY: never use words made on a website for real bitcoin</div>
+<div class="steps" id="sSteps"><button data-s="0" class="on"><b>🪙</b>1. Flip coins</button><button data-s="1"><b>✂️</b>2. Chop up</button><button data-s="2"><b>📖</b>3. Find words</button><button data-s="3"><b>🔑</b>4. Make keys</button><button data-s="4"><b>🤫</b>5. Keep secret</button></div>
+
+<div class="spage on" data-s="0"><h3>1. The wallet flips 128 coins</h3>
+<p>A new wallet starts with <b>randomness</b>: 128 coin flips. Each flip is a <b>bit</b>, either <b style="color:#8cc4ff">0</b> or <b style="color:#f7931a">1</b>.</p>
+<div class="bits" id="sBits"></div>
+<p>128 flips can come out <b>340 undecillion</b> different ways (a 3 with 38 zeros after it). That’s more than the number of grains of sand on every beach on Earth, so <b>nobody can guess yours</b>.</p>
+<button class="sgo" id="sFlip">🎲 Flip new coins</button></div>
+
+<div class="spage" data-s="1"><h3>2. Add a check, then chop into 12 pieces</h3>
+<p>The wallet scrambles the 128 bits with a math recipe called <b>SHA-256</b> and sticks the first <b style="color:#9be7a0">4 bits</b> of the answer on the end. This <b>checksum</b> catches typos later. Now there are <b>132 bits</b>, chopped into <b>12 pieces of 11 bits</b>. Each piece is a number from <b>0 to 2047</b>.</p>
+<div class="groups" id="sGroups"></div></div>
+
+<div class="spage" data-s="2"><h3>3. Each number picks a word</h3>
+<p>Every wallet in the world uses the same official list of <b>2048 words</b> (called <b>BIP39</b>), from <i>abandon</i> to <i>zoo</i>. Each number picks one word: number 0 is <i>abandon</i>, number 2047 is <i>zoo</i>. Words are much easier to write down than 0s and 1s!</p>
+<div class="words" id="sWords"></div>
+<p>These 12 words <b>are</b> the wallet. The last word includes the checksum, so if you write one word wrong, the wallet will notice.</p></div>
+
+<div class="spage" data-s="3"><h3>4. The words grow into keys and addresses</h3>
+<p>The wallet mixes the words <b>2048 times</b> to make a big secret <b>seed</b>. From the seed it makes <b>private keys</b>, and from each private key a public <b>address</b> to receive bitcoin.</p>
+<div class="flow"><div class="fnode"><b>📝 12 words</b><code id="sF1"></code></div><div class="farrow">➜<small>mix 2048×</small></div><div class="fnode"><b>🌱 Seed</b><code id="sF2">…</code></div><div class="farrow">➜</div><div class="fnode"><b>🔐 Private keys</b><code>key 1, key 2, key 3…</code></div><div class="farrow">➜</div><div class="fnode"><b>📬 Addresses</b><code>bc1q…a7 · bc1q…k2 · bc1q…9m</code></div></div>
+<p>The arrows only go <b>one way</b>: you can’t work backwards from an address to the words. And the <b>same 12 words always make the same keys</b>, so if Nelly loses her phone she can type her words into a new wallet and get all her bitcoin back. (The seed above is real math for these words; the addresses are pretend.)</p></div>
+
+<div class="spage" data-s="4"><h3>5. Keep your 12 words secret and safe</h3>
+<p>Whoever has the 12 words <b>owns the bitcoin</b>. There’s no “forgot password” button and no bank to call.</p>
+<div class="rules"><div class="rule">✅ Write them on paper, in order</div><div class="rule">✅ Keep the paper somewhere safe, like a family safe</div><div class="rule">✅ Your wallet app makes the words for you, offline</div><div class="rule no">❌ Never take a photo or screenshot</div><div class="rule no">❌ Never type them into a website or message</div><div class="rule no">❌ Never tell anyone, even “helpers”. It’s a scam!</div></div>
+<p>Nelly’s secret private key on this page came from her 12 words. Her <b>address</b> is safe to share; her <b>words</b> never are.</p></div>
+
+<div class="snav"><button id="sPrev">← Back</button><button id="sNext">Next →</button></div>
+</div></div>
+<script>
+// Official BIP39 English word list (2048 words) from github.com/bitcoin/bips
+const BIP39='abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic affair afford afraid again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual another answer antenna antique anxiety any apart apology appear apple approve april arch arctic area arena argue arm armed armor army around arrange arrest arrive arrow art artefact artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt author auto autumn average avocado avoid awake aware away awesome awful awkward axis baby bachelor bacon badge bag balance balcony ball bamboo banana banner bar barely bargain barrel base basic basket battle beach bean beauty because become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bid bike bind biology bird birth bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur blush board boat body boil bomb bone bonus book boost border boring borrow boss bottom bounce box boy bracket brain brand brass brave bread breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble buddy budget buffalo build bulb bulk bullet bundle bunker burden burger burst bus business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp can canal cancel candy cannon canoe canvas canyon capable capital captain car carbon card cargo carpet carry cart case cash casino castle casual cat catalog catch category cattle caught cause caution cave ceiling celery cement census century cereal certain chair chalk champion change chaos chapter charge chase chat cheap check cheese chef cherry chest chicken chief child chimney choice choose chronic chuckle chunk churn cigar cinnamon circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clump cluster clutch coach coast coconut code coffee coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cousin cover coyote crack cradle craft cram crane crash crater crawl crazy cream credit creek crew cricket crime crisp critic crop cross crouch crowd crucial cruel cruise crumble crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology economy edge edit educate effort egg eight either elbow elder electric elegant element elephant elevator elite else embark embody embrace emerge emotion employ empower empty enable enact end endless endorse enemy energy enforce engage engine enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip era erase erode erosion error erupt escape essay essence estate eternal ethics evidence evil evoke evolve exact example excess exchange excite exclude excuse execute exercise exhaust exhibit exile exist exit exotic expand expect expire explain expose express extend extra eye eyebrow fabric face faculty fade faint faith fall false fame family famous fan fancy fantasy farm fashion fat fatal father fatigue fault favorite feature february federal fee feed feel female fence festival fetch fever few fiber fiction field figure file film filter final find fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil fold follow food foot force forest forget fork fortune forum forward fossil foster found fox fragile frame frequent fresh friend fringe frog front frost frown frozen fruit fuel fun funny furnace fury future gadget gain galaxy gallery game gap garage garbage garden garlic garment gas gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost giant gift giggle ginger giraffe girl give glad glance glare glass glide glimpse globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel gossip govern gown grab grace grain grant grape grass gravity great green grid grief grit grocery group grow grunt guard guess guide guilt guitar gun gym habit hair half hammer hamster hand happy harbor hard harsh harvest hat have hawk hazard head health heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire history hobby hockey hold hole holiday hollow home honey hood hope horn horror horse hospital host hotel hour hover hub huge human humble humor hundred hungry hunt hurdle hurry hurt husband hybrid ice icon idea identify idle ignore ill illegal illness image imitate immense immune impact impose improve impulse inch include income increase index indicate indoor industry infant inflict inform inhale inherit initial inject injury inmate inner innocent input inquiry insane insect inside inspire install intact interest into invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz jealous jeans jelly jewel job join joke journey joy judge juice jump jungle junior junk just kangaroo keen keep ketchup key kick kid kidney kind kingdom kiss kit kitchen kite kitten kiwi knee knife knock know lab label labor ladder lady lake lamp language laptop large later latin laugh laundry lava law lawn lawsuit layer lazy leader leaf learn leave lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level liar liberty library license life lift light like limb limit link lion liquid list little live lizard load loan lobster local lock logic lonely long loop lottery loud lounge love loyal lucky luggage lumber lunar lunch luxury lyrics machine mad magic magnet maid mail main major make mammal man manage mandate mango mansion manual maple marble march margin marine market marriage mask mass master match material math matrix matter maximum maze meadow mean measure meat mechanic medal media melody melt member memory mention menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle mirror misery miss mistake mix mixed mixture mobile model modify mom moment monitor monkey monster month moon moral more morning mosquito mother motion motor mountain mouse move movie much muffin mule multiply muscle museum mushroom music must mutual myself mystery myth naive name napkin narrow nasty nation nature near neck need negative neglect neither nephew nerve nest net network neutral never news next nice night noble noise nominee noodle normal north nose notable note nothing notice novel now nuclear number nurse nut oak obey object oblige obscure observe obtain obvious occur ocean october odor off offer office often oil okay old olive olympic omit once one onion online only open opera opinion oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outer output outside oval oven over own owner oxygen oyster ozone pact paddle page pair palace palm panda panel panic panther paper parade parent park parrot party pass patch path patient patrol pattern pause pave payment peace peanut pear peasant pelican pen penalty pencil people pepper perfect permit person pet phone photo phrase physical piano picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge pluck plug plunge poem poet point polar pole police pond pony pool popular portion position possible post potato pottery poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promote proof property prosper protect proud provide public pudding pull pulp pulse pumpkin punch pupil puppy purchase purity purpose purse push put puzzle pyramid quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar radio rail rain raise rally ramp ranch random range rapid rare rate rather raven raw razor ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resemble resist resource response result retire retreat return reunion reveal review reward rhythm rib ribbon rice rich ride ridge rifle right rigid ring riot ripple risk ritual rival river road roast robot robust rocket romance roof rookie room rose rotate rough round route royal rubber rude rug rule run runway rural sad saddle sadness safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage save say scale scan scare scatter scene scheme school science scissors scorpion scout scrap screen script scrub sea search season seat second secret section security seed seek segment select sell seminar senior sense sentence series service session settle setup seven shadow shaft shallow share shed shell sheriff shield shift shine ship shiver shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy sibling sick side siege sight sign silent silk silly silver similar simple since sing siren sister situate six size skate sketch ski skill skin skirt skull slab slam sleep slender slice slide slight slim slogan slot slow slush small smart smile smoke smooth snack snake snap sniff snow soap soccer social sock soda soft solar soldier solid solution solve someone song soon sorry sort soul sound soup source south space spare spatial spawn speak special speed spell spend sphere spice spider spike spin spirit split spoil sponsor spoon sport spot spray spread spring spy square squeeze squirrel stable stadium staff stage stairs stamp stand start state stay steak steel stem step stereo stick still sting stock stomach stone stool story stove strategy street strike strong struggle student stuff stumble style subject submit subway success such sudden suffer sugar suggest suit summer sun sunny sunset super supply supreme sure surface surge surprise surround survey suspect sustain swallow swamp swap swarm swear sweet swift swim swing switch sword symbol symptom syrup system table tackle tag tail talent talk tank tape target task taste tattoo taxi teach team tell ten tenant tennis tent term test text thank that theme then theory there they thing this thought three thrive throw thumb thunder ticket tide tiger tilt timber time tiny tip tired tissue title toast tobacco today toddler toe together toilet token tomato tomorrow tone tongue tonight tool tooth top topic topple torch tornado tortoise toss total tourist toward tower town toy track trade traffic tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble truck true truly trumpet trust truth try tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique unit universe unknown unlock until unusual unveil update upgrade uphold upon upper upset urban urge usage use used useful useless usual utility vacant vacuum vague valid valley valve van vanish vapor various vast vault vehicle velvet vendor venture venue verb verify version very vessel veteran viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior wash wasp waste water wave way wealth weapon wear weasel weather web wedding weekend weird welcome west wet whale what wheat wheel when where whip whisper wide width wife wild will win window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word work world worry worth wrap wreck wrestle wrist write wrong yard year yellow you young youth zebra zero zone zoo'.split(' ');
+(function(){
+ const $s=id=>document.getElementById(id),box=$s('seed');let step=0,ent=null,mnemonic=[];
+ const COLORS=['#4fc97f','#a6dc52','#f5d04c','#f7931a','#f0605d','#c58cf0','#5ec8f0','#ff8fb8','#9be7a0','#ffd08a','#8cc4ff','#e3a6ff'];
+ // SHA-256: use the browser's version when it has one, otherwise a small built-in one
+ function sha256js(msg){const K=[],H=[];let n=2,c=0;const fr=x=>(x-Math.floor(x))*4294967296|0;
+  while(c<64){let p=true;for(let d=2;d*d<=n;d++)if(n%d===0){p=false;break}if(p){if(c<8)H[c]=fr(Math.pow(n,1/2));K[c]=fr(Math.pow(n,1/3));c++}n++}
+  const l=msg.length,bl=((l+9+63)>>6)<<6,m=new Uint8Array(bl);m.set(msg);m[l]=0x80;const dv=new DataView(m.buffer);dv.setUint32(bl-4,l*8);
+  const w=new Int32Array(64),r=(x,s)=>(x>>>s)|(x<<(32-s));
+  for(let o=0;o<bl;o+=64){for(let i=0;i<16;i++)w[i]=dv.getInt32(o+i*4);for(let i=16;i<64;i++){const a=w[i-15],b=w[i-2];w[i]=(w[i-16]+(r(a,7)^r(a,18)^(a>>>3))+w[i-7]+(r(b,17)^r(b,19)^(b>>>10)))|0}
+   let [A,B,C,D,E,F,G,Hh]=H;for(let i=0;i<64;i++){const t1=(Hh+(r(E,6)^r(E,11)^r(E,25))+((E&F)^(~E&G))+K[i]+w[i])|0,t2=((r(A,2)^r(A,13)^r(A,22))+((A&B)^(A&C)^(B&C)))|0;Hh=G;G=F;F=E;E=(D+t1)|0;D=C;C=B;B=A;A=(t1+t2)|0}
+   H[0]=H[0]+A|0;H[1]=H[1]+B|0;H[2]=H[2]+C|0;H[3]=H[3]+D|0;H[4]=H[4]+E|0;H[5]=H[5]+F|0;H[6]=H[6]+G|0;H[7]=H[7]+Hh|0}
+  const out=new Uint8Array(32),ov=new DataView(out.buffer);H.forEach((h,i)=>ov.setInt32(i*4,h));return out}
+ async function sha256(bytes){return window.crypto&&crypto.subtle?new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)):sha256js(bytes)}
+ window.sha256jsTest=s=>[...sha256js(new TextEncoder().encode(s))].map(x=>x.toString(16).padStart(2,'0')).join('');
+ const toBits=bytes=>[...bytes].map(b=>b.toString(2).padStart(8,'0')).join('');
+ // entropy (16 bytes) -> 12 words, following BIP39
+ async function toMnemonic(e){const bits=toBits(e)+toBits(await sha256(e)).slice(0,4);const idx=[];for(let i=0;i<12;i++)idx.push(parseInt(bits.slice(i*11,i*11+11),2));return {bits,idx,words:idx.map(i=>BIP39[i])}}
+ window.bip39Demo=async hex=>(await toMnemonic(new Uint8Array(hex.match(/../g).map(h=>parseInt(h,16))))).words.join(' ');
+ async function toSeed(words){if(!(window.crypto&&crypto.subtle))throw new Error('no subtle');const enc=new TextEncoder(),k=await crypto.subtle.importKey('raw',enc.encode(words.join(' ')),'PBKDF2',false,['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-512',salt:enc.encode('mnemonic'),iterations:2048},k,512))}
+ const hex=b=>[...b].map(x=>x.toString(16).padStart(2,'0')).join('');
+ async function make(animate){ent=new Uint8Array(16);if(window.crypto&&crypto.getRandomValues)crypto.getRandomValues(ent);else for(let i=0;i<16;i++)ent[i]=Math.random()*256|0;const m=await toMnemonic(ent);mnemonic=m.words;
+  const grid=$s('sBits');if(!grid.children.length)for(let i=0;i<128;i++)grid.appendChild(Object.assign(document.createElement('div'),{className:'bit',textContent:'?'}));
+  [...grid.children].forEach((c,i)=>{const set=()=>{c.className='bit b'+m.bits[i]+' flip';c.textContent=m.bits[i]};animate?setTimeout(set,i*12):set()});
+  $s('sGroups').innerHTML=m.idx.map((n,i)=>{const g=m.bits.slice(i*11,i*11+11),code=i===11?g.slice(0,7)+'<i>'+g.slice(7)+'</i>':g;return `<div class="grp" style="--g:${COLORS[i]}"><small>piece ${i+1}</small><code>${code}</code><span class="num">${n}</span></div>`}).join('');
+  $s('sWords').innerHTML=m.words.map((w,i)=>`<div class="word" style="animation-delay:${i*60}ms"><small>${i+1}.</small>${w}<em>#${m.idx[i]}</em></div>`).join('');
+  $s('sF1').textContent=m.words.join(' ');$s('sF2').textContent='…';
+  try{const sd=await toSeed(m.words);$s('sF2').textContent=hex(sd).slice(0,32)+'… (512 bits)'}catch(e){$s('sF2').textContent='(needs a secure browser)'}}
+ function go(n){step=Math.max(0,Math.min(4,n));document.querySelectorAll('#seed .spage').forEach(p=>p.classList.toggle('on',+p.dataset.s===step));document.querySelectorAll('#sSteps button').forEach(b=>b.classList.toggle('on',+b.dataset.s===step));$s('sPrev').disabled=step===0;$s('sNext').textContent=step===4?'Done ✓':'Next →'}
+ function open(){box.classList.add('open');go(0);make(true)}
+ function close(){box.classList.remove('open')}
+ $s('seedOpen').onclick=open;$s('seedClose').onclick=close;
+ box.addEventListener('click',e=>{if(e.target===box)close()});
+ addEventListener('keydown',e=>{if(e.key==='Escape'&&box.classList.contains('open'))close()});
+ $s('sFlip').onclick=()=>make(true);
+ $s('sPrev').onclick=()=>go(step-1);$s('sNext').onclick=()=>step===4?close():go(step+1);
+ document.querySelectorAll('#sSteps button').forEach(b=>b.onclick=()=>go(+b.dataset.s));
+ box.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
+})();
+</script>
 <script>
 // ---------- helpers & characters ----------
 const $=id=>document.getElementById(id);
-function buddySVG(body,dark,light){return `<svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Coin character"><path d="M60 128 L54 150 M100 128 L106 150 M54 150 L42 153 M106 150 L118 153" stroke="${light}" stroke-width="7" stroke-linecap="round" fill="none"/><path d="M28 82 Q8 70 14 52 M132 82 Q152 70 146 52" stroke="${light}" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="80" cy="80" r="56" fill="${body}"/><circle cx="80" cy="80" r="46" fill="none" stroke="${light}" stroke-width="4" stroke-dasharray="6 7"/><circle cx="64" cy="70" r="7" fill="#1b0c00"/><circle cx="96" cy="70" r="7" fill="#1b0c00"/><circle cx="66" cy="67" r="2.4" fill="#fff"/><circle cx="98" cy="67" r="2.4" fill="#fff"/><path d="M62 94 Q80 110 98 94" stroke="#1b0c00" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="50" cy="90" r="7" fill="${dark}" opacity=".45"/><circle cx="110" cy="90" r="7" fill="${dark}" opacity=".45"/><text x="80" y="44" text-anchor="middle" font-size="22" font-weight="900" fill="${light}" font-family="system-ui">₿</text></svg>`}
-$('ruby').innerHTML=buddySVG('#e54860','#7a1026','#ffd0d7');$('blake').innerHTML=buddySVG('#3297f2','#0c3c78','#cdeeff');
+function buddySVG(ring,id){return `<svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bitcoin coin"><defs><radialGradient id="cg${id}" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#ffd08a"/><stop offset=".55" stop-color="#f7931a"/><stop offset="1" stop-color="#b85d0a"/></radialGradient></defs><g class="spin"><circle cx="80" cy="80" r="72" fill="${ring}"/><circle cx="80" cy="80" r="63" fill="url(#cg${id})"/><circle cx="80" cy="80" r="54" fill="none" stroke="#ffe0b0" stroke-width="3" stroke-dasharray="5 6" opacity=".75"/><text x="80" y="110" text-anchor="middle" font-size="86" font-weight="900" fill="#fff" font-family="system-ui,Segoe UI,sans-serif" transform="rotate(14 80 80)">₿</text><ellipse cx="56" cy="42" rx="22" ry="9" fill="#fff" opacity=".3" transform="rotate(-32 56 42)"/></g></svg>`}
+$('nelly').innerHTML=buddySVG('#e54860','N');$('oscar').innerHTML=buddySVG('#3297f2','O');
 
 const vp=$('viewport'),world=$('world'),packet=$('packet'),status=$('status'),bubbleEl=$('bubble'),received=$('received');
 let scale=1,tx=0,ty=0,seq=0,timers=[],pointers=new Map(),drag=null,pinch=null;const W=1900,H=1050;
@@ -221,29 +340,29 @@ function startSim(){if(simTimer)return;setMode('sim');let h=state.mined[0]?.heig
 function stopSim(){if(simTimer){clearInterval(simTimer);simTimer=null}}
 connect();getJSON('/mempool/recent').then(a=>a.forEach(addTx)).catch(()=>{});setTimeout(()=>{if(!lastData)startPoll()},5000);
 
-// ---------- Ruby's demo transaction ----------
+// ---------- Nelly's demo transaction ----------
 let feeKey='med',delivered=false,demoBubble=null;
 $('feepick').querySelectorAll('button').forEach(b=>b.onclick=()=>{feeKey=b.dataset.k;$('feepick').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
  say({low:'🐢 A low fee is cheap, but miners pick bigger fees first — you may wait hours!',med:'🚶 A medium fee usually gets into a block within about half an hour.',high:'🚀 A high fee jumps the queue — miners grab it for the very next block!'}[feeKey])});
 function stop(){seq++;timers.forEach(clearTimeout);timers=[];packet.classList.remove('visible');if(demoBubble){bubbles=bubbles.filter(b=>b!==demoBubble);demoBubble=null}document.querySelectorAll('.block.picked').forEach(e=>e.classList.remove('picked'))}
 function send(){stop();delivered=false;received.textContent='Waiting for a payment…';
  const rate=+$({low:'fLow',med:'fMed',high:'fHigh'}[feeKey]).textContent;const waitMs={low:9000,med:5500,high:2600}[feeKey];
- status.textContent='1. Ruby signs the payment with her PRIVATE key ✍️';say('I sign with my secret key. That proves the bitcoin is mine to spend!');
- const from=[365,700];packet.textContent='₿ 0.001 → Blake';packet.style.left=from[0]+'px';packet.style.top=from[1]+'px';packet.classList.add('visible');
+ status.textContent='1. Nelly signs the payment with her PRIVATE key ✍️';say('I sign with my secret key. That proves the bitcoin is mine to spend!');
+ const from=[365,700];packet.textContent='₿ 0.001 → Oscar';packet.style.left=from[0]+'px';packet.style.top=from[1]+'px';packet.classList.add('visible');
  wait(1500,()=>{status.textContent='2. The transaction is broadcast to the network 📡';move(from,[470,620],900,()=>{packet.classList.remove('visible');
-  demoBubble=spawn({txid:'ruby-demo',vsize:250,fee:rate*250},{special:true,r:24,color:'#ff6b81',x:470-410,y:620-190,label:'RUBY → BLAKE • '+rate+' sat/vB'});demoBubble.vy=-1;
+  demoBubble=spawn({txid:'nelly-demo',vsize:250,fee:rate*250},{special:true,r:24,color:'#ff6b81',x:470-410,y:620-190,label:'NELLY → OSCAR • '+rate+' sat/vB'});demoBubble.vy=-1;
   status.textContent=`3. Waiting in the mempool, paying ${rate} sat/vB… miners pick the highest fees first`;
   say(feeKey==='high'?'My fee is high — a miner will want this one soon!':feeKey==='low'?'Low fee… lots of others paid more. Real life could take hours (we will speed it up!).':'Medium fee — somewhere in the middle of the queue.',3800);
-  wait(waitMs,()=>{const blk=document.querySelector('.block.pending[data-i="0"]');if(blk)blk.classList.add('picked');status.textContent='4. A miner packs Ruby\'s transaction into the next block ⛏️';
+  wait(waitMs,()=>{const blk=document.querySelector('.block.pending[data-i="0"]');if(blk)blk.classList.add('picked');status.textContent='4. A miner packs Nelly\'s transaction into the next block ⛏️';
    demoBubble.target=[blockLeft('pending',0)+57-410,BLOCK_Y+57-190];
    wait(1600,()=>{bubbles=bubbles.filter(b=>b!==demoBubble);demoBubble=null;if(blk)blk.classList.remove('picked');
-    status.textContent='5. The block is added to the chain — Blake can see the payment!';
-    const a=[blockLeft('mined',0)+57,BLOCK_Y+57];packet.textContent='₿ 0.001 ✅';move([blockLeft('pending',0)+57,BLOCK_Y+57],a,700,()=>move(a,[1535,470],1100,()=>{packet.classList.remove('visible');delivered=true;received.innerHTML='₿ 0.001 received<br>from Ruby!';status.textContent='6. Tap CHECK CONFIRMATIONS to see how safe it is';say('Every new block on top adds another confirmation. Six is very safe!')}))})})})})}
-function verify(){if(!delivered){say('Ask Ruby to send some bitcoin first!');return}received.innerHTML='✅ 1 confirmation<br><small style="font-weight:700">(pretend) — each new block adds one more</small>';status.textContent='✅ Blake\'s payment is in a block on the chain';say('Blake doesn\'t need Ruby\'s secret key — anyone can check the signature with her public key!')}
+    status.textContent='5. The block is added to the chain — Oscar can see the payment!';
+    const a=[blockLeft('mined',0)+57,BLOCK_Y+57];packet.textContent='₿ 0.001 ✅';move([blockLeft('pending',0)+57,BLOCK_Y+57],a,700,()=>move(a,[1535,470],1100,()=>{packet.classList.remove('visible');delivered=true;received.innerHTML='₿ 0.001 received<br>from Nelly!';status.textContent='6. Tap CHECK CONFIRMATIONS to see how safe it is';say('Every new block on top adds another confirmation. Six is very safe!')}))})})})})}
+function verify(){if(!delivered){say('Ask Nelly to send some bitcoin first!');return}received.innerHTML='✅ 1 confirmation<br><small style="font-weight:700">(pretend) — each new block adds one more</small>';status.textContent='✅ Oscar\'s payment is in a block on the chain';say('Oscar doesn\'t need Nelly\'s secret key — anyone can check the signature with her public key!')}
 $('send').onclick=send;$('verify').onclick=verify;
 $('addr').onclick=()=>say('Bitcoin addresses often start with bc1. Share it so people can pay you! (This one is an example.)');
 $('priv').onclick=()=>say('A private key controls the bitcoin. The middle is hidden — NEVER share yours!');
-$('ruby').onclick=()=>say('Ruby signs payments with her private key.');$('blake').onclick=()=>say('Blake watches for his payment to be confirmed in a block.');
+$('nelly').onclick=()=>say('Nelly signs payments with her private key.');$('oscar').onclick=()=>say('Oscar watches for his payment to be confirmed in a block.');
 document.querySelectorAll('.keycard').forEach(e=>e.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();e.click()}});
 $('blocks').addEventListener('click',e=>{const b=e.target.closest('.block');if(!b)return;const i=+b.dataset.i;
  if(b.dataset.kind==='pending'){const p=state.pending[i];if(p)say(`⏳ Projected block #${i+1}<br>${fmt(p.nTx)} transactions paying about ${Math.round(p.medianFee)} sat/vB.<br>Not mined yet — it's a guess at what miners will pick.`)}
@@ -252,7 +371,7 @@ $('blocks').addEventListener('click',e=>{const b=e.target.closest('.block');if(!
 $('pool').addEventListener('click',e=>{const r=$('fx').getBoundingClientRect();const x=(e.clientX-r.left)/r.width*CW,y=(e.clientY-r.top)/r.height*CH;
  let hit=null;for(let i=bubbles.length-1;i>=0;i--){const b=bubbles[i];if(Math.hypot(b.x-x,b.y-y)<=b.r+3){hit=b;break}}
  if(!hit){say('Tap a bubble to look inside a real transaction!');return}
- if(hit.special){say('That\'s Ruby\'s pretend payment, waiting for a miner!');return}
+ if(hit.special){say('That\'s Nelly\'s pretend payment, waiting for a miner!');return}
  const t=hit.t,live=state.mode==='live';say(`🫧 ${live?'Real':'Simulated'} transaction<br><span style="font:800 15px ui-monospace,monospace">${t.txid.slice(0,10)}…${t.txid.slice(-6)}</span><br>Moving ${(t.value/1e8).toFixed(5)} BTC • fee ${Math.round(hit.rate*10)/10} sat/vB • ${fmt(t.vsize)} vbytes${live?`<br><a href="https://mempool.space/tx/${t.txid}" target="_blank" rel="noopener">Open on mempool.space ↗</a>`:''}`,7000)});
 
 // ---------- pan / zoom (same as Nostr page) ----------
