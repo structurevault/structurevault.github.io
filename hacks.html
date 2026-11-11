@@ -35,29 +35,44 @@ header p{margin:0 0 6px;font-size:clamp(16px,1.4vw,22px);color:#9fd8b8}
 .card .t{padding:12px 16px 16px}.card b{display:block;font-size:21px;font-weight:900}.card small{color:#9fd8b8;font-size:15px;font-weight:700}
 .card.soon{display:flex;align-items:center;justify-content:center;min-height:200px;border-style:dashed;color:#6fae8d;font-size:20px;font-weight:850;text-align:center;padding:20px;cursor:default}
 .note{margin-top:28px;color:#6fae8d;font-size:15px}
+.tag.good{background:#0d3a22;border-color:var(--g);color:#b8ffd6}
+.shelf.good{margin-top:40px;padding:24px;border:2px solid #2a8f5f;border-radius:28px;background:linear-gradient(160deg,#0f2e20cc,#08140fcc);box-shadow:0 0 40px #38f28a1f}
+.shelf.good h3{color:var(--g);text-shadow:0 0 18px #38f28a66}
+.shelf .intro{margin:-4px 0 18px;max-width:1000px;font-size:clamp(16px,1.2vw,20px);line-height:1.45;color:#cdeedd}
+.hats{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 20px}
+.hat{flex:1;min-width:200px;padding:12px 16px;border-radius:16px;border:2px solid #1f5a43;background:#06100c;font-size:16px;line-height:1.35;color:#cdeedd}
+.hat b{display:block;font-size:19px;margin-bottom:2px}.hat.w{border-color:var(--g)}.hat.w b{color:var(--g)}.hat.k b{color:var(--r)}.hat.g b{color:#c7c7c7}
 @keyframes blink{50%{opacity:0}}
 @media(max-width:1000px){.stage{grid-template-columns:1fr}header{padding-left:0}.wrap{padding:84px 16px 40px}}
 </style></head><body><div class="wrap">
-<header><h1><span class="alert">⚠</span> HACK WATCH<span class="cur">_</span></h1><p>Real cyber attacks in the news — watch, then talk about it.</p></header>
+<header><h1><span class="alert">⚠</span> HACK WATCH<span class="cur">_</span></h1><p>Real cyber attacks in the news, and hackers using their skills for good. Watch, then talk about it.</p></header>
 <section class="stage">
  <div class="player"><video id="main" controls playsinline preload="metadata"></video></div>
  <aside class="side"><span class="tag" id="tag">🚨 IN THE NEWS</span><h2 id="title"></h2><p class="sum" id="sum"></p><div class="term"><div class="tbar"><i></i><i></i><i></i><span>root@hackwatch:~</span></div><div class="tout" id="term"></div></div>
   <div class="controls"><button class="btn" id="play">▶ Play</button><button class="btn" id="restart">⟲ Start again</button></div></aside>
 </section>
-<section class="shelf"><h3>📼 All videos</h3><div class="grid" id="grid"></div></section>
+<section class="shelf"><h3>🚨 In the news: attacks</h3><div class="grid" id="grid-news"></div></section>
+<section class="shelf good"><h3>💚 Hacking for good: white hats</h3>
+ <p class="intro">Not every hacker is a villain. <b>White-hat hackers</b> use the same skills to protect people, find bugs before criminals do (with permission), and build new tools that make life fairer, like money anyone can use with just a phone.</p>
+ <div class="hats"><div class="hat w"><b>🤍 White hat</b>Has permission. Finds problems and helps fix them.</div><div class="hat g"><b>🩶 Grey hat</b>No permission, but means well. Still against the rules.</div><div class="hat k"><b>🖤 Black hat</b>Breaks in to steal, lock up or damage things.</div></div>
+ <div class="grid" id="grid-good"></div></section>
 <p class="note">Videos are for classroom discussion. Never try hacking anything you don't own or have permission to test.</p>
 </div><script>
 // ── ADD A VIDEO: drop the .mp4 in the site folder, then add one entry here (newest first). ──
+// section:'news' = attacks in the news, section:'good' = white-hat / hacking for good.
 const VIDEOS=[
- {file:'fridges.mp4',title:'Empty Fridges',date:'November 2026',tag:'🚨 IN THE NEWS',
+ {file:'fridges.mp4',section:'news',title:'Empty Fridges',date:'November 2026',tag:'🚨 IN THE NEWS',
   summary:'Supermarket fridges sitting empty. When computer systems are attacked, deliveries and ordering can stop — and it shows up on the shelves.'},
+ {file:'bitcoin.mp4',section:'good',title:'Bitcoin at the Corner Shop',date:'November 2026',tag:'💚 HACKING FOR GOOD',
+  summary:'A phone wallet pays for shopping at a small corner shop using Bitcoin’s ⚡ Lightning Network. Hackers built open money that anyone can use, with no bank account needed.'},
 ];
-const main=document.getElementById('main'),grid=document.getElementById('grid'),playBtn=document.getElementById('play');let cur=0;
-function load(i,autoplay){cur=i;const v=VIDEOS[i];main.src=v.file;
- document.getElementById('title').textContent=v.title;document.getElementById('sum').textContent=v.summary;document.getElementById('tag').textContent=(v.tag||'🚨 IN THE NEWS')+(v.date?' • '+v.date:'');
- grid.querySelectorAll('.card').forEach((c,n)=>c.classList.toggle('on',n===i));if(autoplay)main.play().catch(()=>{})}
-VIDEOS.forEach((v,i)=>{const c=document.createElement('div');c.className='card';c.innerHTML=`<video src="${v.file}#t=3" muted preload="metadata"></video><div class="t"><b>${v.title}</b><small>${v.date||''}</small></div>`;c.onclick=()=>{load(i,true);scrollTo({top:0,behavior:'smooth'})};grid.appendChild(c)});
-const soon=document.createElement('div');soon.className='card soon';soon.textContent='🔜 More hacks coming soon';grid.appendChild(soon);
+const SOON={news:'🔜 More hacks coming soon',good:'🔜 More white-hat stories coming soon'};
+const main=document.getElementById('main'),playBtn=document.getElementById('play'),cards=[];let cur=0;
+function load(i,autoplay){cur=i;const v=VIDEOS[i],good=v.section==='good',tag=document.getElementById('tag');main.src=v.file;
+ document.getElementById('title').textContent=v.title;document.getElementById('sum').textContent=v.summary;tag.textContent=(v.tag||(good?'💚 HACKING FOR GOOD':'🚨 IN THE NEWS'))+(v.date?' • '+v.date:'');tag.classList.toggle('good',good);
+ cards.forEach((c,n)=>c.classList.toggle('on',n===i));if(autoplay)main.play().catch(()=>{})}
+VIDEOS.forEach((v,i)=>{const c=document.createElement('div');c.className='card';c.innerHTML=`<video src="${v.file}#t=3" muted preload="metadata"></video><div class="t"><b>${v.title}</b><small>${v.date||''}</small></div>`;c.onclick=()=>{load(i,true);scrollTo({top:0,behavior:'smooth'})};cards.push(c);document.getElementById('grid-'+(v.section||'news')).appendChild(c)});
+for(const k in SOON){const soon=document.createElement('div');soon.className='card soon';soon.textContent=SOON[k];document.getElementById('grid-'+k).appendChild(soon)}
 playBtn.onclick=()=>main.paused?main.play():main.pause();
 document.getElementById('restart').onclick=()=>{main.currentTime=0;main.play()};
 main.onplay=()=>playBtn.textContent='⏸ Pause';main.onpause=()=>playBtn.textContent='▶ Play';
