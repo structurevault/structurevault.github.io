@@ -437,6 +437,116 @@
   .tcard.next .tplain b.r { color: var(--red); }
   .tcard.next .tplain b.b { color: var(--blue); }
   @media (prefers-reduced-motion: reduce) { .tcard.last { animation: none; } }
+
+  /* ticks on hidden treasures */
+  .tcard .tchest { position: relative; }
+  .ttick {
+    position: absolute;
+    right: -.45em; top: -.55em;
+    width: 1.35em; height: 1.35em;
+    border-radius: 50%;
+    background: var(--done);
+    color: #10251a;
+    font-weight: 700;
+    font-size: clamp(11px, .95vw, 18px);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 2px var(--panel);
+  }
+
+  /* ---------- the raid: treasures bursting out of the chest ---------- */
+  .hoard.raid { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 2fr); }
+  .tcard.next.live {
+    flex-direction: row;
+    align-items: center;
+    gap: clamp(10px, 1.2vw, 24px);
+    overflow: visible;
+    z-index: 2;
+    animation: raidglow 2.4s ease-in-out infinite;
+  }
+  @keyframes raidglow {
+    0%, 100% { box-shadow: -6px 0 18px -4px rgba(229, 72, 77, .7), 6px 0 18px -10px rgba(74, 158, 234, .2); }
+    50%      { box-shadow: -6px 0 18px -10px rgba(229, 72, 77, .2), 6px 0 18px -4px rgba(74, 158, 234, .7); }
+  }
+  .tcard.next.live .tname { font-size: clamp(17px, 1.9vw, 40px); }
+  .stage {
+    position: relative;
+    flex: none;
+    align-self: stretch;
+    width: clamp(100px, 9vw, 190px);
+    min-height: clamp(56px, 7vh, 110px);
+    font-size: clamp(8px, .7vw, 14px);
+  }
+  .bigchest {
+    position: absolute;
+    left: 50%; bottom: 0;
+    width: 52%;
+    transform: translateX(-50%);
+    animation: chesthop 1.4s ease-in-out infinite;
+    z-index: 1;
+  }
+  .bigchest svg { width: 100%; height: auto; display: block; overflow: visible; }
+  @keyframes chesthop {
+    0%, 100% { transform: translateX(-50%) translateY(0) rotate(0); }
+    20%      { transform: translateX(-50%) translateY(-6%) rotate(-3deg); }
+    40%      { transform: translateX(-50%) translateY(0) rotate(2deg); }
+  }
+  .beam {
+    position: absolute;
+    left: 50%; bottom: 25%;
+    width: 46%; height: 140%;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at 50% 100%, rgba(109, 255, 142, .55), rgba(245, 184, 61, .18) 45%, transparent 70%);
+    filter: blur(2px);
+    animation: beam 1.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes beam { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+  .loot, .spark {
+    position: absolute;
+    left: 50%; bottom: 30%;
+    opacity: 0;
+    z-index: 2;
+    animation: burst 2.8s cubic-bezier(.2, .9, .3, 1) infinite;
+    animation-delay: var(--d);
+  }
+  .loot {
+    font-family: "Silkscreen", monospace;
+    font-weight: 700;
+    font-size: 1.15em;
+    color: #120e18;
+    padding: .2em .5em;
+    border-radius: .35em;
+    border: 2px solid rgba(0, 0, 0, .35);
+    white-space: nowrap;
+    box-shadow: 0 0 10px rgba(255, 255, 255, .45);
+  }
+  .spark {
+    width: .7em; height: .7em;
+    background: #fff6c8;
+    box-shadow: 0 0 8px #ffe27a;
+    animation-name: sparkle;
+  }
+  @keyframes burst {
+    0%   { transform: translate(-50%, 0) scale(.2) rotate(0); opacity: 0; }
+    12%  { opacity: 1; }
+    45%  { transform: translate(calc(-50% + var(--dx)), var(--dy)) scale(1.1) rotate(-6deg); opacity: 1; }
+    75%  { transform: translate(calc(-50% + var(--dx)), calc(var(--dy) - .6em)) scale(1) rotate(4deg); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), calc(var(--dy) - 1.2em)) scale(.9); opacity: 0; }
+  }
+  @keyframes sparkle {
+    0%   { transform: translate(-50%, 0) rotate(45deg) scale(0); opacity: 0; }
+    30%  { opacity: 1; }
+    60%  { transform: translate(calc(-50% + var(--dx)), var(--dy)) rotate(45deg) scale(1); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), var(--dy)) rotate(45deg) scale(0); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tcard.next.live, .bigchest, .beam { animation: none; }
+    .spark { display: none; }
+    .loot { animation: none; opacity: 1; transform: translate(calc(-50% + var(--dx)), var(--dy)); }
+  }
+  @media (max-width: 900px) {
+    .hoard.raid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   @media (max-width: 900px) {
     .hoard { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tcard.next { grid-column: 1 / -1; }
@@ -468,7 +578,7 @@
 </header>
 
 <section class="hoard-wrap" aria-label="Treasures to hide">
-  <div class="hoard-title">Treasures your castle should have hidden by now<small id="hoardNote"></small></div>
+  <div class="hoard-title"><span id="hoardTitle">Treasures your castle should have hidden by now</span><small id="hoardNote"></small></div>
   <div class="hoard" id="hoard"></div>
 </section>
 
@@ -492,7 +602,7 @@ var CONFIG = {
   /* TREASURE: every version from treasureFrom onward has a hidden treasure.
      Update thisWeek + add the treasure each week. */
   treasureFrom: "V1.2",
-  thisWeek: "V1.5",
+  thisWeek: "V1.6",
   /* shown across the top, in order. "plain" = kid-friendly meaning. */
   treasures: {
     "V1.2": { name: "IP address",  plain: "Your castle's address on the network" },
@@ -506,8 +616,21 @@ var CONFIG = {
     title: "Hack the other team!",
     text: '<b class="r">Red</b> raids <b class="b">Blue</b>. <b class="b">Blue</b> raids <b class="r">Red</b>. Find all 4 of their treasures.'
   },
-  sideNote: "DMZ available for testing"
+  sideNote: "DMZ available for testing",
+
+  /* every version BEFORE this one shows green for every class, whatever the sheet says.
+     Set to "" to go back to reading the sheet for all columns. */
+  forceDoneBefore: "V1.6"
 };
+
+function applyOverrides(data) {
+  var stop = data.milestones.map(verKey).indexOf(verKey(CONFIG.forceDoneBefore || ""));
+  if (stop < 0) return data;
+  data.classes.forEach(function (c) {
+    for (var j = 0; j < stop; j++) { c.blue[j] = "Yes"; c.red[j] = "Yes"; }
+  });
+  return data;
+}
 
 function verKey(s) { return shortLabel(s).toUpperCase(); }
 function treasureInfo(milestones) {
@@ -662,9 +785,14 @@ function renderRail(data) {
       '<div class="tag">' + (tr ? '<span class="mini chest pending">' + chestSVG("pending") + "</span>" : "") +
         esc(shortLabel(m)) + "</div>" +
       '<div class="count">' + ticks + "/" + teams + "</div>" +
-      (j === t.week ? '<div class="wkflag">This week · last treasure</div>' : "") +
-      (CONFIG.nextWeek && verKey(m) === verKey(CONFIG.nextWeek.ver)
-        ? '<div class="wkflag" style="background:linear-gradient(90deg,var(--red),var(--blue));color:#fff">Next week · hack!</div>' : "") +
+      (function () {
+        var isHack = CONFIG.nextWeek && verKey(m) === verKey(CONFIG.nextWeek.ver);
+        var hackStyle = ' style="background:linear-gradient(90deg,var(--red),var(--blue));color:#fff"';
+        if (j === t.week) return '<div class="wkflag"' + (isHack ? hackStyle : "") + ">This week · " +
+          (isHack ? "hack!" : "last treasure") + "</div>";
+        if (isHack) return '<div class="wkflag"' + hackStyle + ">Next week · hack!</div>";
+        return "";
+      })() +
       "</div>";
   }).join("");
 }
@@ -672,17 +800,19 @@ function renderRail(data) {
 /* Treasure strip across the top: driven by CONFIG only, so it shows even if the sheet fails. */
 function renderHoard() {
   var keys = Object.keys(CONFIG.treasures);
+  var raid = !!CONFIG.nextWeek && verKey(CONFIG.thisWeek || "") === verKey(CONFIG.nextWeek.ver);
   var weekIdx = -1;
   keys.forEach(function (k, i) { if (verKey(k) === verKey(CONFIG.thisWeek || "")) weekIdx = i; });
   var html = keys.map(function (k, i) {
     var tr = CONFIG.treasures[k];
     var isLast = i === weekIdx;
-    var isPast = weekIdx < 0 || i < weekIdx;
+    var isPast = raid || weekIdx < 0 || i < weekIdx;
     var stat = isLast
       ? (i === keys.length - 1 ? "This week · the last one!" : "This week")
-      : isPast ? "✓ Should be hidden" : "Coming up";
+      : isPast ? (raid ? "✓ Hidden" : "✓ Should be hidden") : "Coming up";
     return '<div class="tcard ' + (isLast ? "last" : isPast ? "past" : "") + '">' +
-      '<div class="tchest chest pending">' + chestSVG("pending") + "</div>" +
+      '<div class="tchest chest pending">' + chestSVG("pending") +
+        (isPast ? '<span class="ttick">✓</span>' : "") + "</div>" +
       '<div style="min-width:0">' +
         '<div class="tver">Treasure ' + (i + 1) + " · " + esc(shortLabel(k)) + "</div>" +
         '<div class="tname">' + esc(tr.name) + "</div>" +
@@ -690,14 +820,42 @@ function renderHoard() {
         '<span class="tstat">' + esc(stat) + "</span>" +
       "</div></div>";
   }).join("");
-  if (CONFIG.nextWeek) {
+  if (CONFIG.nextWeek && raid) {
+    /* treasures burst out of an open chest, on a loop */
+    var LOOT = [
+      { t: "IP",   c: "#3fcf7a", dx: -5.6, dy: -3.4 },
+      { t: "PORT", c: "#4a9eea", dx: -2.7, dy: -5.6 },
+      { t: "KEY",  c: "#f5b83d", dx:  2.7, dy: -5.6 },
+      { t: "SEED", c: "#ff6b9a", dx:  5.6, dy: -3.4 }
+    ];
+    var loot = LOOT.map(function (l, i) {
+      return '<span class="loot" style="--dx:' + l.dx + "em;--dy:" + l.dy + "em;--d:" + (i * 0.35) +
+        "s;background:" + l.c + '">' + l.t + "</span>";
+    }).join("");
+    var sparks = [[-6, -1.5], [-3.2, -7.5], [0, -8.5], [3.2, -7.5], [6, -1.5], [-0.2, -4.5]].map(function (p, i) {
+      return '<span class="spark" style="--dx:' + p[0] + "em;--dy:" + p[1] + "em;--d:" + (0.15 + i * 0.27) + 's"></span>';
+    }).join("");
+    html += '<div class="tcard next live">' +
+      '<div class="stage" aria-hidden="true"><div class="beam"></div>' + sparks + loot +
+        '<div class="bigchest chest found">' + chestSVG("found") + "</div></div>" +
+      '<div style="min-width:0">' +
+        '<div class="tver">This week · ' + esc(CONFIG.nextWeek.ver) + " ⚔️</div>" +
+        '<div class="tname">' + esc(CONFIG.nextWeek.title) + "</div>" +
+        '<div class="tplain">' + CONFIG.nextWeek.text + "</div>" +
+      "</div></div>";
+  } else if (CONFIG.nextWeek) {
     html += '<div class="tcard next">' +
       '<div class="tver">Next week · ' + esc(CONFIG.nextWeek.ver) + " ⚔️</div>" +
       '<div class="tname">' + esc(CONFIG.nextWeek.title) + "</div>" +
       '<div class="tplain">' + CONFIG.nextWeek.text + "</div>" +
       "</div>";
   }
-  document.getElementById("hoard").innerHTML = html;
+  var hoard = document.getElementById("hoard");
+  hoard.innerHTML = html;
+  hoard.classList.toggle("raid", raid);
+  document.getElementById("hoardTitle").textContent = raid
+    ? "All 4 treasures hidden ✓ Now raid the other team!"
+    : "Treasures your castle should have hidden by now";
   document.getElementById("hoardNote").textContent = CONFIG.sideNote ? "· " + CONFIG.sideNote : "";
 }
 
@@ -783,7 +941,7 @@ function banner(msg, isError) {
 
 async function refresh() {
   if (!CONFIG.sheetCsvUrl) {
-    var d = demoData();
+    var d = applyOverrides(demoData());
     renderRail(d); renderGrid(d);
     setSync("demo mode", true);
     return;
@@ -793,12 +951,13 @@ async function refresh() {
     if (!res.ok) throw new Error("HTTP " + res.status);
     var data = parseSheet(parseCSV(await res.text()));
     if (!data.classes.length) throw new Error("no class rows found");
+    applyOverrides(data);
     renderRail(data); renderGrid(data);
     setSync("synced " + new Date().toLocaleTimeString("en-AU",
       { hour: "2-digit", minute: "2-digit" }));
     banner("");
   } catch (e) {
-    var d2 = demoData();
+    var d2 = applyOverrides(demoData());
     renderRail(d2); renderGrid(d2);
     setSync("sync failed — demo data", true);
     banner("Could not read the sheet (" + e.message + "). Showing demo data.", true);
