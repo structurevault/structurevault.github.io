@@ -348,6 +348,100 @@
   @media (prefers-reduced-motion: reduce) { .cellbox.wk.todo { animation: none; } }
   .legend .key.tr { background: none; width: .8em; height: .8em; border: 1px solid #5c3a16; background-color: var(--gold); transform: rotate(45deg); }
 
+  /* ---------- treasure hoard strip (across the top) ---------- */
+  .hoard-wrap { display: flex; flex-direction: column; gap: clamp(4px, .6vh, 10px); }
+  .hoard-title {
+    font-family: "Silkscreen", monospace;
+    color: var(--gold);
+    font-size: clamp(13px, 1.25vw, 24px);
+    letter-spacing: .5px;
+  }
+  .hoard-title small { color: var(--muted); font-family: "Atkinson Hyperlegible", sans-serif; font-size: .75em; letter-spacing: 0; margin-left: .5em; }
+  .hoard {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.3fr);
+    gap: clamp(6px, .8vw, 16px);
+  }
+  .tcard {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, .8vw, 16px);
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: clamp(8px, 1vh, 16px) clamp(10px, 1vw, 18px);
+    min-width: 0;
+  }
+  .tcard .tchest { width: clamp(30px, 2.8vw, 58px); flex: none; }
+  .tcard .tchest svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .tcard .tver {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(10px, .85vw, 16px);
+    color: var(--muted);
+  }
+  .tcard .tname {
+    font-weight: 700;
+    font-size: clamp(16px, 1.7vw, 34px);
+    line-height: 1.05;
+    color: var(--text);
+  }
+  .tcard .tplain {
+    color: var(--muted);
+    font-size: clamp(11px, .9vw, 17px);
+    line-height: 1.2;
+    margin-top: 2px;
+  }
+  .tcard .tstat {
+    display: inline-block;
+    margin-top: 4px;
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(9px, .75vw, 14px);
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--done);
+    color: #10251a;
+  }
+  .tcard.past { border-color: var(--done-edge); }
+  .tcard.last {
+    border-color: var(--gold);
+    background: rgba(245, 184, 61, .1);
+    animation: lastpulse 1.8s ease-in-out infinite;
+  }
+  .tcard.last .tname { color: var(--gold); }
+  .tcard.last .tstat { background: var(--gold); color: #1a1422; }
+  @keyframes lastpulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 184, 61, .0); }
+    50%      { box-shadow: 0 0 0 5px rgba(245, 184, 61, .3); }
+  }
+  .tcard.next {
+    border: 2px solid transparent;
+    background:
+      linear-gradient(var(--panel-2), var(--panel-2)) padding-box,
+      linear-gradient(90deg, var(--red), var(--blue)) border-box;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2px;
+  }
+  .tcard.next .tver { color: var(--text); }
+  .tcard.next .tname {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(15px, 1.55vw, 32px);
+    background: linear-gradient(90deg, var(--red), #ff8f8f 45%, var(--blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tcard.next .tplain { color: var(--text); opacity: .85; }
+  .tcard.next .tplain b.r { color: var(--red); }
+  .tcard.next .tplain b.b { color: var(--blue); }
+  @media (prefers-reduced-motion: reduce) { .tcard.last { animation: none; } }
+  @media (max-width: 900px) {
+    .hoard { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tcard.next { grid-column: 1 / -1; }
+  }
+
   .banner {
     text-align: center;
     color: var(--gold);
@@ -373,8 +467,12 @@
   <div class="sync" id="sync"><span class="dot"></span><span id="syncText">connecting…</span></div>
 </header>
 
+<section class="hoard-wrap" aria-label="Treasures to hide">
+  <div class="hoard-title">Treasures your castle should have hidden by now<small id="hoardNote"></small></div>
+  <div class="hoard" id="hoard"></div>
+</section>
+
 <div class="rail">
-  <div class="quest" id="quest" style="display:none"></div>
   <div class="rail-track" id="rail"></div>
 </div>
 
@@ -394,10 +492,19 @@ var CONFIG = {
   /* TREASURE: every version from treasureFrom onward has a hidden treasure.
      Update thisWeek + add the treasure each week. */
   treasureFrom: "V1.2",
-  thisWeek: "V1.3",
+  thisWeek: "V1.5",
+  /* shown across the top, in order. "plain" = kid-friendly meaning. */
   treasures: {
-    "V1.2": "an IP address",
-    "V1.3": "a port number"
+    "V1.2": { name: "IP address",  plain: "Your castle's address on the network" },
+    "V1.3": { name: "Port",        plain: "The door number into your castle" },
+    "V1.4": { name: "Public key",  plain: "Your castle's ID card. Safe to show." },
+    "V1.5": { name: "Seed phrase", plain: "The secret words that unlock everything" }
+  },
+  /* the version after the last treasure: the raid */
+  nextWeek: {
+    ver: "V1.6",
+    title: "Hack the other team!",
+    text: '<b class="r">Red</b> raids <b class="b">Blue</b>. <b class="b">Blue</b> raids <b class="r">Red</b>. Find all 4 of their treasures.'
   },
   sideNote: "DMZ available for testing"
 };
@@ -555,27 +662,43 @@ function renderRail(data) {
       '<div class="tag">' + (tr ? '<span class="mini chest pending">' + chestSVG("pending") + "</span>" : "") +
         esc(shortLabel(m)) + "</div>" +
       '<div class="count">' + ticks + "/" + teams + "</div>" +
-      (j === t.week ? '<div class="wkflag">This week</div>' : "") +
+      (j === t.week ? '<div class="wkflag">This week · last treasure</div>' : "") +
+      (CONFIG.nextWeek && verKey(m) === verKey(CONFIG.nextWeek.ver)
+        ? '<div class="wkflag" style="background:linear-gradient(90deg,var(--red),var(--blue));color:#fff">Next week · hack!</div>' : "") +
       "</div>";
   }).join("");
+}
 
-  var quest = document.getElementById("quest");
-  if (t.week >= 0) {
-    var label = data.milestones[t.week];
-    var loot = treasureFor(label);
-    quest.innerHTML =
-      '<div class="qchest chest found">' + chestSVG("found") + "</div>" +
-      "<div>" +
-        '<div class="qtop">This week · ' + esc(shortLabel(label)) + "</div>" +
-        '<div class="qloot">Treasure: ' + (loot ? esc(loot) : "hidden") + "</div>" +
-        (t.start >= 0 ? '<div class="qsub">Every version from ' + esc(shortLabel(data.milestones[t.start])) +
-          " on has a treasure</div>" : "") +
-        (CONFIG.sideNote ? '<div class="qnote">' + esc(CONFIG.sideNote) + "</div>" : "") +
+/* Treasure strip across the top: driven by CONFIG only, so it shows even if the sheet fails. */
+function renderHoard() {
+  var keys = Object.keys(CONFIG.treasures);
+  var weekIdx = -1;
+  keys.forEach(function (k, i) { if (verKey(k) === verKey(CONFIG.thisWeek || "")) weekIdx = i; });
+  var html = keys.map(function (k, i) {
+    var tr = CONFIG.treasures[k];
+    var isLast = i === weekIdx;
+    var isPast = weekIdx < 0 || i < weekIdx;
+    var stat = isLast
+      ? (i === keys.length - 1 ? "This week · the last one!" : "This week")
+      : isPast ? "✓ Should be hidden" : "Coming up";
+    return '<div class="tcard ' + (isLast ? "last" : isPast ? "past" : "") + '">' +
+      '<div class="tchest chest pending">' + chestSVG("pending") + "</div>" +
+      '<div style="min-width:0">' +
+        '<div class="tver">Treasure ' + (i + 1) + " · " + esc(shortLabel(k)) + "</div>" +
+        '<div class="tname">' + esc(tr.name) + "</div>" +
+        '<div class="tplain">' + esc(tr.plain) + "</div>" +
+        '<span class="tstat">' + esc(stat) + "</span>" +
+      "</div></div>";
+  }).join("");
+  if (CONFIG.nextWeek) {
+    html += '<div class="tcard next">' +
+      '<div class="tver">Next week · ' + esc(CONFIG.nextWeek.ver) + " ⚔️</div>" +
+      '<div class="tname">' + esc(CONFIG.nextWeek.title) + "</div>" +
+      '<div class="tplain">' + CONFIG.nextWeek.text + "</div>" +
       "</div>";
-    quest.style.display = "";
-  } else {
-    quest.style.display = "none";
   }
+  document.getElementById("hoard").innerHTML = html;
+  document.getElementById("hoardNote").textContent = CONFIG.sideNote ? "· " + CONFIG.sideNote : "";
 }
 
 function renderGrid(data) {
@@ -682,6 +805,7 @@ async function refresh() {
   }
 }
 
+renderHoard();
 refresh();
 setInterval(refresh, CONFIG.refreshSeconds * 1000);
 </script>
