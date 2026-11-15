@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Break In — Red vs Blue Servers</title>
+<meta name="description" content="Two Umbrel servers on Dell OptiPlexes, the four secrets hidden in the Minecraft world to get in, and why weak passwords like qwerty get cracked.">
+<!--
+  BREAK IN — SPARK Centre, Boneo PS
+  Companion to the Red vs Blue version board (rtbt.html).
+  Two Umbrel servers (Dell OptiPlex), one red one blue.
+  The four things hidden in the Minecraft world to get in:
+    IP address · Port · Public key (npub) · Seed phrase (12 words)
+  Plus the classic common-password wordlist (qwerty included) and a
+  brute-force demo that shows weak passwords fall instantly — the lesson
+  being that the hidden seed phrase is the real protection.
+  All values shown are made-up practice values generated in the browser.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0d16;
+    --panel: #1b1726;
+    --panel-2: #231d31;
+    --line: #37304b;
+    --text: #efeaf7;
+    --muted: #9a92b4;
+    --red: #e5484d;
+    --red-dim: #7a2230;
+    --blue: #4a9eea;
+    --blue-dim: #1d3f73;
+    --gold: #f5b83d;
+    --green: #3fcf7a;
+    --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 20% -10%, rgba(229,72,77,.12), transparent 60%),
+      radial-gradient(1200px 600px at 80% -10%, rgba(74,158,234,.12), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: "Atkinson Hyperlegible", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: clamp(12px, 1.5vw, 26px);
+    gap: clamp(10px, 1.4vh, 20px);
+  }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1 {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(20px, 3vw, 46px);
+    letter-spacing: 1px;
+    line-height: 1.1;
+  }
+  h1 .r { color: var(--red); }
+  h1 .b { color: var(--blue); }
+  header p { color: var(--muted); font-size: clamp(12px, 1.1vw, 19px); max-width: 48ch; margin-top: 4px; }
+  .fsbtn {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(10px, .9vw, 15px);
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 16px;
+    cursor: pointer;
+  }
+  .fsbtn:hover { background: var(--panel-2); }
+
+  /* ---------- two server rigs ---------- */
+  .rigs { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(12px, 1.6vw, 28px); }
+  .rig {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 16px;
+    padding: clamp(12px, 1.4vw, 24px);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: clamp(12px, 1.4vw, 26px);
+    align-items: start;
+  }
+  .rig.red  { border-color: var(--red-dim);  box-shadow: 0 0 0 1px rgba(229,72,77,.15), 0 10px 40px -20px rgba(229,72,77,.6); }
+  .rig.blue { border-color: var(--blue-dim); box-shadow: 0 0 0 1px rgba(74,158,234,.15), 0 10px 40px -20px rgba(74,158,234,.6); }
+
+  .machine { width: clamp(120px, 11vw, 220px); }
+  .machine svg { width: 100%; height: auto; display: block; }
+  .mlabel {
+    text-align: center;
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(10px, .85vw, 15px);
+    margin-top: 8px;
+    color: var(--muted);
+  }
+  .mlabel b { display: block; font-size: 1.35em; margin-bottom: 3px; }
+  .rig.red  .mlabel b { color: var(--red); }
+  .rig.blue .mlabel b { color: var(--blue); }
+
+  .rig-body { min-width: 0; }
+  .teamtag {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(13px, 1.3vw, 24px);
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 4px;
+  }
+  .rig.red  .teamtag { color: var(--red); }
+  .rig.blue .teamtag { color: var(--blue); }
+  .teamtag .status {
+    font-family: "Atkinson Hyperlegible", sans-serif;
+    font-size: .6em; letter-spacing: .5px;
+    padding: 3px 9px; border-radius: 20px;
+    background: var(--panel-2); color: var(--muted);
+    border: 1px solid var(--line);
+  }
+  .teamtag .status.cracked { background: var(--red); color: #1a0a0c; border-color: var(--red); }
+  .subhead { color: var(--muted); font-size: clamp(11px, .95vw, 17px); margin-bottom: 12px; }
+
+  /* loot: the things hidden in the Minecraft world */
+  .loot-title {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(10px, .8vw, 14px);
+    color: var(--gold);
+    letter-spacing: .5px;
+    margin: 4px 0 8px;
+  }
+  .loot { display: grid; gap: clamp(6px, .7vh, 11px); }
+  .lootrow {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: clamp(8px, .8vw, 16px);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: clamp(7px, .8vh, 12px) clamp(9px, .9vw, 15px);
+  }
+  .lootrow .ic { font-size: clamp(18px, 1.7vw, 30px); line-height: 1; }
+  .lootrow .meta { min-width: 0; }
+  .lootrow .nm { font-weight: 700; font-size: clamp(13px, 1.1vw, 20px); }
+  .lootrow .pl { color: var(--muted); font-size: clamp(10px, .82vw, 15px); line-height: 1.25; }
+  .lootrow .val {
+    font-family: var(--mono);
+    font-size: clamp(11px, .92vw, 17px);
+    font-weight: 700;
+    color: var(--green);
+    margin-top: 3px;
+    word-break: break-all;
+    display: none;
+  }
+  .lootrow.found .val { display: block; }
+  .lootrow.found { border-color: var(--green); }
+  .findbtn {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(9px, .72vw, 13px);
+    white-space: nowrap;
+    color: #1a1422;
+    background: var(--gold);
+    border: none;
+    border-radius: 7px;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .findbtn:hover { filter: brightness(1.08); }
+  .lootrow.found .findbtn { background: var(--green); color: #0b2415; }
+
+  /* ---------- brute force terminal ---------- */
+  .brute { margin-top: clamp(10px, 1.2vh, 18px); }
+  .brute-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 7px; }
+  .brute-head .t { font-family: "Silkscreen", monospace; font-size: clamp(10px, .82vw, 15px); color: var(--muted); }
+  .brute-btns { display: flex; gap: 7px; }
+  .bbtn {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(9px, .72vw, 13px);
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .bbtn.go { background: var(--red); color: #1a0a0c; border-color: var(--red); }
+  .rig.blue .bbtn.go { background: var(--blue); color: #061324; border-color: var(--blue); }
+  .bbtn:hover { filter: brightness(1.1); }
+  .term {
+    background: #0a0810;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: clamp(8px, .9vw, 14px);
+    font-family: var(--mono);
+    font-size: clamp(11px, .92vw, 17px);
+    height: clamp(110px, 15vh, 190px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .term .ln { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .85; }
+  .term .ln .pw { color: var(--text); }
+  .term .ln.deny .pw { color: var(--muted); }
+  .term .ln.deny::after { content: " ✗ DENIED"; color: #c23b4a; }
+  .term .ln.crack {
+    opacity: 1;
+    font-weight: 700;
+    background: rgba(63,207,122,.14);
+    border-radius: 4px;
+    padding: 2px 4px;
+    animation: crackflash .5s steps(2) 4;
+  }
+  .term .ln.crack .pw { color: var(--green); }
+  .term .ln.crack::after { content: " ✓ CRACKED!"; color: var(--green); }
+  .term .ln.info { color: var(--gold); opacity: 1; white-space: normal; }
+  @keyframes crackflash { 50% { background: rgba(63,207,122,.4); } }
+  @media (prefers-reduced-motion: reduce) { .term .ln.crack { animation: none; } }
+
+  /* ---------- shared wordlist ---------- */
+  .wordlist {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 16px;
+    padding: clamp(12px, 1.4vw, 24px);
+  }
+  .wordlist h2 {
+    font-family: "Silkscreen", monospace;
+    font-size: clamp(14px, 1.5vw, 26px);
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+  .wordlist .lead { color: var(--muted); font-size: clamp(11px, 1vw, 18px); margin-bottom: 14px; max-width: 80ch; }
+  .chips { display: flex; flex-wrap: wrap; gap: clamp(6px, .7vw, 12px); }
+  .chip {
+    font-family: var(--mono);
+    font-size: clamp(12px, 1.05vw, 20px);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 13px;
+    position: relative;
+  }
+  .chip .rank { color: var(--muted); font-family: "Silkscreen", monospace; font-size: .62em; margin-right: 7px; }
+  .chip.star {
+    border-color: var(--gold);
+    background: rgba(245,184,61,.14);
+    color: var(--gold);
+    font-weight: 700;
+    box-shadow: 0 0 0 1px rgba(245,184,61,.3);
+  }
+  .chip.star::after { content: " ⭐"; }
+  .note {
+    margin-top: 16px;
+    border-top: 1px dashed var(--line);
+    padding-top: 14px;
+    color: var(--muted);
+    font-size: clamp(11px, .95vw, 17px);
+    line-height: 1.5;
+  }
+  .note b { color: var(--green); }
+  .note .warn { color: var(--gold); }
+
+  @media (max-width: 860px) {
+    .rigs { grid-template-columns: 1fr; }
+    .rig { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+    .rig-body { width: 100%; text-align: left; }
+    .machine { width: clamp(120px, 34vw, 190px); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1><span class="r">RED</span> vs <span class="b">BLUE</span> — BREAK IN</h1>
+    <p>Two Umbrel servers on Dell OptiPlexes. Find the four secrets hidden in the Minecraft world to get in — then see why weak passwords never stood a chance.</p>
+  </div>
+  <button class="fsbtn" id="fs">⛶ Full screen</button>
+</header>
+
+<section class="rigs" id="rigs"></section>
+
+<section class="wordlist">
+  <h2>Password cracking list</h2>
+  <p class="lead">A brute-force attack just tries the most common passwords, one after another, really fast. Here are the classics attackers try first — if your password is on this list, it falls in a blink. <strong style="color:var(--gold)">qwerty</strong> is one of them.</p>
+  <div class="chips" id="chips"></div>
+  <div class="note">
+    <b>The lesson:</b> every password on this list gets cracked instantly. That is why the real way in isn't a password at all — it's the four secrets your team <span class="warn">hid in the Minecraft world</span>: the IP address, the port, the public key, and the <span class="warn">seed phrase</span>. Keep the seed phrase safe and no wordlist can help the other team.
+  </div>
+</section>
+
+<script>
+/* ---- made-up practice values, generated fresh in the browser ---- */
+var WORDS = ["anchor","beacon","castle","dragon","ember","forest","glacier","harbor","island",
+  "jungle","kernel","lantern","meadow","nugget","orbit","pixel","quartz","ripple","saddle","timber",
+  "umbrel","velvet","walnut","xenon","yonder","zephyr","amber","basalt","cobalt","dune"];
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function seedPhrase(){ var out=[]; for(var i=0;i<12;i++) out.push(pick(WORDS)); return out.join(" "); }
+function npub(){
+  var cs="qpzry9x8gf2tvdw0s3jn54khce6mua7l", s="npub1";
+  for(var i=0;i<58;i++) s+=cs[Math.floor(Math.random()*cs.length)];
+  return s;
+}
+function lastOctet(){ return 20+Math.floor(Math.random()*220); }
+function portNum(){ return 1024+Math.floor(Math.random()*64000); }
+
+/* The classic common-password list (qwerty starred). */
+var PASSWORDS = ["123456","password","123456789","12345678","12345","qwerty","abc123","football",
+  "1234567","monkey","111111","letmein","dragon","123123","iloveyou","admin","welcome","login",
+  "princess","qwerty123","000000","superman","password1","sunshine"];
+
+var SERVERS = [
+  { team:"red",  name:"RED TEAM",  host:"optiplex-red",  weak:"qwerty" },
+  { team:"blue", name:"BLUE TEAM", host:"optiplex-blue", weak:"letmein" }
+];
+
+function optiplexSVG(team){
+  var accent = team==="red" ? "#e5484d" : "#4a9eea";
+  var glow   = team==="red" ? "rgba(229,72,77,.9)" : "rgba(74,158,234,.9)";
+  return '' +
+  '<svg viewBox="0 0 120 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    '<defs><filter id="g-'+team+'" x="-50%" y="-50%" width="200%" height="200%">' +
+      '<feGaussianBlur stdDeviation="2.4"/></filter></defs>' +
+    /* shadow */
+    '<ellipse cx="60" cy="162" rx="46" ry="7" fill="#000" opacity=".35"/>' +
+    /* chassis */
+    '<rect x="26" y="8" width="68" height="150" rx="6" fill="#2a2636" stroke="#4a4360" stroke-width="2"/>' +
+    '<rect x="26" y="8" width="68" height="150" rx="6" fill="url(#none)"/>' +
+    /* side vent shading */
+    '<rect x="84" y="8" width="10" height="150" rx="6" fill="#211d2c"/>' +
+    /* top accent stripe */
+    '<rect x="26" y="8" width="68" height="9" rx="6" fill="'+accent+'"/>' +
+    /* vents */
+    '<g stroke="#4a4360" stroke-width="2">' +
+      '<line x1="34" y1="26" x2="76" y2="26"/><line x1="34" y1="31" x2="76" y2="31"/>' +
+      '<line x1="34" y1="36" x2="76" y2="36"/><line x1="34" y1="41" x2="76" y2="41"/>' +
+    '</g>' +
+    /* power button (glowing in team colour) */
+    '<circle cx="42" cy="60" r="7" fill="#15121d" stroke="'+accent+'" stroke-width="2"/>' +
+    '<circle cx="42" cy="60" r="3.2" fill="'+accent+'" filter="url(#g-'+team+')">' +
+      '<animate attributeName="opacity" values="1;.4;1" dur="2.2s" repeatCount="indefinite"/></circle>' +
+    '<path d="M42 56v4" stroke="#15121d" stroke-width="1.6"/>' +
+    /* USB ports */
+    '<rect x="56" y="55" width="12" height="4" rx="1" fill="#15121d"/>' +
+    '<rect x="56" y="62" width="12" height="4" rx="1" fill="#15121d"/>' +
+    /* badge plate */
+    '<rect x="34" y="86" width="52" height="26" rx="4" fill="#15121d" stroke="#4a4360"/>' +
+    '<text x="60" y="97" text-anchor="middle" fill="'+accent+'" font-family="Silkscreen, monospace" font-size="9" font-weight="700">UMBREL</text>' +
+    '<text x="60" y="107" text-anchor="middle" fill="#9a92b4" font-family="monospace" font-size="6">OptiPlex</text>' +
+    /* activity LEDs */
+    '<circle cx="40" cy="128" r="2.5" fill="#3fcf7a"><animate attributeName="opacity" values="1;.2;1" dur="1.1s" repeatCount="indefinite"/></circle>' +
+    '<circle cx="50" cy="128" r="2.5" fill="'+accent+'"><animate attributeName="opacity" values=".3;1;.3" dur="1.7s" repeatCount="indefinite"/></circle>' +
+    /* drive slot */
+    '<rect x="34" y="140" width="52" height="4" rx="2" fill="#15121d"/>' +
+  '</svg>';
+}
+
+var LOOT = [
+  { key:"ip",   ic:"🛰️", nm:"IP address", pl:"The server's address on the network" },
+  { key:"port", ic:"🚪", nm:"Port",       pl:"The door number to knock on" },
+  { key:"pub",  ic:"🪪", nm:"Public key", pl:"The server's ID card — safe to show" },
+  { key:"seed", ic:"🔑", nm:"Seed phrase", pl:"The 12 secret words that unlock everything — keep hidden!" }
+];
+
+function lootValue(key, srv){
+  if (key==="ip")   return "192.168.8." + srv.octet;
+  if (key==="port") return String(srv.port);
+  if (key==="pub")  return srv.pub;
+  if (key==="seed") return srv.seed;
+  return "";
+}
+
+var rigsEl = document.getElementById("rigs");
+SERVERS.forEach(function(srv){
+  srv.octet = lastOctet();
+  srv.port  = portNum();
+  srv.pub   = npub();
+  srv.seed  = seedPhrase();
+
+  var loot = LOOT.map(function(l){
+    return '<div class="lootrow" data-key="'+l.key+'">' +
+      '<div class="ic">'+l.ic+'</div>' +
+      '<div class="meta"><div class="nm">'+l.nm+'</div>' +
+        '<div class="pl">'+l.pl+'</div>' +
+        '<div class="val"></div></div>' +
+      '<button class="findbtn">Find</button>' +
+    '</div>';
+  }).join("");
+
+  var rig = document.createElement("div");
+  rig.className = "rig " + srv.team;
+  rig.innerHTML =
+    '<div class="machine-wrap">' +
+      '<div class="machine">'+optiplexSVG(srv.team)+'</div>' +
+      '<div class="mlabel"><b>Dell OptiPlex</b>Umbrel node</div>' +
+    '</div>' +
+    '<div class="rig-body">' +
+      '<div class="teamtag">'+srv.name+' SERVER <span class="status">LOCKED</span></div>' +
+      '<div class="subhead">Running Umbrel on a Dell OptiPlex</div>' +
+      '<div class="loot-title">Hidden in the Minecraft world — find all 4 to get in</div>' +
+      '<div class="loot">'+loot+'</div>' +
+      '<div class="brute">' +
+        '<div class="brute-head"><span class="t">Brute-force login</span>' +
+          '<div class="brute-btns">' +
+            '<button class="bbtn go">▶ Brute force</button>' +
+            '<button class="bbtn reset">Reset</button>' +
+          '</div></div>' +
+        '<div class="term"><div class="ln info">Waiting… press “Brute force” to try the common passwords.</div></div>' +
+      '</div>' +
+    '</div>';
+  rigsEl.appendChild(rig);
+
+  /* find buttons reveal the hidden loot */
+  rig.querySelectorAll(".lootrow").forEach(function(row){
+    var key = row.dataset.key;
+    row.querySelector(".findbtn").addEventListener("click", function(){
+      if (row.classList.contains("found")) {
+        row.classList.remove("found");
+        this.textContent = "Find";
+      } else {
+        row.querySelector(".val").textContent = lootValue(key, srv);
+        row.classList.add("found");
+        this.textContent = "Found ✓";
+      }
+    });
+  });
+
+  /* brute-force demo terminal */
+  var term = rig.querySelector(".term");
+  var statusEl = rig.querySelector(".status");
+  var goBtn = rig.querySelector(".bbtn.go");
+  var resetBtn = rig.querySelector(".bbtn.reset");
+  var timer = null;
+
+  function resetTerm(){
+    if (timer) { clearInterval(timer); timer = null; }
+    term.innerHTML = '<div class="ln info">Waiting… press “Brute force” to try the common passwords.</div>';
+    statusEl.textContent = "LOCKED";
+    statusEl.classList.remove("cracked");
+    goBtn.disabled = false;
+  }
+
+  function addLine(cls, html){
+    var ln = document.createElement("div");
+    ln.className = "ln " + cls;
+    ln.innerHTML = html;
+    term.appendChild(ln);
+    while (term.children.length > 7) term.removeChild(term.firstChild);
+  }
+
+  function run(){
+    resetTerm();
+    goBtn.disabled = true;
+    statusEl.textContent = "UNDER ATTACK";
+    var i = 0;
+    timer = setInterval(function(){
+      var pw = PASSWORDS[i];
+      if (pw === srv.weak) {
+        clearInterval(timer); timer = null;
+        addLine("crack", 'try: <span class="pw">'+pw+'</span>');
+        statusEl.textContent = "CRACKED";
+        statusEl.classList.add("cracked");
+        setTimeout(function(){
+          addLine("info", '⚠ “'+pw+'” was a top-'+(i+1)+' password — cracked in '+((i+1)*0.06).toFixed(1)+'s. Pick something NOT on the list!');
+          goBtn.disabled = false;
+        }, 500);
+        return;
+      }
+      addLine("deny", 'try: <span class="pw">'+pw+'</span>');
+      i++;
+      if (i >= PASSWORDS.length) {
+        clearInterval(timer); timer = null;
+        addLine("info", "✓ None of the common passwords worked — this one is strong!");
+        statusEl.textContent = "HELD";
+        goBtn.disabled = false;
+      }
+    }, 90);
+  }
+
+  goBtn.addEventListener("click", run);
+  resetBtn.addEventListener("click", resetTerm);
+});
+
+/* wordlist chips */
+var chipsEl = document.getElementById("chips");
+chipsEl.innerHTML = PASSWORDS.map(function(p, i){
+  var star = p === "qwerty" ? " star" : "";
+  return '<span class="chip'+star+'"><span class="rank">'+(i+1)+'</span>'+p+'</span>';
+}).join("");
+
+/* full screen */
+document.getElementById("fs").addEventListener("click", function(){
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+  else document.exitFullscreen && document.exitFullscreen();
+});
+</script>
+</body>
+</html>
