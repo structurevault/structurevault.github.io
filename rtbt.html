@@ -801,14 +801,6 @@ function renderRail(data) {
       '<div class="tag">' + (tr ? '<span class="mini chest pending">' + chestSVG("pending") + "</span>" : "") +
         esc(shortLabel(m)) + "</div>" +
       '<div class="count">' + ticks + "/" + teams + "</div>" +
-      (function () {
-        var isHack = CONFIG.nextWeek && verKey(m) === verKey(CONFIG.nextWeek.ver);
-        var hackStyle = ' style="background:linear-gradient(90deg,var(--red),var(--blue));color:#fff"';
-        if (j === t.week) return '<div class="wkflag"' + (isHack ? hackStyle : "") + ">This week" +
-          (isHack ? " · hack!" : "") + "</div>";
-        if (isHack) return '<div class="wkflag"' + hackStyle + ">Next week · hack!</div>";
-        return "";
-      })() +
       "</div>";
   }).join("");
 }
@@ -836,9 +828,20 @@ function renderHoard() {
         '<span class="tstat">' + esc(stat) + "</span>" +
       "</div></div>";
   }).join("");
-  var html = treasureCards;
-  if (CONFIG.nextWeek && raid) {
-    /* treasures burst out of an open chest, on a loop */
+  var finals = "";
+  /* adventure-mode playtest block */
+  if (CONFIG.thisWeekCard) {
+    var a = CONFIG.thisWeekCard;
+    finals += '<div class="tcard last adventure">' +
+      '<div class="advicon">' + (a.icon || "🗺️") + "</div>" +
+      '<div style="min-width:0">' +
+        '<div class="tver">' + esc(a.ver) + " · PLAYTEST</div>" +
+        '<div class="tname">' + esc(a.title) + "</div>" +
+        '<div class="tplain">' + a.text + "</div>" +
+      "</div></div>";
+  }
+  /* final hack block: treasures burst out of an open chest, on a loop */
+  if (CONFIG.nextWeek) {
     var LOOT = [
       { t: "IP",   c: "#3fcf7a", dx: -5.6, dy: -3.4 },
       { t: "PORT", c: "#4a9eea", dx: -2.7, dy: -5.6 },
@@ -852,49 +855,24 @@ function renderHoard() {
     var sparks = [[-6, -1.5], [-3.2, -7.5], [0, -8.5], [3.2, -7.5], [6, -1.5], [-0.2, -4.5]].map(function (p, i) {
       return '<span class="spark" style="--dx:' + p[0] + "em;--dy:" + p[1] + "em;--d:" + (0.15 + i * 0.27) + 's"></span>';
     }).join("");
-    html += '<div class="tcard next live">' +
+    finals += '<div class="tcard next live">' +
       '<div class="stage" aria-hidden="true"><div class="beam"></div>' + sparks + loot +
         '<div class="bigchest chest found">' + chestSVG("found") + "</div></div>" +
       '<div style="min-width:0">' +
-        '<div class="tver">This week · ' + esc(CONFIG.nextWeek.ver) + " ⚔️</div>" +
+        '<div class="tver">' + esc(CONFIG.nextWeek.ver) + " ⚔️</div>" +
         '<div class="tname">' + esc(CONFIG.nextWeek.title) + "</div>" +
         '<div class="tplain">' + CONFIG.nextWeek.text + "</div>" +
       "</div></div>";
   }
   var hoard = document.getElementById("hoard");
-  if (raid) {
-    hoard.classList.add("raid");
-    hoard.classList.remove("tworow");
-    hoard.innerHTML = html;
-  } else {
-    hoard.classList.remove("raid");
-    hoard.classList.add("tworow");
-    var finals = "";
-    if (CONFIG.thisWeekCard) {
-      var a = CONFIG.thisWeekCard;
-      finals += '<div class="tcard last adventure">' +
-        '<div class="advicon">' + (a.icon || "🗺️") + "</div>" +
-        '<div style="min-width:0">' +
-          '<div class="tver">This week · ' + esc(a.ver) + "</div>" +
-          '<div class="tname">' + esc(a.title) + "</div>" +
-          '<div class="tplain">' + a.text + "</div>" +
-          '<span class="tstat">This week</span>' +
-        "</div></div>";
-    }
-    if (CONFIG.nextWeek) {
-      finals += '<div class="tcard next">' +
-        '<div class="tver">Next week · ' + esc(CONFIG.nextWeek.ver) + " ⚔️</div>" +
-        '<div class="tname">' + esc(CONFIG.nextWeek.title) + "</div>" +
-        '<div class="tplain">' + CONFIG.nextWeek.text + "</div>" +
-      "</div>";
-    }
-    hoard.innerHTML =
-      '<div class="hrow treasures">' + treasureCards + "</div>" +
-      '<div class="hrow finals">' + finals + "</div>";
-  }
+  hoard.classList.remove("raid");
+  hoard.classList.add("tworow");
+  hoard.innerHTML =
+    '<div class="hrow treasures">' + treasureCards + "</div>" +
+    '<div class="hrow finals">' + finals + "</div>";
   document.getElementById("hoardTitle").textContent = raid
     ? "All 4 treasures hidden ✓ Now raid the other team!"
-    : "Your 4 hidden treasures — then this week's adventure-mode check";
+    : "Treasures your castle should have hidden by now";
   document.getElementById("hoardNote").textContent = CONFIG.sideNote ? "· " + CONFIG.sideNote : "";
 }
 
