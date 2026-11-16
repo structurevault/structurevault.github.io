@@ -283,7 +283,7 @@
 
 <section class="wordlist">
   <h2>Password cracking list</h2>
-  <p class="lead">A brute-force attack just tries the most common passwords, one after another, really fast. Here are the classics attackers try first — if your password is on this list, it falls in a blink. <strong style="color:var(--gold)">qwerty</strong> is one of them.</p>
+  <p class="lead">A brute-force attack just tries the most common passwords, one after another, really fast. Here are the classics attackers try first — if your password is on this list, it falls in a blink. Can you guess which one gets you into a server?</p>
   <div class="chips" id="chips"></div>
   <div class="note">
     <b>The lesson:</b> every password on this list gets cracked instantly. That is why the real way in isn't a password at all — it's the four secrets your team <span class="warn">hid in the Minecraft world</span>: the IP address, the port, the public key, and the <span class="warn">seed phrase</span>. Keep the seed phrase safe and no wordlist can help the other team.
@@ -317,42 +317,52 @@ var SERVERS = [
 
 function optiplexSVG(team){
   var accent = team==="red" ? "#e5484d" : "#4a9eea";
-  var glow   = team==="red" ? "rgba(229,72,77,.9)" : "rgba(74,158,234,.9)";
+  /* vent slats down the right side of the front face */
+  var slats = "";
+  for (var x = 60; x <= 86; x += 3) slats += '<line x1="'+x+'" y1="14" x2="'+x+'" y2="170"/>';
   return '' +
-  '<svg viewBox="0 0 120 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-    '<defs><filter id="g-'+team+'" x="-50%" y="-50%" width="200%" height="200%">' +
-      '<feGaussianBlur stdDeviation="2.4"/></filter></defs>' +
-    /* shadow */
-    '<ellipse cx="60" cy="162" rx="46" ry="7" fill="#000" opacity=".35"/>' +
-    /* chassis */
-    '<rect x="26" y="8" width="68" height="150" rx="6" fill="#2a2636" stroke="#4a4360" stroke-width="2"/>' +
-    '<rect x="26" y="8" width="68" height="150" rx="6" fill="url(#none)"/>' +
-    /* side vent shading */
-    '<rect x="84" y="8" width="10" height="150" rx="6" fill="#211d2c"/>' +
-    /* top accent stripe */
-    '<rect x="26" y="8" width="68" height="9" rx="6" fill="'+accent+'"/>' +
-    /* vents */
-    '<g stroke="#4a4360" stroke-width="2">' +
-      '<line x1="34" y1="26" x2="76" y2="26"/><line x1="34" y1="31" x2="76" y2="31"/>' +
-      '<line x1="34" y1="36" x2="76" y2="36"/><line x1="34" y1="41" x2="76" y2="41"/>' +
+  '<svg viewBox="0 0 120 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    '<defs>' +
+      '<linearGradient id="chassis-'+team+'" x1="0" y1="0" x2="1" y2="0">' +
+        '<stop offset="0" stop-color="#3a3647"/><stop offset=".5" stop-color="#26232f"/>' +
+        '<stop offset="1" stop-color="#1b1824"/></linearGradient>' +
+      '<filter id="g-'+team+'" x="-60%" y="-60%" width="220%" height="220%">' +
+        '<feGaussianBlur stdDeviation="2"/></filter>' +
+    '</defs>' +
+    /* rubber feet */
+    '<rect x="36" y="176" width="10" height="7" rx="2" fill="#141019"/>' +
+    '<rect x="74" y="176" width="10" height="7" rx="2" fill="#141019"/>' +
+    /* chassis: tall vertical micro */
+    '<rect x="30" y="6" width="60" height="172" rx="8" fill="url(#chassis-'+team+')" stroke="#4a4360" stroke-width="2"/>' +
+    /* grille panel on the right of the front face */
+    '<rect x="57" y="8" width="31" height="168" rx="6" fill="#171420"/>' +
+    '<g stroke="#2e2a3b" stroke-width="1.6" stroke-linecap="round">'+slats+'</g>' +
+    /* power button (top) with faint team glow showing it is on */
+    '<circle cx="44" cy="26" r="8" fill="#141019" stroke="#6a6280" stroke-width="2"/>' +
+    '<circle cx="44" cy="26" r="8" fill="none" stroke="'+accent+'" stroke-width="1.4" opacity=".7" filter="url(#g-'+team+')">' +
+      '<animate attributeName="opacity" values=".25;.85;.25" dur="2.4s" repeatCount="indefinite"/></circle>' +
+    '<path d="M44 21v5" stroke="'+accent+'" stroke-width="1.8" stroke-linecap="round"/>' +
+    '<path d="M39.6 24a6 6 0 1 0 8.8 0" fill="none" stroke="#9a92b4" stroke-width="1.6"/>' +
+    /* storage activity LED */
+    '<path d="M40 44h5l2 3-4 0z" fill="#9a92b4" opacity=".7"/>' +
+    '<circle cx="44" cy="44" r="1.6" fill="#3fcf7a"><animate attributeName="opacity" values="1;.2;1" dur="1.1s" repeatCount="indefinite"/></circle>' +
+    /* headphone jack */
+    '<circle cx="44" cy="58" r="4.5" fill="#0c0a12" stroke="#55506a" stroke-width="1.5"/>' +
+    '<circle cx="44" cy="58" r="1.6" fill="#2a2636"/>' +
+    /* two USB 3 ports (blue inner) */
+    '<rect x="36" y="70" width="17" height="6" rx="1.5" fill="#0c0a12" stroke="#55506a" stroke-width="1"/>' +
+    '<rect x="45" y="71.5" width="7" height="3" fill="#3a7fd6"/>' +
+    '<rect x="36" y="81" width="17" height="6" rx="1.5" fill="#0c0a12" stroke="#55506a" stroke-width="1"/>' +
+    '<rect x="45" y="82.5" width="7" height="3" fill="#3a7fd6"/>' +
+    /* OptiPlex label pill on the grille */
+    '<rect x="58" y="120" width="29" height="13" rx="6.5" fill="#201c2b" stroke="#3a3548" stroke-width="1"/>' +
+    '<text x="72.5" y="129.4" text-anchor="middle" fill="#b9b2cf" font-family="Arial, sans-serif" font-size="6.6" font-weight="700">OptiPlex</text>' +
+    /* DELL logo on the grille, in the team colour */
+    '<circle cx="72.5" cy="152" r="14" fill="#141019"/>' +
+    '<circle cx="72.5" cy="152" r="14" fill="none" stroke="'+accent+'" stroke-width="2.2"/>' +
+    '<g transform="translate(72.5 152) skewX(-10)">' +
+      '<text x="0" y="3.2" text-anchor="middle" fill="'+accent+'" font-family="Arial, sans-serif" font-size="9.5" font-weight="700" letter-spacing="-.3">DELL</text>' +
     '</g>' +
-    /* power button (glowing in team colour) */
-    '<circle cx="42" cy="60" r="7" fill="#15121d" stroke="'+accent+'" stroke-width="2"/>' +
-    '<circle cx="42" cy="60" r="3.2" fill="'+accent+'" filter="url(#g-'+team+')">' +
-      '<animate attributeName="opacity" values="1;.4;1" dur="2.2s" repeatCount="indefinite"/></circle>' +
-    '<path d="M42 56v4" stroke="#15121d" stroke-width="1.6"/>' +
-    /* USB ports */
-    '<rect x="56" y="55" width="12" height="4" rx="1" fill="#15121d"/>' +
-    '<rect x="56" y="62" width="12" height="4" rx="1" fill="#15121d"/>' +
-    /* badge plate */
-    '<rect x="34" y="86" width="52" height="26" rx="4" fill="#15121d" stroke="#4a4360"/>' +
-    '<text x="60" y="97" text-anchor="middle" fill="'+accent+'" font-family="Silkscreen, monospace" font-size="9" font-weight="700">UMBREL</text>' +
-    '<text x="60" y="107" text-anchor="middle" fill="#9a92b4" font-family="monospace" font-size="6">OptiPlex</text>' +
-    /* activity LEDs */
-    '<circle cx="40" cy="128" r="2.5" fill="#3fcf7a"><animate attributeName="opacity" values="1;.2;1" dur="1.1s" repeatCount="indefinite"/></circle>' +
-    '<circle cx="50" cy="128" r="2.5" fill="'+accent+'"><animate attributeName="opacity" values=".3;1;.3" dur="1.7s" repeatCount="indefinite"/></circle>' +
-    /* drive slot */
-    '<rect x="34" y="140" width="52" height="4" rx="2" fill="#15121d"/>' +
   '</svg>';
 }
 
@@ -453,10 +463,11 @@ SERVERS.forEach(function(srv){
     resetTerm();
     goBtn.disabled = true;
     statusEl.textContent = "UNDER ATTACK";
+    var target = PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)];
     var i = 0;
     timer = setInterval(function(){
       var pw = PASSWORDS[i];
-      if (pw === srv.weak) {
+      if (pw === target) {
         clearInterval(timer); timer = null;
         addLine("crack", 'try: <span class="pw">'+pw+'</span>');
         statusEl.textContent = "CRACKED";
@@ -485,8 +496,7 @@ SERVERS.forEach(function(srv){
 /* wordlist chips */
 var chipsEl = document.getElementById("chips");
 chipsEl.innerHTML = PASSWORDS.map(function(p, i){
-  var star = p === "qwerty" ? " star" : "";
-  return '<span class="chip'+star+'"><span class="rank">'+(i+1)+'</span>'+p+'</span>';
+  return '<span class="chip"><span class="rank">'+(i+1)+'</span>'+p+'</span>';
 }).join("");
 
 /* full screen */

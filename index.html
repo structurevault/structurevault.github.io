@@ -40,6 +40,8 @@ footer{position:fixed;left:40px;bottom:24px;color:#8f88c0;font-size:15px;pointer
 <script>
 // To add a page: add one line here. cat = filter group, live = shows a LIVE badge.
 const PAGES=[
+ {f:'breakin.html',t:'Break In',d:'Crack the red & blue Umbrel servers',i:'🔓',cat:'Networks & Security',a:'#e5484d',b:'#4a9eea'},
+ {f:'rtbt.html',t:'Castle Defence',d:'Red vs Blue version board',i:'⚔️',cat:'Networks & Security',a:'#d8344a',b:'#1f4fb8'},
  {f:'ip-port.html',t:'IP + Port = npub',d:'Type an IP address and port to find a nostrich',i:'⌨️',cat:'Networks & Security',a:'#3fa9ff',b:'#7c1546'},
  {f:'nostr-fridges.html',t:'Nostr Fridge Network',d:'Hacked supermarket fridges try to fake a nostrich message',i:'🌡️',cat:'Bitcoin & Nostr',a:'#d1452f',b:'#3a1166'},
  {f:'hacks.html',t:'Hacks',d:'Videos about real cyber attacks in the news',i:'🚨',cat:'Networks & Security',a:'#1fae63',b:'#3a0d16'},
@@ -67,18 +69,36 @@ const PAGES=[
  {f:'dmz-keys.html',t:'DMZ Keys',d:'Each server gets its own key pair',i:'🔑',cat:'Networks & Security',a:'#b8862a',b:'#3a2408'},
  {f:'vc.html',t:'Castle Version Control',d:'Save, branch and merge your castle',i:'🏯',cat:'Networks & Security',a:'#6b5bd6',b:'#1b1550'},
  {f:'version-control.html',t:'Version Control (Classic)',d:'The original castle versions',i:'📜',cat:'Networks & Security',a:'#5a4fb0',b:'#17123a'},
- {f:'rtbt.html',t:'Castle Defence',d:'Red vs Blue version board',i:'⚔️',cat:'Networks & Security',a:'#d8344a',b:'#1f4fb8'},
- {f:'breakin.html',t:'Break In',d:'Crack the red & blue Umbrel servers',i:'🔓',cat:'Networks & Security',a:'#e5484d',b:'#4a9eea'},
  {f:'art.html',t:'360 Gallery',d:'Our students’ artwork',i:'🎨',cat:'School',a:'#f2a33a',b:'#b8346b'},
  {f:'robot.html',t:'Name Our Robots',d:'Vote for the robot names',i:'🤖',cat:'School',a:'#38c9c0',b:'#255a9c'},
  {f:'tpe.html',t:'Think · Puzzle · Explore',d:'The live wall of big questions',i:'💡',cat:'School',live:1,a:'#f5c935',b:'#c4511e'},
 ];
+// Break In tile shows the two OptiPlex Micro servers (red + blue) instead of an emoji
+(function(){
+ function micro(x,accent){
+  var slats='';for(var sx=24;sx<=36;sx+=3)slats+='<line x1="'+sx+'" y1="10" x2="'+sx+'" y2="84"/>';
+  return '<g transform="translate('+x+',0)">'+
+   '<rect x="2" y="4" width="38" height="86" rx="5" fill="#26232f" stroke="#4a4360" stroke-width="1.5"/>'+
+   '<rect x="23" y="6" width="15" height="82" rx="3" fill="#171420"/>'+
+   '<g stroke="#2e2a3b" stroke-width="1" stroke-linecap="round">'+slats+'</g>'+
+   '<circle cx="12" cy="16" r="4.5" fill="#141019" stroke="'+accent+'" stroke-width="1.3"/>'+
+   '<path d="M12 13v4" stroke="'+accent+'" stroke-width="1.3" stroke-linecap="round"/>'+
+   '<rect x="7" y="30" width="11" height="3.2" rx="1" fill="#0c0a12"/>'+
+   '<rect x="7" y="37" width="11" height="3.2" rx="1" fill="#0c0a12"/>'+
+   '<circle cx="30.5" cy="70" r="8.5" fill="#141019"/>'+
+   '<circle cx="30.5" cy="70" r="8.5" fill="none" stroke="'+accent+'" stroke-width="1.6"/>'+
+   '<g transform="translate(30.5 70) skewX(-10)"><text x="0" y="2.4" text-anchor="middle" fill="'+accent+'" font-family="Arial,sans-serif" font-size="5.6" font-weight="700" letter-spacing="-.2">DELL</text></g>'+
+   '</g>';
+ }
+ var bk=PAGES.find(function(p){return p.f==='breakin.html';});
+ if(bk)bk.svg='<svg viewBox="0 0 108 96" style="width:clamp(96px,8.5vw,150px);height:auto;overflow:visible" aria-hidden="true">'+micro(4,'#e5484d')+micro(60,'#4a9eea')+'</svg>';
+})();
 const grid=document.getElementById('grid'),filters=document.getElementById('filters');
 const ORDER=['Bitcoin & Nostr','Minecraft','Games','Live Data','Networks & Security','School'];
 const cats=['All',...new Set([...ORDER,...PAGES.map(p=>p.cat)].filter(c=>PAGES.some(p=>p.cat===c)))];let cat='All';
 cats.forEach(c=>{const b=document.createElement('button');b.textContent=c;b.onclick=()=>{cat=c;render();try{sessionStorage.setItem('cat',c)}catch(e){}};filters.appendChild(b)});
 PAGES.forEach((p,n)=>{const a=document.createElement('a');a.className='tile';a.href=p.f;a.dataset.cat=p.cat;a.style.setProperty('--a',p.a);a.style.setProperty('--b',p.b);a.style.animationDelay=(n*25)+'ms';
- a.innerHTML=`${p.live?'<span class="badge live">LIVE</span>':''}<span class="ic">${p.i}</span><h2>${p.t}</h2><p>${p.d}</p>`;
+ a.innerHTML=`${p.live?'<span class="badge live">LIVE</span>':''}<span class="ic">${p.svg||p.i}</span><h2>${p.t}</h2><p>${p.d}</p>`;
  a.onclick=e=>{e.preventDefault();open(p.f)};grid.appendChild(a)});
 function render(){[...filters.children].forEach(b=>b.classList.toggle('on',b.textContent===cat));grid.querySelectorAll('.tile').forEach(t=>t.classList.toggle('hide',cat!=='All'&&t.dataset.cat!==cat))}
 try{const c=sessionStorage.getItem('cat');if(c&&cats.includes(c))cat=c}catch(e){}render();
