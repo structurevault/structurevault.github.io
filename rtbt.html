@@ -362,6 +362,13 @@
     grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.3fr);
     gap: clamp(6px, .8vw, 16px);
   }
+  /* two-row layout: treasures on top, then this-week + next-week */
+  .hoard.tworow { display: flex; flex-direction: column; }
+  .hrow { display: grid; gap: clamp(6px, .8vw, 16px); }
+  .hrow.treasures { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .hrow.finals { grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); }
+  .tcard.adventure { align-items: center; }
+  .tcard.adventure .advicon { font-size: clamp(26px, 2.6vw, 48px); line-height: 1; flex: none; }
   .tcard {
     position: relative;
     display: flex;
@@ -550,6 +557,8 @@
   @media (max-width: 900px) {
     .hoard { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tcard.next { grid-column: 1 / -1; }
+    .hrow.treasures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hrow.finals { grid-template-columns: 1fr; }
   }
 
   .banner {
@@ -605,22 +614,29 @@ var CONFIG = {
   thisWeek: "V1.6",
   /* shown across the top, in order. "plain" = kid-friendly meaning. */
   treasures: {
-    "V1.2": { name: "IP address",  plain: "Your castle's address on the network" },
-    "V1.3": { name: "Port",        plain: "The door number into your castle" },
-    "V1.4": { name: "Public key",  plain: "Your castle's ID card. Safe to show." },
-    "V1.5": { name: "Seed phrase", plain: "The secret words that unlock everything" }
+    "V1.2": { name: "IP address",   plain: "Your castle's address on the network" },
+    "V1.3": { name: "Port",         plain: "The door number into your castle" },
+    "V1.4": { name: "Public key",   plain: "Your castle's ID card. Safe to show." },
+    "V1.5": { name: "Seed phrase",  plain: "The secret words that unlock everything" }
   },
-  /* the version after the last treasure: the raid */
-  nextWeek: {
+  /* this week: not a new treasure — a playtest that you can still reach your own treasures */
+  thisWeekCard: {
     ver: "V1.6",
-    title: "Hack the other team!",
+    icon: "🗺️",
+    title: "Adventure mode",
+    text: "Play through and make sure you can still find all 4 of your <b>own</b> hidden treasures before the swap-over."
+  },
+  /* next week: the raid — swap over and hack the other team */
+  nextWeek: {
+    ver: "V1.7",
+    title: "The final hack!",
     text: '<b class="r">Red</b> raids <b class="b">Blue</b>. <b class="b">Blue</b> raids <b class="r">Red</b>. Find all 4 of their treasures.'
   },
   sideNote: "DMZ available for testing",
 
   /* every version BEFORE this one shows green for every class, whatever the sheet says.
      Set to "" to go back to reading the sheet for all columns. */
-  forceDoneBefore: "V1.6"
+  forceDoneBefore: "V1.7"
 };
 
 function applyOverrides(data) {
@@ -712,7 +728,7 @@ function parseSheet(rows) {
 
 var DEMO_CLASSES = ["Prep A","Prep B","1 A","1 B","2 A","2 B","3 A","3 B","3 C","4 A","4 B","4 C","5 A","5 B","6 A","6 B"];
 function demoData() {
-  var ms = ["Beta Test","V1.0","V1.2","V1.3","V1.4","V1.5","V1.6"];
+  var ms = ["Beta Test","V1.0","V1.2","V1.3","V1.4","V1.5","V1.6","V1.7"];
   var classes = DEMO_CLASSES.map(function (n, i) {
     var prog = 1 + (i * 5) % 3;
     return {
@@ -788,8 +804,8 @@ function renderRail(data) {
       (function () {
         var isHack = CONFIG.nextWeek && verKey(m) === verKey(CONFIG.nextWeek.ver);
         var hackStyle = ' style="background:linear-gradient(90deg,var(--red),var(--blue));color:#fff"';
-        if (j === t.week) return '<div class="wkflag"' + (isHack ? hackStyle : "") + ">This week · " +
-          (isHack ? "hack!" : "last treasure") + "</div>";
+        if (j === t.week) return '<div class="wkflag"' + (isHack ? hackStyle : "") + ">This week" +
+          (isHack ? " · hack!" : "") + "</div>";
         if (isHack) return '<div class="wkflag"' + hackStyle + ">Next week · hack!</div>";
         return "";
       })() +
@@ -803,7 +819,7 @@ function renderHoard() {
   var raid = !!CONFIG.nextWeek && verKey(CONFIG.thisWeek || "") === verKey(CONFIG.nextWeek.ver);
   var weekIdx = -1;
   keys.forEach(function (k, i) { if (verKey(k) === verKey(CONFIG.thisWeek || "")) weekIdx = i; });
-  var html = keys.map(function (k, i) {
+  var treasureCards = keys.map(function (k, i) {
     var tr = CONFIG.treasures[k];
     var isLast = i === weekIdx;
     var isPast = raid || weekIdx < 0 || i < weekIdx;
@@ -820,6 +836,7 @@ function renderHoard() {
         '<span class="tstat">' + esc(stat) + "</span>" +
       "</div></div>";
   }).join("");
+  var html = treasureCards;
   if (CONFIG.nextWeek && raid) {
     /* treasures burst out of an open chest, on a loop */
     var LOOT = [
@@ -843,19 +860,41 @@ function renderHoard() {
         '<div class="tname">' + esc(CONFIG.nextWeek.title) + "</div>" +
         '<div class="tplain">' + CONFIG.nextWeek.text + "</div>" +
       "</div></div>";
-  } else if (CONFIG.nextWeek) {
-    html += '<div class="tcard next">' +
-      '<div class="tver">Next week · ' + esc(CONFIG.nextWeek.ver) + " ⚔️</div>" +
-      '<div class="tname">' + esc(CONFIG.nextWeek.title) + "</div>" +
-      '<div class="tplain">' + CONFIG.nextWeek.text + "</div>" +
-      "</div>";
   }
   var hoard = document.getElementById("hoard");
-  hoard.innerHTML = html;
-  hoard.classList.toggle("raid", raid);
+  if (raid) {
+    hoard.classList.add("raid");
+    hoard.classList.remove("tworow");
+    hoard.innerHTML = html;
+  } else {
+    hoard.classList.remove("raid");
+    hoard.classList.add("tworow");
+    var finals = "";
+    if (CONFIG.thisWeekCard) {
+      var a = CONFIG.thisWeekCard;
+      finals += '<div class="tcard last adventure">' +
+        '<div class="advicon">' + (a.icon || "🗺️") + "</div>" +
+        '<div style="min-width:0">' +
+          '<div class="tver">This week · ' + esc(a.ver) + "</div>" +
+          '<div class="tname">' + esc(a.title) + "</div>" +
+          '<div class="tplain">' + a.text + "</div>" +
+          '<span class="tstat">This week</span>' +
+        "</div></div>";
+    }
+    if (CONFIG.nextWeek) {
+      finals += '<div class="tcard next">' +
+        '<div class="tver">Next week · ' + esc(CONFIG.nextWeek.ver) + " ⚔️</div>" +
+        '<div class="tname">' + esc(CONFIG.nextWeek.title) + "</div>" +
+        '<div class="tplain">' + CONFIG.nextWeek.text + "</div>" +
+      "</div>";
+    }
+    hoard.innerHTML =
+      '<div class="hrow treasures">' + treasureCards + "</div>" +
+      '<div class="hrow finals">' + finals + "</div>";
+  }
   document.getElementById("hoardTitle").textContent = raid
     ? "All 4 treasures hidden ✓ Now raid the other team!"
-    : "Treasures your castle should have hidden by now";
+    : "Your 4 hidden treasures — then this week's adventure-mode check";
   document.getElementById("hoardNote").textContent = CONFIG.sideNote ? "· " + CONFIG.sideNote : "";
 }
 
