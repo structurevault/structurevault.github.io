@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brute Force Lab</title>
+<meta name="description" content="A big-screen, tap-through demo of brute-force hacking: a robot cracks a bike lock, races bigger locks, cracks passwords live, and shows why long passwords win.">
+<!--
+  BRUTE FORCE LAB — SPARK Centre big touch screen demo
+  Six full-screen scenes, tap ◀ ▶ (or swipe / arrow keys) to move between them:
+    1. What is brute force?        (animated robot terminal)
+    2. Crack the bike lock         (robot tries 000, 001… with optional lockout shield)
+    3. Lock race                   (2, 3 and 4 dials cracked side by side: 100 vs 1,000 vs 10,000)
+    4. Live password crack         (tap a sample password, the browser REALLY brute-forces it)
+    5. Grow the password           (add characters, watch crack time climb the time ladder)
+    6. Stop the robot              (defences + the hacker's code)
+  Nothing typed here leaves the browser.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0f12; --panel:#121a1f; --panel-2:#18232a; --line:#26363f;
+    --text:#e9f3ef; --muted:#8fa6a0;
+    --green:#3fe07f; --green-dim:#1c5a37; --red:#ff5468; --gold:#ffc83d; --blue:#4ab3ff; --purple:#b77bff;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,"SFMono-Regular",monospace;
+    --pix:"Silkscreen",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden}
+  body{
+    background:
+      radial-gradient(1100px 600px at 10% -5%,rgba(63,224,127,.13),transparent 60%),
+      radial-gradient(1100px 600px at 95% 10%,rgba(183,123,255,.10),transparent 60%),
+      var(--bg);
+    color:var(--text);font-family:"Atkinson Hyperlegible",system-ui,sans-serif;
+    font-size:clamp(16px,1.35vw,30px);line-height:1.4;
+    user-select:none;
+  }
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px);z-index:100}
+  h1,h2,h3,.pix{font-family:var(--pix);font-weight:700;letter-spacing:.5px}
+  button{font-family:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+  button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+  /* ---------- stage + scenes ---------- */
+  .scene{position:fixed;inset:0;bottom:clamp(70px,9vh,110px);padding:clamp(70px,9vh,110px) clamp(16px,3vw,64px) clamp(10px,2vh,30px);
+    display:flex;flex-direction:column;gap:clamp(10px,2vh,28px);opacity:0;visibility:hidden;transform:translateX(40px);transition:opacity .35s,transform .35s,visibility 0s .35s;overflow-y:auto}
+  .scene.active{opacity:1;visibility:visible;transform:none;transition:opacity .35s,transform .35s}
+  .scene.back{transform:translateX(-40px)}
+  .shead{text-align:center}
+  .shead .step{font-family:var(--pix);font-size:.7em;color:var(--bg);background:var(--green);display:inline-block;padding:3px 12px;border-radius:8px}
+  .shead h2{font-size:clamp(26px,3.2vw,70px);line-height:1.1;margin-top:8px}
+  .shead p{color:var(--muted);margin:8px auto 0;max-width:60ch;font-size:1.05em}
+  .shead p b{color:var(--text)}
+  .sbody{flex:1;min-height:0;display:flex;gap:clamp(14px,2vw,40px);align-items:stretch;justify-content:center}
+
+  /* ---------- nav bar ---------- */
+  .navbar{position:fixed;left:0;right:0;bottom:0;height:clamp(70px,9vh,110px);display:flex;align-items:center;justify-content:center;gap:clamp(14px,2vw,40px);padding:0 16px;background:linear-gradient(0deg,rgba(0,0,0,.55),transparent);z-index:50}
+  .navbtn{width:clamp(56px,6vw,110px);height:clamp(50px,6.5vh,80px);border-radius:18px;border:2px solid var(--line);background:var(--panel);font-size:clamp(22px,2vw,40px)}
+  .navbtn.next{background:var(--green);color:#04130a;border-color:var(--green);box-shadow:0 0 30px -6px rgba(63,224,127,.7)}
+  .navbtn:disabled{opacity:.25}
+  .navbtn:active{transform:scale(.94)}
+  .dots{display:flex;gap:clamp(8px,1vw,16px)}
+  .dots button{width:clamp(14px,1.2vw,24px);height:clamp(14px,1.2vw,24px);border-radius:50%;border:2px solid var(--muted);background:transparent;padding:0}
+  .dots button.on{background:var(--green);border-color:var(--green);box-shadow:0 0 12px var(--green)}
+
+  /* ---------- shared bits ---------- */
+  .card{background:var(--panel);border:2px solid var(--line);border-radius:24px;padding:clamp(14px,1.6vw,34px);display:flex;flex-direction:column;gap:clamp(8px,1.4vh,18px);min-width:0}
+  .btn{border:2px solid var(--line);background:var(--panel-2);border-radius:16px;padding:.55em .9em;font-weight:700;font-size:1em}
+  .btn:active{transform:scale(.95)}
+  .btn.go{background:var(--green);color:#04130a;border-color:var(--green);font-family:var(--pix);box-shadow:0 0 28px -4px rgba(63,224,127,.6)}
+  .btn.stop{background:var(--red);color:#1a0306;border-color:var(--red);font-family:var(--pix)}
+  .btn.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+  .btn.huge{font-size:clamp(20px,2vw,44px);padding:.5em 1.1em;border-radius:20px}
+  .row{display:flex;gap:clamp(8px,1vw,16px);flex-wrap:wrap;align-items:center;justify-content:center}
+  .label{color:var(--muted);font-size:.85em}
+  .msg{padding:.7em 1em;border-radius:16px;background:#0c1317;border:2px solid var(--line);min-height:3.2em}
+  .msg.win{border-color:var(--green);background:rgba(63,224,127,.08)}
+  .msg.warn{border-color:var(--gold);background:rgba(255,200,61,.08)}
+  .msg.bad{border-color:var(--red);background:rgba(255,84,104,.09)}
+  .msg b{color:var(--gold)}
+  .bar{height:clamp(14px,1.8vh,24px);background:#0c1317;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--gold))}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .stat{background:#0c1317;border:1px solid var(--line);border-radius:14px;padding:.5em .7em}
+  .stat small{display:block;color:var(--muted);font-size:.7em}
+  .stat b{font-family:var(--mono);font-size:1.4em}
+
+  /* ---------- scene 1: intro ---------- */
+  #s1 .sbody{align-items:center}
+  .intro{flex:1;max-width:46%;display:flex;flex-direction:column;gap:2vh}
+  .intro h1{font-size:clamp(40px,6.5vw,150px);line-height:.95;color:var(--green);text-shadow:0 0 40px rgba(63,224,127,.45)}
+  .intro p{font-size:clamp(20px,2vw,46px);line-height:1.3}
+  .intro p b{color:var(--gold)}
+  .keys{font-size:clamp(30px,3.6vw,90px);letter-spacing:.05em;white-space:nowrap}
+  .keys span{display:inline-block;opacity:.35;transition:opacity .2s,transform .2s}
+  .keys span.try{opacity:1;transform:translateY(-10px) rotate(-10deg)}
+  .keys span.fit{opacity:1;filter:drop-shadow(0 0 20px var(--green));transform:scale(1.3)}
+  .term{flex:1;max-width:50%;align-self:stretch;max-height:70vh;background:#050807;border:2px solid var(--green-dim);border-radius:24px;padding:clamp(14px,1.6vw,32px);font-family:var(--mono);font-size:clamp(13px,1.25vw,28px);color:var(--green);box-shadow:0 0 60px -10px rgba(63,224,127,.4) inset;overflow:hidden;white-space:pre}
+  .term .bad{color:#6e807a}.term .ok{color:#04130a;background:var(--gold);font-weight:700}
+
+  /* ---------- scene 2: lock ---------- */
+  .lockcard{flex:1.1;align-items:center;justify-content:center}
+  .padlock{font-size:clamp(60px,9vh,140px);line-height:1}
+  .padlock.shake{animation:shake .25s}
+  .padlock.open{animation:pop .5s}
+  .dials{display:flex;gap:clamp(8px,1vw,20px)}
+  .dial{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .dial button{width:clamp(64px,7vw,150px);height:clamp(44px,6vh,80px);border-radius:14px;border:2px solid var(--line);background:var(--panel-2);font-size:clamp(20px,1.8vw,36px)}
+  .dial button:disabled{opacity:.2}
+  .dial .num,.mini .num{display:grid;place-items:center;font-family:var(--mono);font-weight:700;background:#050807;border:2px solid var(--line);border-radius:14px;color:var(--text)}
+  .dial .num{width:clamp(64px,7vw,150px);height:clamp(80px,14vh,200px);font-size:clamp(46px,7vh,120px)}
+  .running .num{color:var(--gold);border-color:#5a4a16}
+  .cracked .num{color:#04130a;background:var(--green);border-color:var(--green);box-shadow:0 0 30px rgba(63,224,127,.6)}
+  .secretline{font-family:var(--pix);font-size:.8em;color:var(--muted);text-align:center;min-height:1.3em}
+  .ctrlcard{flex:1}
+  .log{font-family:var(--mono);font-size:.85em;background:#050807;border:1px solid var(--line);border-radius:14px;padding:.5em .9em;flex:1;min-height:5em;overflow:hidden;color:#6e807a}
+  .log .ok{color:var(--green);font-weight:700}
+  .log .wait{color:var(--purple)}
+  .toggle{display:flex;align-items:center;gap:14px;padding:.5em .9em;border:2px solid var(--line);border-radius:16px;background:var(--panel-2)}
+  .toggle .sw{width:2.6em;height:1.5em;border-radius:1em;background:#2a3a42;position:relative;flex:none;transition:background .2s}
+  .toggle .sw::after{content:"";position:absolute;top:.15em;left:.15em;width:1.2em;height:1.2em;border-radius:50%;background:#fff;transition:left .2s}
+  .toggle.on{border-color:var(--purple)}
+  .toggle.on .sw{background:var(--purple)}
+  .toggle.on .sw::after{left:1.25em}
+  .toggle small{color:var(--muted);display:block;font-size:.75em;font-weight:400}
+
+  /* ---------- scene 3: race ---------- */
+  .lane{flex:1;align-items:center;text-align:center}
+  .lane h3{font-size:1.1em}
+  .lane .codes{font-family:var(--pix);color:var(--gold);font-size:clamp(22px,2.4vw,52px)}
+  .lane .codes small{display:block;font-family:"Atkinson Hyperlegible",sans-serif;color:var(--muted);font-size:.4em;font-weight:400}
+  .mini{display:flex;gap:6px}
+  .mini .num{width:clamp(40px,4vw,86px);height:clamp(56px,9vh,130px);font-size:clamp(30px,5vh,76px)}
+  .lane .bar{width:100%}
+  .lane .time{font-family:var(--mono);font-size:1.6em;font-weight:700}
+  .lane .padlock{font-size:clamp(46px,7vh,110px)}
+  .lane.done{border-color:var(--green)}
+
+  /* ---------- scene 4: live crack ---------- */
+  .picks{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1vw,16px)}
+  .pick{border:3px solid var(--line);background:var(--panel-2);border-radius:18px;padding:.6em .4em;font-family:var(--mono);font-weight:700;font-size:clamp(18px,1.7vw,38px);word-break:break-all}
+  .pick small{display:block;font-family:"Atkinson Hyperlegible",sans-serif;font-weight:400;color:var(--muted);font-size:.5em;margin-top:2px}
+  .pick.on{border-color:var(--green);background:rgba(63,224,127,.1)}
+  .pick:active{transform:scale(.96)}
+  .own{display:none;gap:10px}
+  .own.show{display:flex}
+  .own input{flex:1;min-width:0;font-family:var(--mono);font-size:1.3em;padding:.4em .6em;border-radius:14px;border:2px solid var(--line);background:#050807;color:var(--text)}
+  .own input:focus{outline:none;border-color:var(--green)}
+  .screen{flex:1.4;background:#050807;border-color:var(--green-dim)}
+  .screen .target{font-family:var(--pix);color:var(--muted);font-size:.8em}
+  .screen .guess{font-family:var(--mono);font-size:clamp(36px,5vw,110px);color:var(--green);font-weight:700;line-height:1.1;min-height:1.15em;word-break:break-all}
+  .screen .guess.found{color:#04130a;background:var(--green);border-radius:12px;padding:0 .2em;align-self:flex-start;box-shadow:0 0 40px rgba(63,224,127,.6)}
+  .screen .rain{font-family:var(--mono);color:#3f5a51;font-size:1em;height:4.4em;overflow:hidden;white-space:pre}
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .vs div{background:#0c1317;border:1px solid var(--line);border-radius:14px;padding:.5em .8em}
+  .vs small{color:var(--muted);display:block;font-size:.7em}
+  .vs b{font-size:1.15em}
+
+  /* ---------- scene 5: grow ---------- */
+  .growpw{font-family:var(--mono);font-weight:700;font-size:clamp(30px,4.2vw,96px);color:var(--green);background:#050807;border:2px solid var(--green-dim);border-radius:20px;padding:.2em .5em;min-height:1.6em;word-break:break-all;line-height:1.2;text-align:center}
+  .growpw .cur{animation:blink 1s steps(1) infinite;color:var(--gold)}
+  .formula{font-family:var(--mono);font-size:1.15em;text-align:center}
+  .formula .n{color:var(--gold);font-weight:700}
+  .formula .big{color:var(--green);font-weight:700}
+  .bigtime{text-align:center}
+  .bigtime .emo{font-size:clamp(50px,8vh,130px);line-height:1}
+  .bigtime .t{font-family:var(--pix);color:var(--gold);font-size:clamp(22px,2.6vw,58px);line-height:1.15}
+  .bigtime .n{color:var(--muted)}
+  .ladder{flex:.8;display:flex;flex-direction:column-reverse;gap:6px;justify-content:flex-start}
+  .rung{display:flex;align-items:center;gap:.6em;padding:.25em .7em;border-radius:12px;border:2px solid var(--line);background:var(--panel);color:var(--muted);font-size:.9em;transition:all .3s;flex:1;min-height:0}
+  .rung span{font-size:1.4em}
+  .rung.past{color:var(--text);border-color:var(--green-dim);background:rgba(63,224,127,.07)}
+  .rung.here{color:#04130a;background:var(--gold);border-color:var(--gold);font-weight:700;transform:scale(1.04);box-shadow:0 0 24px rgba(255,200,61,.5)}
+
+  /* ---------- scene 6: defences ---------- */
+  .defs{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(10px,1.4vw,26px);flex:1}
+  .def{background:var(--panel);border:2px solid var(--line);border-radius:22px;padding:clamp(12px,1.4vw,30px);display:flex;flex-direction:column;gap:.3em}
+  .def .ic{font-size:clamp(38px,5vh,80px);line-height:1}
+  .def h3{font-size:1em;color:var(--green)}
+  .def p{color:var(--muted);font-size:.95em}
+  .def p b{color:var(--text)}
+  .def.code{border-color:var(--gold);background:rgba(255,200,61,.07)}
+  .def.code h3{color:var(--gold)}
+
+  .bit{position:fixed;pointer-events:none;z-index:200;font-size:clamp(28px,3vw,60px);animation:fly 1.4s ease-out forwards}
+  @keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:0}}
+  @keyframes shake{25%{transform:translateX(-6px) rotate(-6deg)}75%{transform:translateX(6px) rotate(6deg)}}
+  @keyframes pop{40%{transform:scale(1.35)}}
+  @keyframes blink{50%{opacity:0}}
+
+  @media (max-width:900px){
+    html,body{overflow:auto}
+    .sbody{flex-direction:column}
+    .intro,.term{max-width:none}
+    .defs{grid-template-columns:1fr 1fr}
+    .ladder{flex-direction:column-reverse}
+    .rung{flex:none}
+  }
+  @media (max-width:600px){
+    .defs,.picks{grid-template-columns:1fr 1fr}
+    .stats{grid-template-columns:1fr 1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .bit,.padlock.shake,.padlock.open{animation:none}
+    .scene{transition:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= 1. INTRO ================= -->
+<section class="scene" id="s1" data-title="What is brute force?">
+  <div class="sbody">
+    <div class="intro">
+      <h1>BRUTE<br>FORCE</h1>
+      <p>The simplest hack there is. Don't be clever. Just <b>try every key</b> until one fits.</p>
+      <div class="keys" id="keys" aria-hidden="true"><span>🗝️</span><span>🗝️</span><span>🗝️</span><span>🗝️</span><span>🗝️</span><span>🔑</span></div>
+    </div>
+    <div class="term" id="heroTerm" aria-hidden="true"></div>
+  </div>
+</section>
+
+<!-- ================= 2. LOCK ================= -->
+<section class="scene" id="s2">
+  <div class="shead">
+    <span class="step">STEP 2</span>
+    <h2>🔒 Watch the robot crack a lock</h2>
+    <p>The robot doesn't know the code. It just tries <b>000, 001, 002, 003…</b> until the lock pops open.</p>
+  </div>
+  <div class="sbody">
+    <div class="card lockcard">
+      <div class="padlock" id="padlock">🔒</div>
+      <div class="dials" id="dials"></div>
+      <div class="secretline" id="secretLine">Secret code is set. Tap ▲ ▼ to change it</div>
+      <div class="row">
+        <button class="btn go huge" id="crackLock">🤖 CRACK IT!</button>
+        <button class="btn huge" id="randLock">🎲</button>
+      </div>
+    </div>
+    <div class="card ctrlcard">
+      <div class="row" style="justify-content:flex-start">
+        <span class="label">Speed</span>
+        <button class="btn" data-speed="3">🐢 slow</button>
+        <button class="btn on" data-speed="30">🐇 fast</button>
+        <button class="btn" data-speed="400">🚀 robot</button>
+      </div>
+      <div class="toggle" id="lockoutToggle" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span><b>🛡️ Lockout shield</b><small>3 wrong tries = wait 5 minutes</small></span></div>
+      <div class="stats">
+        <div class="stat"><small>Possible codes</small><b>1,000</b></div>
+        <div class="stat"><small>Robot's tries</small><b id="sTries">0</b></div>
+        <div class="stat"><small>Lockout waiting</small><b id="sWait">—</b></div>
+      </div>
+      <div class="bar"><i id="lockBar"></i></div>
+      <div class="log" id="lockLog"></div>
+      <div class="msg" id="lockMsg">3 dials = <b>1,000</b> possible codes. Press <b>CRACK IT!</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3. RACE ================= -->
+<section class="scene" id="s3">
+  <div class="shead">
+    <span class="step">STEP 3</span>
+    <h2>🏁 Lock race: what if we add a dial?</h2>
+    <p>Three robots, same speed. Each lock's code is the <b>very last one</b> the robot will try.</p>
+  </div>
+  <div class="sbody" id="lanes"></div>
+  <div class="row">
+    <button class="btn go huge" id="raceGo">🏁 START RACE</button>
+  </div>
+  <div class="msg" id="raceMsg" style="text-align:center">Every extra dial means <b>10×</b> more codes to try.</div>
+</section>
+
+<!-- ================= 4. LIVE CRACK ================= -->
+<section class="scene" id="s4">
+  <div class="shead">
+    <span class="step">STEP 4</span>
+    <h2>💻 A real password crack, live</h2>
+    <p>Tap a password. This computer will <b>really</b> brute-force it: common passwords first, then every combination.</p>
+  </div>
+  <div class="sbody">
+    <div class="card" style="flex:1">
+      <div class="picks" id="picks"></div>
+      <div class="own" id="own"><input id="ownIn" maxlength="24" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="make one up (not a real one!)"><button class="btn go" id="ownGo">GO</button></div>
+      <div class="msg" id="cMsg">Start with <b>cat</b>, then try <b>zap</b> and <b>zap42</b>.</div>
+    </div>
+    <div class="card screen">
+      <div class="row" style="justify-content:space-between">
+        <span class="target" id="cTarget">TARGET: —</span>
+        <button class="btn stop" id="stopPw" disabled>■ STOP</button>
+      </div>
+      <div class="guess" id="cGuess">…</div>
+      <div class="rain" id="cRain"></div>
+      <div class="stats">
+        <div class="stat"><small>Guesses tried</small><b id="cTries">0</b></div>
+        <div class="stat"><small>Guesses / second</small><b id="cRate">—</b></div>
+        <div class="stat"><small>Searched</small><b id="cPct">—</b></div>
+      </div>
+      <div class="vs">
+        <div><small>💻 This computer, worst case</small><b id="vsHere">—</b></div>
+        <div><small>🔥 Hacker's graphics-card farm</small><b id="vsFarm">—</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 5. GROW ================= -->
+<section class="scene" id="s5">
+  <div class="shead">
+    <span class="step">STEP 5</span>
+    <h2>📏 Longer = stronger</h2>
+    <p>Add characters one at a time and watch how long a graphics-card farm (<b>100 billion guesses a second</b>) would need.</p>
+  </div>
+  <div class="sbody">
+    <div class="card" style="flex:1.3;justify-content:center">
+      <div class="growpw" id="growPw"></div>
+      <div class="row">
+        <button class="btn huge" data-add="lower">+ abc</button>
+        <button class="btn huge" data-add="upper">+ ABC</button>
+        <button class="btn huge" data-add="digit">+ 123</button>
+        <button class="btn huge" data-add="symbol">+ !@#</button>
+      </div>
+      <div class="formula" id="growFormula"></div>
+      <div class="bigtime"><div class="emo" id="growEmo">🤔</div><div class="t" id="growTime">—</div><div class="n" id="growNote"></div></div>
+      <div class="row">
+        <button class="btn go" id="growAuto">▶ AUTO GROW</button>
+        <button class="btn" id="growReset">↺ RESET</button>
+      </div>
+    </div>
+    <div class="ladder" id="ladder"></div>
+  </div>
+</section>
+
+<!-- ================= 6. DEFENCES ================= -->
+<section class="scene" id="s6">
+  <div class="shead">
+    <span class="step">STEP 6</span>
+    <h2>🛡️ How to stop the robot</h2>
+    <p>Brute force always works <b>eventually</b>. Defenders make "eventually" so long the robot gives up.</p>
+  </div>
+  <div class="defs">
+    <div class="def"><div class="ic">📏</div><h3>GO LONG</h3><p>Every extra character <b>multiplies</b> the work. Length beats fancy tricks.</p></div>
+    <div class="def"><div class="ic">🎲</div><h3>PASSPHRASES</h3><p><b>toast-wombat-rocket-piano</b>: long, easy to remember, miserable to crack.</p></div>
+    <div class="def"><div class="ic">⏳</div><h3>LOCKOUTS</h3><p><b>"3 wrong tries? Wait 5 minutes."</b> A robot's few seconds become days.</p></div>
+    <div class="def"><div class="ic">📱</div><h3>TWO-FACTOR</h3><p>Even with your password, the robot still needs <b>the code on your phone</b>.</p></div>
+    <div class="def"><div class="ic">🚫</div><h3>NOT ON THE LIST</h3><p>Hackers try <b>password</b>, <b>123456</b>, <b>qwerty</b> first. Never use popular ones.</p></div>
+    <div class="def code"><div class="ic">⚖️</div><h3>THE HACKER'S CODE</h3><p>Only test locks that are <b>yours</b> or that you have <b>permission</b> to test. Breaking into other people's accounts is against the law.</p></div>
+  </div>
+</section>
+
+<nav class="navbar">
+  <button class="navbtn" id="prev" aria-label="Previous">◀</button>
+  <div class="dots" id="dots"></div>
+  <button class="navbtn next" id="next" aria-label="Next">▶</button>
+</nav>
+
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmt = n => Math.round(n).toLocaleString('en-AU');
+const FARM = 1e11;
+
+/* =====================================================================
+   Shared maths
+   ===================================================================== */
+const SETS = [
+  {key:'lower',  size:26, chars:'abcdefghijklmnopqrstuvwxyz'},
+  {key:'digit',  size:10, chars:'0123456789'},
+  {key:'upper',  size:26, chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ'},
+  {key:'symbol', size:33, chars:' !"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'},
+];
+const OTHER_SIZE = 100;
+const DICT = ['123456','password','123456789','12345678','12345','qwerty','abc123','password1','111111','1234567',
+  '123123','iloveyou','admin','welcome','monkey','dragon','letmein','football','baseball','sunshine','princess',
+  'master','shadow','superman','batman','trustno1','000000','qwertyuiop','654321','1234','minecraft','fortnite',
+  'roblox','pokemon','starwars','hello','freedom','whatever','charlie','p@ssw0rd','passw0rd','p@ssword','qwerty123',
+  '1q2w3e4r','asdfgh','zxcvbnm','computer','secret','cheese','pizza','chocolate','soccer','hockey','ninja','mustang',
+  'michael','jordan','liverpool','123321','666666','121212','aaaaaa','abcdef','abcd1234','password123','love',
+  'login','hunter2','flower','summer','winter','banana','cookie','puppy','kitty','tigger','buster','ginger',
+  'pepper','orange','apple','unicorn','rainbow','killer','gamer','hello123','iloveu','lovely','987654321','qazwsx',
+  'cat','dog','test','user','guest','school','teacher','footy','cricket','ilovepizza','superstar'];
+const DICT_SET = new Set(DICT);
+function dictCheck(pw){
+  const lo = pw.toLowerCase();
+  if (DICT_SET.has(lo)) return {word:lo, extra:''};
+  const m = lo.match(/^(.+?)([0-9!@#$%^&*.?]{1,4})$/);
+  if (m && DICT_SET.has(m[1])) return {word:m[1], extra:m[2]};
+  return null;
+}
+function analyze(pw){
+  const chars = [...pw];
+  const used = SETS.filter(s => chars.some(c => s.chars.includes(c)));
+  const others = [...new Set(chars.filter(c => !SETS.some(s => s.chars.includes(c))))];
+  const pool = used.reduce((a,s)=>a+s.size,0) + (others.length ? OTHER_SIZE : 0);
+  const len = chars.length;
+  const bruteLog = len ? len * Math.log10(Math.max(pool,1)) : 0;
+  const dict = pw ? dictCheck(pw) : null;
+  return {pw, used, others, pool, len, bruteLog, dict, log10: dict ? Math.log10(DICT.length * (dict.extra ? 1e5 : 1)) : bruteLog};
+}
+const BIG = [[33,'decillion'],[30,'nonillion'],[27,'octillion'],[24,'septillion'],[21,'sextillion'],
+  [18,'quintillion'],[15,'quadrillion'],[12,'trillion'],[9,'billion'],[6,'million']];
+function bigWords(log10){
+  if (log10 < 6) return fmt(Math.pow(10, log10));
+  if (log10 >= 36) return 'a 1 with ' + Math.floor(log10) + ' zeros';
+  for (const [e,name] of BIG) if (log10 >= e){
+    const m = Math.pow(10, log10 - e);
+    return (m >= 10 ? Math.round(m) : m.toFixed(1)) + ' ' + name;
+  }
+}
+const plural = (n,w) => n + ' ' + w + (n === 1 ? '' : 's');
+const AGE_UNIVERSE_YRS = 1.38e10;
+// ladder of time "rungs" (log10 seconds threshold)
+const RUNGS = [
+  {s:-9,  emo:'⚡', name:'Instantly'},
+  {s:0,   emo:'⏱️', name:'Seconds'},
+  {s:Math.log10(60),       emo:'🍿', name:'Minutes'},
+  {s:Math.log10(3600),     emo:'😴', name:'Hours'},
+  {s:Math.log10(86400),    emo:'📅', name:'Days'},
+  {s:Math.log10(31557600), emo:'🎂', name:'Years'},
+  {s:Math.log10(31557600*100),  emo:'🧓', name:'A lifetime'},
+  {s:Math.log10(31557600*5000), emo:'🏛️', name:'Since the pyramids'},
+  {s:Math.log10(31557600*1e8),  emo:'🦕', name:'Since the dinosaurs'},
+  {s:Math.log10(31557600*AGE_UNIVERSE_YRS), emo:'🌌', name:'Age of the universe'},
+];
+function timeWords(logS){
+  const s = Math.pow(10, logS);
+  if (s < 0.001) return {text:'Instantly', emo:'⚡', note:'Faster than a blink.'};
+  if (s < 1)     return {text:'Under 1 second', emo:'⚡', note:'Gone in a blink.'};
+  if (s < 60)    return {text:plural(Math.round(s),'second'), emo:'⏱️', note:'About as long as tying your shoelaces.'};
+  if (s < 3600)  return {text:plural(Math.round(s/60),'minute'), emo:'🍿', note:'Barely time to make popcorn.'};
+  if (s < 86400) return {text:plural(Math.round(s/3600),'hour'), emo:'😴', note:'Start it tonight, cracked by breakfast.'};
+  const d = s/86400;
+  if (d < 365.25) return {text:plural(Math.round(d),'day'), emo:'📅', note:'Annoying, but the hacker can wait.'};
+  const y = d/365.25;
+  if (y < 100)   return {text:plural(Math.round(y),'year'), emo:'🎂', note:'You\'d be grown up before it finished.'};
+  if (y < 5000)  return {text:fmt(y)+' years', emo:'🧓', note:'Longer than a human lifetime.'};
+  if (y < 1e8)   return {text:bigWords(Math.log10(y))+' years', emo:'🏛️', note:'Older than the pyramids. The hacker gives up.'};
+  if (y < AGE_UNIVERSE_YRS) return {text:bigWords(Math.log10(y))+' years', emo:'🦕', note:'Dinosaur-era long. Nobody waits that long.'};
+  const x = Math.log10(y / AGE_UNIVERSE_YRS);
+  return {text:'Longer than the universe has existed', emo:'🌌', note:(x >= 0.3 ? bigWords(x) + ' × ' : 'About ') + 'the age of the universe.'};
+}
+function durShort(sec){
+  if (sec < 60) return Math.round(sec) + 's';
+  if (sec < 3600) return Math.round(sec/60) + ' min';
+  if (sec < 86400){ const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60); return h + 'h ' + m + 'm'; }
+  const d = Math.floor(sec/86400), h = Math.round((sec%86400)/3600); return d + 'd ' + h + 'h';
+}
+function confetti(el, set){
+  if (reduced) return;
+  const r0 = el.getBoundingClientRect(), x = r0.left + r0.width/2, y = r0.top + r0.height/2;
+  const em = set || ['🎉','✨','🔓','💥','⭐'];
+  for (let i=0;i<30;i++){
+    const b = document.createElement('span');
+    b.className = 'bit'; b.textContent = em[i % em.length];
+    b.style.left = x + 'px'; b.style.top = y + 'px';
+    const a = Math.random()*Math.PI*2, r = 140 + Math.random()*280;
+    b.style.setProperty('--dx', Math.cos(a)*r + 'px');
+    b.style.setProperty('--dy', Math.sin(a)*r + 140 + 'px');
+    b.style.setProperty('--r', (Math.random()*720-360) + 'deg');
+    document.body.appendChild(b);
+    setTimeout(()=>b.remove(), 1500);
+  }
+}
+function setMsg(el, html, cls){ el.innerHTML = html; el.className = 'msg' + (cls ? ' ' + cls : ''); }
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* =====================================================================
+   Scene navigation (buttons, dots, swipe, arrow keys)
+   ===================================================================== */
+const scenes = [...document.querySelectorAll('.scene')];
+let cur = 0;
+const stoppers = []; // functions to call when leaving a scene
+scenes.forEach((s,i) => {
+  const d = document.createElement('button');
+  d.setAttribute('aria-label', 'Step ' + (i+1));
+  d.onclick = () => go(i);
+  $('dots').appendChild(d);
+});
+function go(i){
+  i = Math.max(0, Math.min(scenes.length-1, i));
+  if (i !== cur) stoppers.forEach(f => f());
+  scenes.forEach((s,k) => { s.classList.toggle('active', k === i); s.classList.toggle('back', k < i); });
+  [...$('dots').children].forEach((d,k) => d.classList.toggle('on', k === i));
+  $('prev').disabled = i === 0; $('next').disabled = i === scenes.length-1;
+  cur = i;
+  try { sessionStorage.setItem('bf-scene', i); } catch(e){}
+}
+$('prev').onclick = () => go(cur-1);
+$('next').onclick = () => go(cur+1);
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') go(cur+1);
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur-1);
+});
+let sx = null, sy = null;
+addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, {passive:true});
+addEventListener('touchend', e => {
+  if (sx === null) return;
+  const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+  if (Math.abs(dx) > 120 && Math.abs(dx) > Math.abs(dy) * 2) go(cur + (dx < 0 ? 1 : -1));
+  sx = null;
+}, {passive:true});
+
+/* =====================================================================
+   1. Intro: robot terminal + key animation
+   ===================================================================== */
+(function heroTerm(){
+  const term = $('heroTerm');
+  const lines = [];
+  let n = 0;
+  const MAX = 14;
+  function push(html){ lines.push(html); while (lines.length > MAX) lines.shift(); term.innerHTML = lines.join('\n'); }
+  push('$ ./robot --target login --mode brute');
+  const rnd = () => Array.from({length:4}, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.random()*36|0]).join('');
+  function tick(){
+    n++;
+    if (n % 22 === 0){
+      push('<span class="ok"> [✓] try #' + fmt(n*7919) + '  "k3y9"  ACCESS GRANTED </span>');
+      setTimeout(()=>{ push(''); push('$ ./robot --again'); setTimeout(tick, 600); }, 2200);
+      return;
+    }
+    push('<span class="bad">[✗] try #' + fmt(n*7919) + '  "' + rnd() + '"  wrong</span>');
+    setTimeout(tick, reduced ? 600 : 110);
+  }
+  setTimeout(tick, 500);
+
+  const keys = [...$('keys').children];
+  let k = 0;
+  // each wrong key wiggles in turn, the last one fits and glows, then repeat
+  setInterval(() => {
+    const last = keys.length - 1;
+    keys.forEach((s,i) => s.className = (k < last && i === k) ? 'try' : (k >= last && k <= last + 2 && i === last) ? 'fit' : '');
+    k = (k + 1) % (keys.length + 3);
+  }, 550);
+})();
+
+/* =====================================================================
+   2. Bike lock
+   ===================================================================== */
+const N = 3, TOTAL = 1000;
+const L = {dials:[0,0,0], secret:0, guess:0, tries:0, running:false, speed:30, lockout:false, wait:0, acc:0, last:0, t0:0, log:[]};
+const dialsEl = $('dials');
+L.dials = L.dials.map(() => Math.random()*10|0);
+L.dials.forEach((v,i) => {
+  const d = document.createElement('div'); d.className = 'dial';
+  d.innerHTML = '<button aria-label="Dial '+(i+1)+' up">▲</button><div class="num">'+v+'</div><button aria-label="Dial '+(i+1)+' down">▼</button>';
+  d.children[0].onclick = () => spin(i, 1);
+  d.children[2].onclick = () => spin(i, -1);
+  dialsEl.appendChild(d);
+});
+function spin(i, dir){ if (L.running) return; resetLockVisual(); L.dials[i] = (L.dials[i] + dir + 10) % 10; showDials(L.dials); }
+function showDials(arr){ dialsEl.querySelectorAll('.num').forEach((el,i) => el.textContent = arr[i]); }
+function setDialButtons(on){ dialsEl.querySelectorAll('button').forEach(b => b.disabled = !on); }
+function resetLockVisual(){ dialsEl.classList.remove('running','cracked'); $('padlock').textContent = '🔒'; $('padlock').className = 'padlock'; }
+
+function startLock(){
+  if (L.running){ stopLock(); return; }
+  L.secret = parseInt(L.dials.join(''), 10);
+  Object.assign(L, {guess:0, tries:0, wait:0, acc:0, log:[], running:true, last:performance.now()});
+  L.t0 = L.last;
+  resetLockVisual(); dialsEl.classList.add('running'); setDialButtons(false);
+  $('secretLine').textContent = 'Secret: ●●● (hidden from the robot)';
+  $('crackLock').textContent = '■ STOP'; $('crackLock').className = 'btn stop huge';
+  $('randLock').disabled = true; $('lockoutToggle').style.opacity = .5;
+  setMsg($('lockMsg'), 'The robot is trying every code, in order…');
+  requestAnimationFrame(lockStep);
+}
+function stopLock(found){
+  L.running = false;
+  dialsEl.classList.remove('running'); setDialButtons(true);
+  $('crackLock').textContent = '🤖 CRACK IT!'; $('crackLock').className = 'btn go huge';
+  $('randLock').disabled = false; $('lockoutToggle').style.opacity = 1;
+  if (!found){ showDials(L.dials); $('secretLine').textContent = 'Stopped. Tap ▲ ▼ to change the code'; }
+}
+stoppers.push(() => { if (L.running){ stopLock(); setMsg($('lockMsg'), 'Robot stopped.'); } });
+function lockStep(t){
+  if (!L.running) return;
+  const dt = Math.min((t - L.last)/1000, 0.1); L.last = t;
+  L.acc += dt * L.speed;
+  let did = 0;
+  while (L.acc >= 1 && L.running){
+    L.acc -= 1; did++;
+    const g = L.guess; L.tries++;
+    const code = String(g).padStart(N,'0');
+    if (g === L.secret){ L.log.push('<span class="ok">try #'+fmt(L.tries)+'  '+code+'  ✓ OPEN!</span>'); renderLock(g); lockFound(); return; }
+    L.log.push('try #'+fmt(L.tries)+'  '+code+'  ✗');
+    if (L.lockout && L.tries % 3 === 0){ L.wait += 300; L.log.push('<span class="wait">⏳ locked out! waiting 5 minutes…</span>'); }
+    L.guess++;
+    if (L.speed <= 5 && !reduced){ const p = $('padlock'); p.classList.remove('shake'); void p.offsetWidth; p.classList.add('shake'); }
+  }
+  if (did) renderLock(L.guess);
+  requestAnimationFrame(lockStep);
+}
+function renderLock(g){
+  showDials(String(Math.min(g, TOTAL-1)).padStart(N,'0').split(''));
+  $('sTries').textContent = fmt(L.tries);
+  $('sWait').textContent = L.lockout ? (L.wait ? durShort(L.wait) : '0s') : '—';
+  $('lockBar').style.width = (L.tries / TOTAL * 100) + '%';
+  L.log = L.log.slice(-7);
+  $('lockLog').innerHTML = L.log.join('<br>');
+}
+function lockFound(){
+  stopLock(true);
+  dialsEl.classList.add('cracked');
+  const p = $('padlock'); p.textContent = '🔓'; p.className = 'padlock open';
+  $('secretLine').textContent = 'CRACKED! The code was ' + String(L.secret).padStart(N,'0');
+  const secs = (performance.now() - L.t0)/1000;
+  let html = '🔓 <b>Cracked in ' + fmt(L.tries) + ' tries</b>, ' + secs.toFixed(1) + ' seconds.';
+  if (L.lockout) html += '<br>⏳ But the lockout shield made it wait <b>' + durShort(L.wait) + '</b> in real life!';
+  else html += '<br>💡 Now switch on the <b>🛡️ Lockout shield</b> and crack it again.';
+  setMsg($('lockMsg'), html, 'win');
+  confetti(p);
+}
+$('crackLock').onclick = startLock;
+$('randLock').onclick = () => { resetLockVisual(); L.dials = L.dials.map(()=>Math.random()*10|0); showDials(L.dials); $('secretLine').textContent = 'New random code set'; };
+document.querySelectorAll('[data-speed]').forEach(b => b.onclick = () => {
+  L.speed = +b.dataset.speed;
+  document.querySelectorAll('[data-speed]').forEach(x => x.classList.toggle('on', x === b));
+});
+function toggleLockout(){
+  if (L.running) return;
+  L.lockout = !L.lockout;
+  const t = $('lockoutToggle'); t.classList.toggle('on', L.lockout); t.setAttribute('aria-checked', L.lockout);
+  $('sWait').textContent = L.lockout ? '0s' : '—';
+}
+$('lockoutToggle').onclick = toggleLockout;
+$('lockoutToggle').onkeydown = e => { if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); toggleLockout(); } };
+
+/* =====================================================================
+   3. Lock race: 2 vs 3 vs 4 dials, same speed, worst-case codes
+   ===================================================================== */
+const RACE_SPEED = 600; // tries per second each
+const lanes = [2,3,4].map(n => {
+  const el = document.createElement('div');
+  el.className = 'card lane';
+  el.innerHTML = '<h3>' + n + ' DIALS</h3><div class="codes">' + fmt(Math.pow(10,n)) + '<small>possible codes</small></div>' +
+    '<div class="padlock">🔒</div><div class="mini">' + '<div class="num">0</div>'.repeat(n) + '</div>' +
+    '<div class="bar"><i></i></div><div class="time">0.0s</div>';
+  $('lanes').appendChild(el);
+  return {n, el, total:Math.pow(10,n), tries:0, done:false, nums:[...el.querySelectorAll('.num')], bar:el.querySelector('.bar i'), time:el.querySelector('.time'), lock:el.querySelector('.padlock')};
+});
+const R = {running:false, t0:0};
+function raceReset(){
+  lanes.forEach(l => {
+    l.tries = 0; l.done = false; l.el.classList.remove('done');
+    l.nums.forEach(x => x.textContent = '0'); l.bar.style.width = '0'; l.time.textContent = '0.0s'; l.lock.textContent = '🔒';
+    l.el.querySelector('.mini').className = 'mini';
+  });
+}
+function raceStart(){
+  if (R.running){ R.running = false; $('raceGo').textContent = '🏁 START RACE'; $('raceGo').className = 'btn go huge'; return; }
+  raceReset();
+  R.running = true; R.t0 = performance.now();
+  $('raceGo').textContent = '■ STOP'; $('raceGo').className = 'btn stop huge';
+  setMsg($('raceMsg'), 'Ready… set… <b>GO!</b> 🤖🤖🤖');
+  requestAnimationFrame(raceStep);
+}
+stoppers.push(() => { if (R.running){ R.running = false; $('raceGo').textContent = '🏁 START RACE'; $('raceGo').className = 'btn go huge'; } });
+function raceStep(t){
+  if (!R.running) return;
+  const el = (t - R.t0)/1000;
+  let allDone = true;
+  lanes.forEach(l => {
+    if (l.done) return;
+    l.tries = Math.min(l.total, Math.floor(el * RACE_SPEED));
+    const code = String(Math.min(l.tries, l.total-1)).padStart(l.n,'0');
+    l.nums.forEach((x,i) => x.textContent = code[i]);
+    l.bar.style.width = (l.tries / l.total * 100) + '%';
+    l.time.textContent = el.toFixed(1) + 's';
+    l.el.querySelector('.mini').className = 'mini running';
+    if (l.tries >= l.total){
+      l.done = true; l.lock.textContent = '🔓'; l.el.classList.add('done');
+      l.el.querySelector('.mini').className = 'mini cracked';
+      l.time.textContent = (l.total / RACE_SPEED).toFixed(1) + 's';
+      confetti(l.lock, ['🔓','✨']);
+      if (l.n === 2) setMsg($('raceMsg'), '2 dials: cracked already! The other robots are still going…');
+      if (l.n === 3) setMsg($('raceMsg'), '3 dials took <b>10×</b> longer. And 4 dials is still going…');
+    } else allDone = false;
+  });
+  if (allDone){
+    R.running = false;
+    $('raceGo').textContent = '🏁 RACE AGAIN'; $('raceGo').className = 'btn go huge';
+    const t5 = timeWords(Math.log10(1e5/RACE_SPEED)).text, t8 = timeWords(Math.log10(1e8/RACE_SPEED)).text;
+    setMsg($('raceMsg'), 'Each extra dial = <b>10× longer</b>. At this speed, 5 dials would take <b>' + t5.toLowerCase() + '</b>, and 8 dials <b>' + t8.toLowerCase() + '</b>!', 'win');
+    return;
+  }
+  requestAnimationFrame(raceStep);
+}
+$('raceGo').onclick = raceStart;
+
+/* =====================================================================
+   4. Live password crack (runs for real in this browser)
+   ===================================================================== */
+const PICKS = [
+  {pw:'cat',   note:'a pet'},
+  {pw:'zap',   note:'3 letters'},
+  {pw:'zap42', note:'+ numbers'},
+  {pw:'Zap42', note:'+ a capital'},
+  {pw:'P@ssw0rd', note:'"tricky" swaps'},
+  {pw:'purple-tiger-jumps', note:'3 words'},
+  {pw:'minecraft', note:'a game'},
+  {pw:'qwerty', note:'keyboard row'},
+  {pw:'✏️', note:'type your own', own:true},
+];
+PICKS.forEach(p => {
+  const b = document.createElement('button');
+  b.className = 'pick';
+  b.innerHTML = escapeHtml(p.pw) + '<small>' + p.note + '</small>';
+  b.onclick = () => {
+    document.querySelectorAll('.pick').forEach(x => x.classList.toggle('on', x === b));
+    if (p.own){ $('own').classList.add('show'); $('ownIn').focus(); return; }
+    $('own').classList.remove('show');
+    startCrack(p.pw);
+  };
+  $('picks').appendChild(b);
+});
+$('ownGo').onclick = () => { const v = $('ownIn').value; if (v) startCrack(v); };
+$('ownIn').onkeydown = e => { if (e.key === 'Enter') $('ownGo').click(); };
+
+const C = {running:false};
+function startCrack(pw){
+  const a = analyze(pw);
+  const chars = [...a.used.map(s => s.chars).join(''), ...a.others];
+  const target = [...pw];
+  const P = chars.length;
+  let total = 0; for (let l = 1; l <= target.length; l++) total += Math.pow(P, l);
+  Object.assign(C, {running:true, a, chars, P, tIdx:target.map(c => chars.indexOf(c)), tLen:target.length, total,
+    phase:'dict', dIdx:0, dAcc:0, tries:0, len:1, idx:[0], t0:performance.now(), last:performance.now(), bruteT0:0, bruteTries:0, rain:[], hinted:false});
+  $('stopPw').disabled = false;
+  $('cTarget').textContent = 'TARGET: ' + '●'.repeat(target.length) + ' (' + target.length + ' characters)';
+  $('cGuess').className = 'guess';
+  const farm = timeWords(a.log10 - Math.log10(FARM));
+  $('vsFarm').textContent = farm.emo + ' ' + farm.text;
+  $('vsHere').textContent = 'measuring…';
+  setMsg($('cMsg'), '📖 Step 1: trying the hacker\'s list of <b>common passwords</b>…');
+  requestAnimationFrame(crackStep);
+}
+function stopCrack(){ C.running = false; $('stopPw').disabled = true; }
+stoppers.push(() => { if (C.running){ stopCrack(); setMsg($('cMsg'), 'Crack stopped.'); } });
+$('stopPw').onclick = () => { stopCrack(); setMsg($('cMsg'), 'Stopped after <b>' + fmt(C.tries) + '</b> guesses. The longer it takes, the safer the password!'); };
+function idxToStr(idx){ let s = ''; for (let i = 0; i < idx.length; i++) s += C.chars[idx[i]]; return s; }
+function crackStep(t){
+  if (!C.running) return;
+  const dt = (t - C.last)/1000; C.last = t;
+  if (C.phase === 'dict'){
+    C.dAcc += dt * 30;
+    while (C.dAcc >= 1){
+      C.dAcc -= 1;
+      const w = DICT[C.dIdx++]; C.tries++;
+      C.rain.push(w); C.rain = C.rain.slice(-4);
+      $('cGuess').textContent = w;
+      if (C.a.dict && w === C.a.dict.word){
+        renderCrack();
+        return crackFound(C.a.pw, '📖 Found it on the <b>common passwords list</b>' + (C.a.dict.extra ? ', then just added <b>' + escapeHtml(C.a.dict.extra) + '</b> on the end' : '') + '! Only <b>' + fmt(C.tries) + '</b> guesses. No brute force needed.', 'bad');
+      }
+      if (C.dIdx >= DICT.length){
+        C.phase = 'brute'; C.bruteT0 = performance.now();
+        setMsg($('cMsg'), '🤖 Not on the list! Step 2: <b>brute force</b>: every combination of ' + C.P + ' characters, shortest first…');
+        break;
+      }
+    }
+    renderCrack();
+    requestAnimationFrame(crackStep);
+    return;
+  }
+  const end = performance.now() + 14;
+  const P = C.P, tIdx = C.tIdx, tLen = C.tLen;
+  let idx = C.idx, len = C.len, tries = 0, matched = false;
+  outer:
+  while (performance.now() < end){
+    for (let k = 0; k < 20000; k++){
+      tries++;
+      if (len === tLen && idx[len-1] === tIdx[len-1]){
+        let same = true;
+        for (let i = 0; i < len; i++) if (idx[i] !== tIdx[i]){ same = false; break; }
+        if (same){ matched = true; break outer; }
+      }
+      let i = len - 1;
+      while (i >= 0){ if (++idx[i] < P) break; idx[i] = 0; i--; }
+      if (i < 0){ len++; idx = new Array(len).fill(0); }
+    }
+  }
+  C.idx = idx; C.len = len; C.tries += tries; C.bruteTries += tries;
+  const g = idxToStr(idx);
+  C.rain.push(g); C.rain = C.rain.slice(-4);
+  renderCrack(g);
+  if (matched){
+    const secs = (performance.now() - C.t0)/1000;
+    return crackFound(C.a.pw, '🤖 <b>Brute forced</b> in ' + secs.toFixed(1) + ' seconds after <b>' + fmt(C.tries) + '</b> guesses!', 'win');
+  }
+  requestAnimationFrame(crackStep);
+}
+function renderCrack(g){
+  if (g !== undefined) $('cGuess').textContent = g;
+  $('cRain').textContent = C.rain.slice(0,-1).reverse().map(x => '✗ ' + x).join('\n');
+  $('cTries').textContent = fmt(C.tries);
+  if (C.phase === 'brute' && C.bruteTries){
+    const rate = C.bruteTries / Math.max((performance.now() - C.bruteT0)/1000, 0.001);
+    $('cRate').textContent = bigWords(Math.log10(rate));
+    const pct = C.bruteTries / C.total * 100;
+    $('cPct').textContent = pct >= 1 ? pct.toFixed(0) + '%' : pct >= 0.01 ? pct.toFixed(2) + '%' : '0.00…%';
+    const here = timeWords(C.a.bruteLog - Math.log10(rate));
+    $('vsHere').textContent = here.emo + ' ' + here.text;
+    if (!C.hinted && performance.now() - C.bruteT0 > 4000){
+      C.hinted = true;
+      setMsg($('cMsg'), '🤖 Still going… This computer could need <b>' + here.text.toLowerCase() + '</b> ' + here.emo + ' to try everything. Press <b>STOP</b> any time.', 'warn');
+    }
+  } else {
+    $('cRate').textContent = '30 (reading the list)';
+    $('cPct').textContent = '—';
+  }
+}
+function crackFound(pw, html, cls){
+  C.running = false;
+  $('cGuess').textContent = pw; $('cGuess').className = 'guess found';
+  $('cTries').textContent = fmt(C.tries);
+  $('stopPw').disabled = true;
+  if (C.phase === 'dict') $('vsHere').textContent = '⚡ Instantly';
+  setMsg($('cMsg'), html, cls);
+  confetti($('cGuess'), ['🔓','💥','🤖','✨']);
+}
+
+/* =====================================================================
+   5. Grow the password + time ladder
+   ===================================================================== */
+RUNGS.forEach(r => {
+  const d = document.createElement('div'); d.className = 'rung';
+  d.innerHTML = '<span>' + r.emo + '</span>' + r.name;
+  $('ladder').appendChild(d);
+});
+let growPw = '', growTimer = null;
+const ADD_ORDER = ['lower','lower','lower','digit','upper','lower','symbol','lower','lower','digit','lower','upper','lower','symbol','lower','lower','digit','lower','lower','lower'];
+function addChar(key){
+  if ([...growPw].length >= 24) return;
+  const s = SETS.find(x => x.key === key);
+  let pool = s.chars; if (key === 'symbol') pool = '!@#$%&*?-_+=';
+  growPw += pool[Math.random()*pool.length|0];
+  renderGrow();
+}
+function renderGrow(){
+  $('growPw').innerHTML = (growPw ? escapeHtml(growPw) : '') + '<span class="cur">▌</span>';
+  const a = analyze(growPw);
+  const rungs = [...$('ladder').children];
+  if (!a.len){
+    $('growFormula').innerHTML = 'Tap a button to add a character';
+    $('growEmo').textContent = '🤔'; $('growTime').textContent = '—'; $('growNote').textContent = '';
+    rungs.forEach(r => r.className = 'rung');
+    return;
+  }
+  $('growFormula').innerHTML = '<span class="n">' + a.pool + '</span> choices × <span class="n">' + a.len + '</span> characters = <span class="big">' + bigWords(a.bruteLog) + '</span> combinations';
+  const logS = a.bruteLog - Math.log10(FARM);
+  const tw = timeWords(logS);
+  $('growEmo').textContent = tw.emo; $('growTime').textContent = tw.text; $('growNote').textContent = tw.note;
+  let here = 0; RUNGS.forEach((r,i) => { if (logS >= r.s) here = i; });
+  rungs.forEach((r,i) => r.className = 'rung' + (i === here ? ' here' : i < here ? ' past' : ''));
+}
+function stopAuto(){ clearInterval(growTimer); growTimer = null; $('growAuto').textContent = '▶ AUTO GROW'; $('growAuto').className = 'btn go'; }
+stoppers.push(stopAuto);
+document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { stopAuto(); addChar(b.dataset.add); });
+$('growReset').onclick = () => { stopAuto(); growPw = ''; renderGrow(); };
+$('growAuto').onclick = () => {
+  if (growTimer){ stopAuto(); return; }
+  if ([...growPw].length >= 20) growPw = '';
+  $('growAuto').textContent = '■ PAUSE'; $('growAuto').className = 'btn stop';
+  growTimer = setInterval(() => {
+    const n = [...growPw].length;
+    if (n >= 20){ stopAuto(); return; }
+    addChar(ADD_ORDER[n]);
+  }, 1100);
+};
+renderGrow();
+
+/* start: remember the scene when the page reloads */
+let start = 0; try { start = +sessionStorage.getItem('bf-scene') || 0; } catch(e){}
+cur = -1; go(start);
+})();
+</script>
+</body>
+</html>
