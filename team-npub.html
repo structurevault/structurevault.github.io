@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team Key Viewer</title>
+<!--
+  TEAM KEY VIEWER — Castle Defence, SPARK Centre
+  Type in a team's Nostr public key (npub). If it's Red Team's or Blue Team's,
+  the page unlocks that team's profile and everything they've posted on Nostr,
+  read live from public relays. Any other key is refused.
+
+  Team keys are stored as hex below (not as npubs) so the answer isn't sitting
+  in plain sight in the page source.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #121018;
+    --panel: #1d1927;
+    --panel-2: #241e31;
+    --line: #37304b;
+    --text: #efeaf7;
+    --muted: #9a92b4;
+    --red: #e5484d;
+    --blue: #4a9eea;
+    --gold: #f5b83d;
+    --ok: #3fcf7a;
+    --team: var(--gold);
+    --team-soft: rgba(245, 184, 61, .12);
+  }
+  body.red  { --team: var(--red);  --team-soft: rgba(229, 72, 77, .13); }
+  body.blue { --team: var(--blue); --team-soft: rgba(74, 158, 234, .13); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Atkinson Hyperlegible", system-ui, sans-serif;
+    min-height: 100vh;
+    padding: clamp(14px, 2vw, 32px) 16px 48px;
+    transition: background .4s;
+  }
+  body.red  { background: radial-gradient(ellipse at 50% -10%, #3a1520, var(--bg) 60%) fixed; }
+  body.blue { background: radial-gradient(ellipse at 50% -10%, #142a46, var(--bg) 60%) fixed; }
+  .wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+  .pix { font-family: "Silkscreen", monospace; }
+
+  header h1 { font-family: "Silkscreen", monospace; font-size: clamp(22px, 3.4vw, 40px); }
+  header h1 .r { color: var(--red); }
+  header h1 .b { color: var(--blue); }
+  header p { color: var(--muted); margin-top: 4px; font-size: clamp(14px, 1.4vw, 18px); }
+
+  /* ---------- key entry ---------- */
+  .gate {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: clamp(14px, 2vw, 24px);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .gate label { font-family: "Silkscreen", monospace; color: var(--gold); font-size: clamp(13px, 1.3vw, 18px); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  #npub {
+    flex: 1 1 320px; min-width: 0;
+    background: var(--bg); color: var(--text);
+    border: 2px solid var(--line); border-radius: 10px;
+    padding: 14px 14px;
+    font: 700 clamp(14px, 1.4vw, 18px) ui-monospace, Consolas, monospace;
+  }
+  #npub:focus { outline: none; border-color: var(--gold); }
+  button {
+    font-family: "Silkscreen", monospace; font-size: clamp(14px, 1.4vw, 18px);
+    border: 2px solid transparent; border-radius: 10px; padding: 12px 18px;
+    cursor: pointer; color: #1a1422; background: var(--gold);
+  }
+  button.ghost { background: none; color: var(--muted); border-color: var(--line); }
+  button:hover { filter: brightness(1.1); }
+  .msg { min-height: 1.4em; font-weight: 700; }
+  .msg.bad { color: var(--red); }
+  .msg.good { color: var(--ok); }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+  /* ---------- team view ---------- */
+  #view { display: none; flex-direction: column; gap: 18px; }
+  #view.show { display: flex; }
+  .unlock {
+    font-family: "Silkscreen", monospace; text-align: center;
+    color: var(--team); font-size: clamp(16px, 2vw, 26px);
+    animation: pop .5s ease-out;
+  }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .card {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .card.team { border-color: var(--team); box-shadow: 0 0 30px var(--team-soft); }
+  .card h2 {
+    font-family: "Silkscreen", monospace; font-size: clamp(14px, 1.4vw, 18px);
+    color: var(--team); padding: 14px 18px 0;
+  }
+  .card .body { padding: 12px 18px 18px; }
+
+  .banner { height: clamp(90px, 18vw, 200px); background: var(--team-soft) center/cover no-repeat; }
+  .who { display: flex; gap: 18px; align-items: flex-end; padding: 0 18px 18px; margin-top: -48px; flex-wrap: wrap; }
+  .avatar {
+    width: clamp(84px, 12vw, 120px); aspect-ratio: 1; border-radius: 50%;
+    border: 4px solid var(--team); background: var(--panel-2) center/cover no-repeat;
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(36px, 5vw, 56px); flex: none;
+  }
+  .who .names { min-width: 0; flex: 1; padding-bottom: 4px; }
+  .teamtag {
+    display: inline-block; font-family: "Silkscreen", monospace; font-size: 13px;
+    background: var(--team); color: #fff; padding: 3px 10px; border-radius: 20px; margin-bottom: 6px;
+  }
+  .who .dn { font-weight: 700; font-size: clamp(22px, 2.6vw, 32px); line-height: 1.1; overflow-wrap: anywhere; }
+  .who .un { color: var(--muted); overflow-wrap: anywhere; }
+  .about { padding: 0 18px 16px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; }
+
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding: 0 18px 18px; }
+  .fact { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+  .fact .k { font-family: "Silkscreen", monospace; font-size: 12px; color: var(--muted); }
+  .fact .v { font-weight: 700; overflow-wrap: anywhere; margin-top: 2px; }
+  .fact .v.mono { font: 700 13px/1.35 ui-monospace, Consolas, monospace; }
+  .fact a { color: var(--team); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; text-align: center; }
+  .stat b { display: block; font-family: "Silkscreen", monospace; font-size: clamp(22px, 2.6vw, 34px); color: var(--team); }
+  .stat span { color: var(--muted); font-size: 14px; }
+
+  .note { border-top: 1px solid var(--line); padding: 14px 0; }
+  .note:first-child { border-top: none; padding-top: 4px; }
+  .note .meta { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+  .note .kind { font-family: "Silkscreen", monospace; color: var(--team); }
+  .note .text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; font-size: clamp(15px, 1.4vw, 18px); }
+  .note .text a { color: var(--team); }
+  .note img, .note video { display: block; max-width: 100%; max-height: 420px; border-radius: 10px; margin-top: 8px; border: 1px solid var(--line); }
+  .note .tags { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .note .tags span { background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px; padding: 1px 9px; font-size: 13px; color: var(--muted); }
+  .note.fresh { animation: fresh 2s ease-out; }
+  @keyframes fresh { from { background: var(--team-soft); } to { background: transparent; } }
+  .empty { color: var(--muted); font-style: italic; }
+
+  .relays { display: flex; flex-wrap: wrap; gap: 8px; }
+  .relay { font: 13px ui-monospace, Consolas, monospace; background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px; padding: 4px 10px; }
+  .relay::before { content: "●"; margin-right: 6px; color: var(--muted); }
+  .relay.ok::before { color: var(--ok); }
+  .relay.bad::before { color: var(--red); }
+  .relay.wait::before { color: var(--gold); }
+
+  .follows { display: flex; flex-wrap: wrap; gap: 8px; }
+  .follow { font: 12px ui-monospace, Consolas, monospace; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; overflow-wrap: anywhere; }
+
+  .live { color: var(--muted); font-size: 14px; text-align: center; }
+  .live .dot { display: inline-block; width: .6em; height: .6em; border-radius: 50%; background: var(--gold); margin-right: .4em; }
+  .live.on .dot { background: var(--ok); animation: blink 1.6s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .shake, .unlock, .note.fresh, .live.on .dot { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1><span class="r">Red</span> &amp; <span class="b">Blue</span> Team Key Viewer</h1>
+  <p>Found a team's public key? Type in their <b>npub</b> to unlock everything that team has shared on Nostr.</p>
+</header>
+
+<form class="gate" id="gate" autocomplete="off">
+  <label for="npub">🔓 Enter a team's public key</label>
+  <div class="row">
+    <input id="npub" placeholder="npub1…" spellcheck="false" autocapitalize="off">
+    <button type="submit">Unlock</button>
+    <button type="button" class="ghost" id="clear">Clear</button>
+  </div>
+  <div class="msg" id="msg" aria-live="polite"></div>
+</form>
+
+<section id="view" aria-live="polite">
+  <div class="unlock" id="unlock"></div>
+
+  <div class="card team">
+    <div class="banner" id="banner"></div>
+    <div class="who">
+      <div class="avatar" id="avatar"></div>
+      <div class="names">
+        <span class="teamtag" id="teamtag"></span>
+        <div class="dn" id="dn">Loading…</div>
+        <div class="un" id="un"></div>
+      </div>
+    </div>
+    <div class="about" id="about"></div>
+    <div class="facts" id="facts"></div>
+  </div>
+
+  <div class="card">
+    <h2>📊 Team stats</h2>
+    <div class="body"><div class="stats" id="stats"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>📝 Posts &amp; events</h2>
+    <div class="body" id="notes"><p class="empty">Searching the relays…</p></div>
+  </div>
+
+  <div class="card" id="followCard" hidden>
+    <h2>👥 Following</h2>
+    <div class="body"><div class="follows" id="follows"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>📡 Relays</h2>
+    <div class="body"><div class="relays" id="relays"></div></div>
+  </div>
+
+  <div class="live" id="live"><span class="dot"></span><span id="liveText">connecting…</span></div>
+</section>
+
+</div>
+
+<script>
+/* ---------- the two team keys (hex form of each npub) ---------- */
+var TEAMS = {
+  "6cf65110bae4b6870e91227d2c3c9ffdffef8cd1fed87e5fc8a62bd4406ad7c3": { id: "blue", name: "Blue Team", icon: "🔵", emoji: "🛡️" },
+  "4f7bef87b6d08005c4cab3d52ed2d32f147a30cec6c95dc9602ca0af4cc074fb": { id: "red",  name: "Red Team",  icon: "🔴", emoji: "⚔️" }
+};
+var RELAYS = [
+  "wss://relay.damus.io",
+  "wss://nos.lol",
+  "wss://relay.primal.net",
+  "wss://relay.nostr.band",
+  "wss://relay.snort.social",
+  "wss://purplepag.es"
+];
+
+/* ---------- bech32 (npub) decoding with checksum check ---------- */
+var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+function polymod(values) {
+  var GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3], chk = 1;
+  values.forEach(function (v) {
+    var b = chk >>> 25;
+    chk = ((chk & 0x1ffffff) << 5) ^ v;
+    for (var i = 0; i < 5; i++) if ((b >>> i) & 1) chk ^= GEN[i];
+  });
+  return chk;
+}
+function hrpExpand(hrp) {
+  var out = [];
+  for (var i = 0; i < hrp.length; i++) out.push(hrp.charCodeAt(i) >> 5);
+  out.push(0);
+  for (i = 0; i < hrp.length; i++) out.push(hrp.charCodeAt(i) & 31);
+  return out;
+}
+function bech32Decode(str) {
+  str = str.toLowerCase();
+  var pos = str.lastIndexOf("1");
+  if (pos < 1 || pos + 7 > str.length) throw new Error("That doesn't look like a key.");
+  var hrp = str.slice(0, pos), data = [];
+  for (var i = pos + 1; i < str.length; i++) {
+    var d = CHARSET.indexOf(str[i]);
+    if (d < 0) throw new Error("The letter \"" + str[i] + "\" can't be in an npub. Check for typos!");
+    data.push(d);
+  }
+  if (polymod(hrpExpand(hrp).concat(data)) !== 1) throw new Error("One of the letters is wrong. Check for typos!");
+  var acc = 0, bits = 0, bytes = [];
+  data.slice(0, -6).forEach(function (v) {
+    acc = (acc << 5) | v; bits += 5;
+    while (bits >= 8) { bits -= 8; bytes.push((acc >> bits) & 255); }
+  });
+  return { hrp: hrp, hex: bytes.map(function (b) { return b.toString(16).padStart(2, "0"); }).join("") };
+}
+function bech32Encode(hrp, hex) {
+  var bytes = hex.match(/../g).map(function (h) { return parseInt(h, 16); });
+  var acc = 0, bits = 0, data = [];
+  bytes.forEach(function (b) {
+    acc = (acc << 8) | b; bits += 8;
+    while (bits >= 5) { bits -= 5; data.push((acc >> bits) & 31); }
+  });
+  if (bits > 0) data.push((acc << (5 - bits)) & 31);
+  var mod = polymod(hrpExpand(hrp).concat(data, [0, 0, 0, 0, 0, 0])) ^ 1, chk = [];
+  for (var i = 0; i < 6; i++) chk.push((mod >> (5 * (5 - i))) & 31);
+  return hrp + "1" + data.concat(chk).map(function (v) { return CHARSET[v]; }).join("");
+}
+
+/* ---------- helpers ---------- */
+function $(id) { return document.getElementById(id); }
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+function safeUrl(u) {
+  try { var x = new URL(String(u)); return /^https?:$/.test(x.protocol) ? x.href : ""; } catch (e) { return ""; }
+}
+function when(ts) {
+  var d = new Date(ts * 1000);
+  return d.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) + " " +
+    d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" });
+}
+var KIND_NAMES = {
+  0: "Profile", 1: "Post", 3: "Follow list", 5: "Delete", 6: "Repost", 7: "Reaction",
+  1063: "File", 10002: "Relay list", 30023: "Article", 30078: "App data", 9735: "Zap"
+};
+function kindName(k) { return KIND_NAMES[k] || "Event kind " + k; }
+
+/* turn note text into safe HTML: links, images, videos */
+function richText(text) {
+  var media = [];
+  var html = esc(text).replace(/https?:\/\/[^\s<]+/g, function (raw) {
+    var url = safeUrl(raw.replace(/&amp;/g, "&"));
+    if (!url) return raw;
+    if (/\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(url)) { media.push('<img loading="lazy" src="' + esc(url) + '" alt="">'); return ""; }
+    if (/\.(mp4|webm|mov)(\?|$)/i.test(url)) { media.push('<video controls preload="metadata" src="' + esc(url) + '"></video>'); return ""; }
+    return '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + raw + "</a>";
+  });
+  return { html: html.trim(), media: media.join("") };
+}
+
+/* ---------- state ---------- */
+var sockets = [], events = {}, profile = null, contacts = null, relayList = null, team = null, hex = null, firstLoad = true;
+
+function closeAll() {
+  sockets.forEach(function (ws) { try { ws.close(); } catch (e) {} });
+  sockets = [];
+}
+
+function connect(urls) {
+  var box = $("relays");
+  urls.forEach(function (url) {
+    if (box.querySelector('[data-url="' + url + '"]')) return;
+    var chip = document.createElement("span");
+    chip.className = "relay wait"; chip.dataset.url = url; chip.textContent = url.replace("wss://", "");
+    box.appendChild(chip);
+    var ws;
+    try { ws = new WebSocket(url); } catch (e) { chip.className = "relay bad"; return; }
+    sockets.push(ws);
+    var gotEose = false;
+    var timer = setTimeout(function () { if (!gotEose) chip.className = "relay bad"; updateLive(); render(); }, 9000);
+    ws.onopen = function () {
+      ws.send(JSON.stringify(["REQ", "team", { authors: [hex], limit: 500 }]));
+      ws.send(JSON.stringify(["REQ", "live", { authors: [hex], since: Math.floor(Date.now() / 1000) }]));
+    };
+    ws.onmessage = function (m) {
+      var d; try { d = JSON.parse(m.data); } catch (e) { return; }
+      if (d[0] === "EVENT" && d[2] && d[2].pubkey === hex) addEvent(d[2], url);
+      if (d[0] === "EOSE" && d[1] === "team") { gotEose = true; clearTimeout(timer); chip.className = "relay ok"; updateLive(); render(); }
+    };
+    ws.onerror = function () { chip.className = "relay bad"; updateLive(); };
+    ws.onclose = function () { if (!gotEose) chip.className = "relay bad"; updateLive(); };
+  });
+}
+
+function addEvent(ev, url) {
+  if (events[ev.id]) { events[ev.id].relays[url] = 1; return; }
+  ev.relays = {}; ev.relays[url] = 1;
+  ev.isNew = !firstLoad;
+  events[ev.id] = ev;
+  if (ev.kind === 0 && (!profile || ev.created_at > profile.created_at)) profile = ev;
+  if (ev.kind === 3 && (!contacts || ev.created_at > contacts.created_at)) contacts = ev;
+  if (ev.kind === 10002 && (!relayList || ev.created_at > relayList.created_at)) {
+    relayList = ev;
+    connect(ev.tags.filter(function (t) { return t[0] === "r" && /^wss:\/\//.test(t[1] || ""); })
+      .map(function (t) { return t[1].replace(/\/$/, ""); }).slice(0, 8));
+  }
+  scheduleRender();
+}
+
+var renderTimer = null;
+function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 120); }
+
+function updateLive() {
+  var ok = $("relays").querySelectorAll(".relay.ok").length;
+  var pending = $("relays").querySelectorAll(".relay.wait").length;
+  $("live").classList.toggle("on", ok > 0);
+  $("liveText").textContent = ok > 0
+    ? "Live — listening on " + ok + " relay" + (ok === 1 ? "" : "s") + " for new posts"
+    : pending ? "connecting to relays…" : "Couldn't reach any relays. Check the internet connection.";
+}
+
+function render() {
+  if (!team) return;
+  var p = {};
+  if (profile) { try { p = JSON.parse(profile.content) || {}; } catch (e) {} }
+
+  var dn = p.display_name || p.displayName || p.name || team.name;
+  $("dn").textContent = dn;
+  $("un").textContent = p.name && p.name !== dn ? "@" + p.name : "";
+  $("about").textContent = p.about || (profile ? "" : "No profile found yet — this team hasn't set up their name and picture.");
+  var pic = safeUrl(p.picture), ban = safeUrl(p.banner);
+  $("avatar").style.backgroundImage = pic ? 'url("' + pic.replace(/"/g, "%22") + '")' : "";
+  $("avatar").textContent = pic ? "" : team.emoji;
+  $("banner").style.backgroundImage = ban ? 'url("' + ban.replace(/"/g, "%22") + '")' : "";
+
+  var npub = bech32Encode("npub", hex);
+  var facts = [["Public key (npub)", npub, true], ["Public key (hex)", hex, true]];
+  if (p.nip05) facts.push(["Nostr address", p.nip05]);
+  if (p.website) { var w = safeUrl(p.website); facts.push(["Website", w ? '<a href="' + esc(w) + '" target="_blank" rel="noopener noreferrer">' + esc(p.website) + "</a>" : esc(p.website), false, true]); }
+  if (p.lud16 || p.lud06) facts.push(["Lightning address", p.lud16 || p.lud06, true]);
+  Object.keys(p).forEach(function (k) {
+    if (["name", "display_name", "displayName", "about", "picture", "banner", "nip05", "website", "lud16", "lud06"].indexOf(k) >= 0) return;
+    var v = p[k];
+    if (v === "" || v == null) return;
+    facts.push([k, typeof v === "object" ? JSON.stringify(v) : String(v)]);
+  });
+  if (profile) facts.push(["Profile updated", when(profile.created_at)]);
+  $("facts").innerHTML = facts.map(function (f) {
+    return '<div class="fact"><div class="k">' + esc(f[0]) + '</div><div class="v' + (f[2] ? " mono" : "") + '">' +
+      (f[3] ? f[1] : esc(f[1])) + "</div></div>";
+  }).join("");
+
+  /* stats */
+  var all = Object.keys(events).map(function (k) { return events[k]; });
+  var posts = all.filter(function (e) { return e.kind === 1; });
+  var reacts = all.filter(function (e) { return e.kind === 7; }).length;
+  var follows = contacts ? contacts.tags.filter(function (t) { return t[0] === "p"; }) : [];
+  var first = all.reduce(function (m, e) { return Math.min(m, e.created_at); }, Infinity);
+  var last = all.reduce(function (m, e) { return Math.max(m, e.created_at); }, 0);
+  var stats = [[posts.length, "posts"], [all.length, "events found"], [follows.length, "following"], [reacts, "reactions given"]];
+  $("stats").innerHTML = stats.map(function (s) { return '<div class="stat"><b>' + s[0] + "</b><span>" + s[1] + "</span></div>"; }).join("") +
+    (last ? '<div class="stat"><b style="font-size:16px">' + esc(when(last)) + '</b><span>last active</span></div>' : "") +
+    (first < Infinity ? '<div class="stat"><b style="font-size:16px">' + esc(when(first)) + '</b><span>first seen</span></div>' : "");
+
+  /* feed: everything except profile / follow list / relay list, newest first */
+  var feed = all.filter(function (e) { return [0, 3, 10002].indexOf(e.kind) < 0; })
+    .sort(function (a, b) { return b.created_at - a.created_at; });
+  var stillLoading = $("relays").querySelectorAll(".relay.wait").length > 0;
+  $("notes").innerHTML = feed.length ? feed.map(function (e) {
+    var body;
+    if (e.kind === 7) body = { html: "Reacted " + esc(e.content === "+" || !e.content ? "👍" : e.content), media: "" };
+    else if (e.kind === 6) body = { html: "Reposted a note", media: "" };
+    else body = richText(e.content || "");
+    var tags = e.tags.filter(function (t) { return t[0] === "t" && t[1]; }).map(function (t) { return "<span>#" + esc(t[1]) + "</span>"; });
+    var title = e.tags.filter(function (t) { return t[0] === "title" && t[1]; })[0];
+    var seen = Object.keys(e.relays).length;
+    var fresh = e.isNew ? " fresh" : "";
+    e.isNew = false;
+    return '<div class="note' + fresh + '"><div class="meta"><span class="kind">' + esc(kindName(e.kind)) + "</span><span>" +
+      esc(when(e.created_at)) + "</span><span>seen on " + seen + " relay" + (seen === 1 ? "" : "s") + "</span></div>" +
+      (title ? "<b>" + esc(title[1]) + "</b>" : "") +
+      '<div class="text">' + (body.html || '<span class="empty">(no text)</span>') + "</div>" + body.media +
+      (tags.length ? '<div class="tags">' + tags.join("") + "</div>" : "") + "</div>";
+  }).join("") : '<p class="empty">' + (stillLoading ? "Searching the relays…" : "No posts found yet. When this team posts on Nostr it will pop up here.") + "</p>";
+
+  /* following */
+  $("followCard").hidden = !follows.length;
+  $("follows").innerHTML = follows.map(function (t) {
+    var other = TEAMS[t[1]];
+    var label = other ? other.icon + " " + other.name : (/^[0-9a-f]{64}$/.test(t[1]) ? bech32Encode("npub", t[1]).slice(0, 20) + "…" : t[1]);
+    return '<span class="follow">' + esc(label) + "</span>";
+  }).join("");
+}
+
+/* ---------- unlocking ---------- */
+function setMsg(text, kind) {
+  var m = $("msg"); m.textContent = text; m.className = "msg " + (kind || "");
+}
+function refuse(text) {
+  setMsg(text, "bad");
+  var g = $("gate"); g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake");
+}
+
+function unlock(input) {
+  input = input.trim().replace(/^nostr:/i, "");
+  if (!input) { refuse("Type in a public key first."); return; }
+  var key;
+  if (/^[0-9a-f]{64}$/i.test(input)) key = input.toLowerCase();
+  else {
+    if (/^nsec1/i.test(input)) { refuse("🛑 That's a PRIVATE key (nsec)! Never share it. This viewer only needs a public key (npub)."); return; }
+    try {
+      var d = bech32Decode(input);
+      if (d.hrp !== "npub") { refuse("That's not an npub. Team public keys start with npub1."); return; }
+      key = d.hex;
+    } catch (e) { refuse(e.message); return; }
+  }
+  if (!TEAMS[key]) { refuse("🔒 That's a real key, but it isn't Red Team's or Blue Team's. Keep hunting!"); return; }
+
+  closeAll();
+  hex = key; team = TEAMS[key];
+  events = {}; profile = null; contacts = null; relayList = null; firstLoad = true;
+  document.body.className = team.id;
+  setMsg("✅ Key accepted!", "good");
+  $("unlock").textContent = team.icon + " " + team.name.toUpperCase() + " UNLOCKED " + team.icon;
+  $("teamtag").textContent = team.icon + " " + team.name;
+  $("relays").innerHTML = "";
+  $("notes").innerHTML = '<p class="empty">Searching the relays…</p>';
+  $("view").classList.add("show");
+  render();
+  connect(RELAYS);
+  updateLive();
+  setTimeout(function () { firstLoad = false; }, 6000);
+}
+
+$("gate").addEventListener("submit", function (e) { e.preventDefault(); unlock($("npub").value); });
+$("clear").addEventListener("click", function () {
+  closeAll(); team = null; hex = null;
+  document.body.className = "";
+  $("npub").value = ""; setMsg("");
+  $("view").classList.remove("show");
+  $("npub").focus();
+});
+</script>
+</body>
+</html>
